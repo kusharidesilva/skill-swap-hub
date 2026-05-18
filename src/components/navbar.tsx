@@ -3,58 +3,90 @@ import Link from "next/link";
 
 const navLinks = [
   { name: "Home", href: "/" },
-  { name: "Technology", href: "/technology" },
-  { name: "Lifestyle", href: "/lifestyle" },
-  { name: "Education", href: "/education" },
-  { name: "Travel", href: "/travel" },
-  { name: "Food", href: "/food" },
-  { name: "News & Trends", href: "/news&trends" },
+  { name: "Explore Skills", href: "/explore" },
+  { name: "How It Works", href: "/how-it-works" },
+  { name: "About", href: "/about" },
 ];
 
 export default function Navbar() {
-  // Server-safe: no client hooks or `window` usage. Mobile toggle uses a CSS checkbox.
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5">
-        {/* Logo */}
-        <Link href="/" className="flex items-center">
-          <Image src="/logo2.png" alt="BlogNest Logo" width={70} height={70} className="h-16 w-16" />
+    <header className="relative sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <input
+        id="nav-toggle"
+        type="checkbox"
+        className="peer sr-only"
+        aria-label="Toggle navigation menu"
+        aria-controls="mobile-nav"
+      />
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
+        <Link href="/" className="flex items-center gap-3">
+          <Image
+            src="/img/Skill%20Swap%20Hub%20Logo%20icon-no%20bg.svg"
+            alt="Skill Swap Hub"
+            width={44}
+            height={44}
+            className="h-11 w-11"
+            priority
+          />
+          <span className="text-base font-semibold text-slate-900">Skill Swap Hub</span>
         </Link>
 
-        {/* navbar */}
-        <nav className="hidden items-center gap-10 md:flex">
+        <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
           {navLinks.map((link) => (
             <Link
               key={link.name}
               href={link.href}
-              className="relative inline-flex flex-col items-center text-sm font-medium transition-colors after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-full after:origin-left after:scale-x-0 after:bg-[#89a8d0] after:transition-transform after:content-[''] text-slate-600 hover:text-[#0f3b93] hover:after:scale-x-100"
+              className="transition-colors hover:text-slate-900"
             >
               {link.name}
             </Link>
           ))}
         </nav>
 
-        {/* Mobile view navbar (CSS-only toggle) */}
-        <div className="md:hidden">
-          <input id="nav-toggle" type="checkbox" className="peer sr-only" aria-label="Toggle navigation menu" />
-          <label htmlFor="nav-toggle" className="rounded-md p-2 text-slate-700 transition-colors hover:text-[#0f3b93] inline-flex items-center" aria-hidden>
-            <svg className="h-6 w-6 peer-checked:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-            <svg className="hidden h-6 w-6 peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </label>
+        <div className="hidden items-center gap-3 md:flex">
+          <Link
+            href="/login"
+            className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
+          >
+            Login
+          </Link>
+          <Link
+            href="/get-started"
+            className="rounded-full bg-[#0f4cbf] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0d3fa1]"
+          >
+            Get Started
+          </Link>
         </div>
+
       </div>
 
-      <div className="transition-[max-height,opacity] duration-300 ease-out md:hidden max-h-0 opacity-0 peer-checked:max-h-96 peer-checked:opacity-100 overflow-hidden border-b border-slate-200 bg-[#f5f2fb]">
-        <nav id="mobile-nav" aria-hidden className="flex flex-col gap-4 px-8 pt-4 pb-6">
+      <label
+        htmlFor="nav-toggle"
+        className="absolute right-6 top-5 inline-flex items-center rounded-md p-2 text-slate-700 transition-colors hover:text-slate-900 md:hidden"
+      >
+        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </label>
+
+      <div className="max-h-0 overflow-hidden border-b border-slate-200 bg-white/95 opacity-0 transition-[max-height,opacity] duration-300 ease-out peer-checked:max-h-96 peer-checked:opacity-100 md:hidden">
+        <nav id="mobile-nav" className="flex flex-col gap-4 px-6 pb-6 pt-4 text-sm font-medium">
           {navLinks.map((link) => (
-            <Link key={link.name} href={link.href} className="text-base font-medium text-slate-600 hover:text-[#0f3b93]">
+            <Link key={link.name} href={link.href} className="text-slate-600 hover:text-slate-900">
               {link.name}
             </Link>
           ))}
+          <div className="mt-2 flex flex-col gap-3">
+            <Link href="/login" className="text-slate-600 hover:text-slate-900">
+              Login
+            </Link>
+            <Link
+              href="/get-started"
+              className="rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
+            >
+              Get Started
+            </Link>
+          </div>
         </nav>
       </div>
     </header>
