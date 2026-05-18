@@ -1,6 +1,6 @@
 import HeroSection from "@/components/home/hero";
 import HowItWorksSection from "@/components/home/how-it-works";
-import SiteFooter from "@/components/home/site-footer";
+import SiteFooter from "@/components/footer";
 import SkillGigsSection from "@/components/home/skill-gigs";
 import VerifiedStudentsSection from "@/components/home/verified-students";
 import Navbar from "@/components/navbar/navbar-all users";
