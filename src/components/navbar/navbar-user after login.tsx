@@ -6,7 +6,7 @@ const navLinks = [
   { name: "Explore Skills", href: "/explore" },
   { name: "How It Works", href: "/how-it-works" },
   { name: "About", href: "/about/buyer" },
-  { name: "Become a Seller", href: "/become-a-seller" },
+  { name: "Become a Seller", href: "/become-a-seller-intro" },
 ];
 
 export default function Navbar() {

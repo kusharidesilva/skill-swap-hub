@@ -1,5 +1,7 @@
-import Image from "next/image";
+'use client';
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Badge = {
   label: string;
@@ -12,6 +14,7 @@ const badges: Badge[] = [
 ];
 
 export default function LoginPage() {
+  const router = useRouter();
   return (
     <main className="relative min-h-screen bg-white">
       <div className="fixed inset-0 bg-black/20" aria-hidden="true" />
@@ -102,7 +105,8 @@ export default function LoginPage() {
               </label>
 
               <button
-                type="submit"
+                type="button"
+                onClick={() => router.push('/home/buyer')}
                 className="w-full rounded-lg bg-[#2b62e6] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
               >
                 Login

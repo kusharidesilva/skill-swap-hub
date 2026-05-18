@@ -71,7 +71,7 @@ export default function RegisterPage() {
 
                 <div>
                   <label className="text-xs font-semibold text-slate-600">University Name</label>
-                  <select className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none">
+                  <select title="Select your University" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none">
                     <option>Select your University</option>
                     <option>University of Colombo</option>
                     <option>University of Moratuwa</option>
@@ -90,7 +90,7 @@ export default function RegisterPage() {
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-slate-600">Year of Study</label>
-                    <select className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none">
+                    <select title="Select Year of Study" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none">
                       <option>1st Year</option>
                       <option>2nd Year</option>
                       <option>3rd Year</option>

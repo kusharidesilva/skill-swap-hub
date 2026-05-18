@@ -104,7 +104,7 @@ export default function ProviderRegisterPage() {
               <section>
                 <p className="text-xs font-semibold text-slate-500">Academic Profile</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <select className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600">
+                  <select title="Select University" className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600">
                     <option>Select University</option>
                     <option>University of Colombo</option>
                     <option>University of Moratuwa</option>
@@ -115,7 +115,7 @@ export default function ProviderRegisterPage() {
                     placeholder="Degree Programme"
                     className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400"
                   />
-                  <select className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600">
+                  <select title="Select Year of Study" className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600">
                     <option>Year of Study</option>
                     <option>1st Year</option>
                     <option>2nd Year</option>
@@ -189,7 +189,7 @@ export default function ProviderRegisterPage() {
               </section>
 
               <Link
-                href="/home/provider"
+                href="/verify-email?from=provider"
                 className="w-full rounded-lg bg-[#2b62e6] px-4 py-2.5 text-center text-xs font-semibold text-white shadow-sm"
               >
                 Create Provider Account →

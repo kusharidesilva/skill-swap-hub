@@ -1,7 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export default function VerifyEmailPage() {
+interface Props {
+  searchParams?: { from?: string };
+}
+
+export default function VerifyEmailPage({ searchParams }: Props) {
+  const isProvider = searchParams?.from === "provider";
+  const redirectUrl = isProvider ? "/home/provider" : "/home/buyer";
   return (
     <main className="relative min-h-screen bg-white">
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" aria-hidden="true" />
@@ -35,13 +41,15 @@ export default function VerifyEmailPage() {
                   key={index}
                   inputMode="numeric"
                   maxLength={1}
+                  placeholder="0"
+                  aria-label={`Verification code digit ${index + 1}`}
                   className="h-12 w-11 rounded-lg border border-slate-200 text-center text-sm font-semibold text-slate-700 focus:outline-none"
                 />
               ))}
             </div>
 
             <Link
-              href="/home/buyer"
+              href={redirectUrl}
               className="w-full rounded-lg bg-[#2b62e6] px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm"
             >
               Verify
