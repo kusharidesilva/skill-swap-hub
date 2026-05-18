@@ -4,10 +4,10 @@ import Link from "next/link";
 type IconProps = { className?: string };
 
 const navLinks = [
-  { name: "Home", href: "/" },
+  { name: "Home", href: "/home/provider" },
   { name: "Explore Skills", href: "/explore" },
   { name: "How It Works", href: "/how-it-works" },
-  { name: "About", href: "/about" },
+  { name: "About", href: "/about/provider" },
 ];
 
 export default function ProviderNavbar() {
@@ -56,13 +56,25 @@ export default function ProviderNavbar() {
           >
             <HeartIcon className="h-5 w-5" />
           </Link>
-          <Link
-            href="/profile"
-            aria-label="Profile"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
-          >
-            <UserIcon className="h-5 w-5" />
-          </Link>
+          <details className="relative">
+            <summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:text-slate-900">
+              <UserIcon className="h-5 w-5" />
+            </summary>
+            <div className="absolute right-0 mt-3 w-48 rounded-xl border border-slate-200 bg-white p-2 text-sm text-slate-600 shadow-lg">
+              <Link href="/profile" className="block rounded-lg px-3 py-2 hover:bg-slate-100">
+                Profile
+              </Link>
+              <Link href="/settings" className="block rounded-lg px-3 py-2 hover:bg-slate-100">
+                Settings
+              </Link>
+              <Link href="/help/provider" className="block rounded-lg px-3 py-2 hover:bg-slate-100">
+                Help & Support
+              </Link>
+              <Link href="/" className="block rounded-lg px-3 py-2 text-red-500 hover:bg-red-50">
+                Sign Out
+              </Link>
+            </div>
+          </details>
         </div>
       </div>
 
@@ -97,6 +109,15 @@ export default function ProviderNavbar() {
               className="rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
             >
               Profile
+            </Link>
+            <Link href="/settings" className="text-slate-600 hover:text-slate-900">
+              Settings
+            </Link>
+            <Link href="/help/provider" className="text-slate-600 hover:text-slate-900">
+              Help & Support
+            </Link>
+            <Link href="/" className="text-slate-600 hover:text-red-500">
+              Sign Out
             </Link>
           </div>
         </nav>
