@@ -42,15 +42,15 @@ export default function SiteFooter() {
           <div>
             <Link href="/" className="flex items-center gap-3">
               <Image
-                src="/img/Skill%20Swap%20Hub%20Logo%20icon-no%20bg.svg"
+                src="/img/Skill Swap Hub Logo.png"
                 alt="Skill Swap Hub"
-                width={44}
-                height={44}
-                className="h-11 w-11"
+                width={1000}
+                height={1000}
+                className="h-38 w-42"
               />
-              <span className="text-base font-semibold text-slate-900">Skill Swap Hub</span>
+              {/* <span className="text-base font-semibold text-slate-900">Skill Swap Hub</span> */}
             </Link>
-            <p className="mt-4 max-w-sm text-sm text-slate-600">
+            <p className="mx-auto mt-4 max-w-sm text-center text-sm text-slate-600">
               Connecting Sri Lankan university students through peer-to-peer knowledge sharing.
             </p>
           </div>
@@ -71,7 +71,7 @@ export default function SiteFooter() {
             ))}
           </div>
         </div>
-        <div className="mt-10 border-t border-slate-200 pt-6 text-xs text-slate-500">
+        <div className="mt-10 border-t border-slate-200 pt-6 text-xs text-slate-500 items-center justify-center text-center">
           © 2026 Skill Swap Hub | All Rights Reserved
         </div>
       </div>

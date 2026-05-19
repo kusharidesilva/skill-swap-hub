@@ -76,10 +76,10 @@ export default function HeroSection() {
           </form>
         </div>
         <div className="relative flex items-center justify-center lg:justify-end">
-          <div
+          {/* <div
             className="absolute -bottom-10 right-10 h-24 w-24 rounded-full bg-white/70 shadow-sm"
             aria-hidden="true"
-          />
+          /> */}
           <Image
             src="/img/hero-illustration.png"
             alt="Student learning with laptop"
