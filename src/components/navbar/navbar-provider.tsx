@@ -14,13 +14,13 @@ export default function ProviderNavbar() {
   return (
     <header className="relative sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
       <input
-        id="nav-toggle-provider"
+        id="nav-toggle"
         type="checkbox"
         className="peer sr-only"
         aria-label="Toggle navigation menu"
-        aria-controls="mobile-nav-provider"
+        aria-controls="mobile-nav"
       />
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-10 py-5">
         <Link href="/" className="flex items-center gap-3">
           <Image
             src="/img/Skill%20Swap%20Hub%20Logo%20icon-no%20bg.svg"
@@ -30,7 +30,7 @@ export default function ProviderNavbar() {
             className="h-11 w-11"
             priority
           />
-          <span className="text-base font-semibold text-slate-900">Skill Swap Hub</span>
+          {/* <span className="text-base font-semibold text-slate-900">Skill Swap Hub</span> */}
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">

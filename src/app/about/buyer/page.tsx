@@ -1,4 +1,4 @@
-import AboutPage from "@/components/about/about-page";
+import AboutPage from "@/components/about-page";
 import Navbar from "@/components/navbar/navbar-user after login";
 import SiteFooter from "@/components/footer";
 

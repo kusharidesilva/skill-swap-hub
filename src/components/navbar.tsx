@@ -18,7 +18,7 @@ export default function Navbar() {
         aria-label="Toggle navigation menu"
         aria-controls="mobile-nav"
       />
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-10 py-5">
         <Link href="/" className="flex items-center gap-3">
           <Image
             src="/img/Skill%20Swap%20Hub%20Logo%20icon-no%20bg.svg"
@@ -28,7 +28,7 @@ export default function Navbar() {
             className="h-11 w-11"
             priority
           />
-          <span className="text-base font-semibold text-slate-900">Skill Swap Hub</span>
+          {/* <span className="text-base font-semibold text-slate-900">Skill Swap Hub</span> */}
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
