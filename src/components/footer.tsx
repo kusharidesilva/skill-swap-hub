@@ -36,37 +36,35 @@ const footerColumns: FooterColumn[] = [
 
 export default function SiteFooter() {
   return (
-    <footer className="bg-[#f1f3ff]">
-      <div className="mx-auto max-w-6xl px-6 py-12">
-        <div className="grid gap-10 md:grid-cols-[1.1fr_2fr]">
-          <div>
-            <Link href="/" className="flex items-center gap-3">
+    <footer className="bg-[#f5f6fe]">
+      <div className="mx-auto max-w-6xl px-10 py-6">
+        <div className="grid gap-6 md:grid-cols-[1fr_2fr]">
+          <div className="flex flex-col items-start text-left">
+            <Link href="/" className="inline-block">
               <Image
                 src="/img/Skill Swap Hub Logo.png"
                 alt="Skill Swap Hub"
-                width={1000}
-                height={1000}
-                className="h-38 w-42"
+                width={100}
+                height={100}
+                className="h-auto w-20"
               />
-              {/* <span className="text-base font-semibold text-slate-900">Skill Swap Hub</span> */}
             </Link>
-            <p className="mx-auto mt-4 max-w-sm text-center text-sm text-slate-600">
-              Connecting Sri Lankan university students through peer-to-peer
-              knowledge sharing.
+            <p className="mt-1.5 max-w-[180px] text-[10px] leading-normal text-slate-500">
+              Connecting Sri Lankan university students through peer-to-peer knowledge sharing.
             </p>
           </div>
-          <div className="grid gap-8 sm:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-3">
             {footerColumns.map((column) => (
               <div key={column.title}>
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#2b62e6]">
                   {column.title}
                 </h3>
-                <div className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
+                <div className="mt-2 flex flex-col gap-1.5 text-[11px]">
                   {column.links.map((link) => (
                     <Link
                       key={link.label}
                       href={link.href}
-                      className="hover:text-slate-900"
+                      className="underline text-slate-500 hover:text-[#2b62e6] transition-colors"
                     >
                       {link.label}
                     </Link>
@@ -76,10 +74,11 @@ export default function SiteFooter() {
             ))}
           </div>
         </div>
-        <div className="mt-10 border-t border-slate-200 pt-6 text-xs text-slate-500 items-center justify-center text-center">
-          © 2026 Skill Swap Hub | All Rights Reserved
+        <div className="mt-6 border-t border-slate-200/60 pt-4 text-[10px] text-slate-400 text-center">
+          © 2026 Skill Swap Hub | All Right Reserved
         </div>
       </div>
     </footer>
   );
 }
+

@@ -1,9 +1,10 @@
 import VerifyEmailPage from "@/components/login flow/verify-email-page";
 
 interface Props {
-  searchParams?: { from?: string };
+  searchParams: Promise<{ from?: string }>;
 }
 
-export default function VerifyEmail({ searchParams }: Props) {
-  return <VerifyEmailPage searchParams={searchParams} />;
+export default async function VerifyEmail({ searchParams }: Props) {
+  const resolvedSearchParams = await searchParams;
+  return <VerifyEmailPage searchParams={resolvedSearchParams} />;
 }

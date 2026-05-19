@@ -16,7 +16,7 @@ const highlights: Highlight[] = [
 
 export default function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-[#e9f7f0]">
+    <section className="relative overflow-hidden bg-[#ebf5f0]">
       <div
         className="absolute -left-24 top-8 h-64 w-64 rounded-full bg-white/70 blur-3xl"
         aria-hidden="true"
@@ -25,8 +25,8 @@ export default function HeroSection() {
         className="absolute right-0 top-0 h-72 w-72 rounded-full bg-[#d2f1e4] blur-3xl"
         aria-hidden="true"
       />
-      <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-14 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
-        <div>
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 py-14 lg:grid-cols-2 lg:py-20">
+        <div className="relative z-10">
           <div className="flex flex-wrap items-center gap-3">
             {highlights.map((item) => (
               <HighlightBadge
@@ -36,35 +36,35 @@ export default function HeroSection() {
               />
             ))}
           </div>
-          <h1 className="mt-6 text-4xl font-semibold text-slate-900 sm:text-5xl">
+          <h1 className="mt-6 text-5xl font-bold tracking-tight text-slate-900 sm:text-6xl leading-[1.15]">
             <span className="block">Exchange Skills</span>
-            <span className="block text-[#0f4cbf]">Learn Together</span>
+            <span className="block text-[#2b62e6]">Learn Together</span>
             <span className="block">Grow Faster</span>
           </h1>
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
-            A trusted student-only platform for Sri Lankan university students
-            to offer skills, request services, and connect with verified peers.
+          <p className="mt-6 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
+            A trusted student-only platform for Sri Lankan university students to offer skills,
+            request services, and connect with verified peers.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap gap-4">
             <Link
               href="/get-started"
-              className="rounded-full bg-[#0f4cbf] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0d3fa1]"
+              className="rounded-lg bg-[#2b62e6] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
             >
               Get Started
             </Link>
             <Link
               href="/explore"
-              className="rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+              className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900"
             >
               Explore Skills
             </Link>
           </div>
           <form
-            className="mt-8 flex w-full max-w-xl items-center gap-3 rounded-full bg-white p-2 shadow-sm ring-1 ring-slate-200"
+            className="mt-8 flex w-full max-w-xl items-center gap-3 rounded-xl bg-white p-1.5 shadow-md border border-slate-200/80"
             role="search"
           >
-            <div className="flex flex-1 items-center gap-2 px-3 text-slate-400">
-              <SearchIcon className="h-4 w-4" aria-hidden="true" />
+            <div className="flex flex-1 items-center gap-2.5 px-3 text-slate-400">
+              <SearchIcon className="h-5 w-5 text-slate-400" aria-hidden="true" />
               <input
                 className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
                 type="text"
@@ -73,25 +73,21 @@ export default function HeroSection() {
             </div>
             <button
               type="submit"
-              className="rounded-full bg-[#0f4cbf] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0d3fa1]"
+              className="rounded-lg bg-[#2b62e6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
             >
               Search Skills
             </button>
           </form>
         </div>
-        <div className="relative flex items-center justify-center lg:justify-end">
-          {/* <div
-            className="absolute -bottom-10 right-10 h-24 w-24 rounded-full bg-white/70 shadow-sm"
-            aria-hidden="true"
-          /> */}
+        <div className="relative flex items-end justify-center lg:justify-end -mb-14 lg:-mb-20 lg:-mt-28 self-end lg:translate-x-16">
           <Image
             src="/img/hero-illustration.png"
             alt="Student learning with laptop"
-            width={520}
-            height={560}
-            className="h-auto w-full max-w-md object-contain lg:max-w-lg"
+            width={720}
+            height={720}
+            className="h-auto w-full max-w-md object-contain sm:max-w-lg lg:max-w-[680px] lg:w-[680px] transition-all duration-300 hover:scale-[1.02]"
             priority
-            sizes="(min-width: 1024px) 520px, 80vw"
+            sizes="(min-width: 1024px) 720px, 80vw"
           />
         </div>
       </div>
@@ -99,12 +95,16 @@ export default function HeroSection() {
   );
 }
 
-function HighlightBadge({ label, Icon }: { label: string; Icon: IconType }) {
+function HighlightBadge({
+  label,
+  Icon,
+}: {
+  label: string;
+  Icon: IconType;
+}) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f1ff] text-[#0f4cbf]">
-        <Icon className="h-3 w-3" aria-hidden="true" />
-      </span>
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e6fcf4] px-3 py-1 text-xs font-semibold text-[#0f8a6b] shadow-xs">
+      <Icon className="h-4 w-4" aria-hidden="true" />
       {label}
     </span>
   );
@@ -112,18 +112,11 @@ function HighlightBadge({ label, Icon }: { label: string; Icon: IconType }) {
 
 function VerifiedIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      {...props}
-    >
-      <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
       <path
-        d="M12 3l2.6 1.4 2.9.4.4 2.9 1.4 2.6-1.4 2.6-.4 2.9-2.9.4L12 21l-2.6-1.4-2.9-.4-.4-2.9L4.7 12l1.4-2.6.4-2.9 2.9-.4L12 3z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        fillRule="evenodd"
+        d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.5 2.5a.75.75 0 001.137-.089l4-5.6z"
+        clipRule="evenodd"
       />
     </svg>
   );
@@ -131,18 +124,11 @@ function VerifiedIcon(props: SVGProps<SVGSVGElement>) {
 
 function MatchIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      {...props}
-    >
-      <path d="M8 16c-2.5 0-4.5-2-4.5-4.5S5.5 7 8 7s4.5 2 4.5 4.5S10.5 16 8 16z" />
-      <path d="M16 17c1.9 0 3.5-1.6 3.5-3.5S17.9 10 16 10s-3.5 1.6-3.5 3.5S14.1 17 16 17z" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} {...props}>
       <path
-        d="M3.5 20c1.5-2.2 3.8-3.5 6.5-3.5 2.2 0 4.1.9 5.6 2.5"
         strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M18 18.72a6 6 0 00-3.44-5.32M15 8a3 3 0 11-6 0 3 3 0 016 0zM6 18.72a6 6 0 013.44-5.32M12 14c-3.3 0-6 2.7-6 6h12c0-3.3-2.7-6-6-6z"
       />
     </svg>
   );
