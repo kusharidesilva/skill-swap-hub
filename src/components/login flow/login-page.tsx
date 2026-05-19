@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 type Badge = {
   label: string;
@@ -15,12 +16,13 @@ const badges: Badge[] = [
 
 export default function LoginPage() {
   const router = useRouter();
+  const [loginRole, setLoginRole] = useState<"buyer" | "provider">("buyer");
   return (
     <main className="relative min-h-screen bg-white">
       <div className="fixed inset-0 bg-black/20" aria-hidden="true" />
       <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
         <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
-          <section className="relative flex flex-col justify-between bg-gradient-to-br from-[#2b62e6] via-[#1f5ad7] to-[#0e3a9e] px-10 py-12 text-white">
+          <section className="relative flex flex-col justify-between bg-linear-to-br from-[#2b62e6] via-[#1f5ad7] to-[#0e3a9e] px-10 py-12 text-white">
           <div className="absolute inset-0 opacity-10">
             <div className="h-full w-full bg-[linear-gradient(120deg,rgba(255,255,255,0.15)_0%,rgba(255,255,255,0.02)_50%,transparent_100%)]" />
           </div>
@@ -104,9 +106,37 @@ export default function LoginPage() {
                 Remember this device
               </label>
 
+              <div>
+                <label className="text-sm font-semibold text-slate-700 block mb-2">Login As</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="role" 
+                      value="buyer" 
+                      checked={loginRole === "buyer"} 
+                      onChange={() => setLoginRole("buyer")}
+                      className="text-[#2b62e6] focus:ring-[#2b62e6]" 
+                    />
+                    Student (Buyer)
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="role" 
+                      value="provider" 
+                      checked={loginRole === "provider"} 
+                      onChange={() => setLoginRole("provider")}
+                      className="text-[#2b62e6] focus:ring-[#2b62e6]" 
+                    />
+                    Provider (Seller)
+                  </label>
+                </div>
+              </div>
+
               <button
                 type="button"
-                onClick={() => router.push('/home/buyer')}
+                onClick={() => router.push(`/home/${loginRole}`)}
                 className="w-full rounded-lg bg-[#2b62e6] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
               >
                 Login

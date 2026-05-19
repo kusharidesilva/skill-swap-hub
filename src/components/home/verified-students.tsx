@@ -1,6 +1,7 @@
 import type { SVGProps } from "react";
+import * as React from "react";
 
-type IconType = (props: SVGProps<SVGSVGElement>) => JSX.Element;
+type IconType = (props: SVGProps<SVGSVGElement>) => React.ReactElement;
 
 type Feature = {
   title: string;

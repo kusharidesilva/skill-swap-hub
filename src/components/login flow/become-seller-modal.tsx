@@ -40,7 +40,7 @@ export default function BecomeSellerModal() {
                 fill
                 className="object-cover"
               />
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+              <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/60 to-transparent p-4">
                 <p className="text-white text-sm italic">
                   Empower your peers across Sri Lankan universities.
                 </p>
@@ -79,12 +79,12 @@ export default function BecomeSellerModal() {
 
               {/* Step 1 */}
               <div className="flex gap-4 mb-8">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white font-bold">
                     1
                   </div>
                 </div>
-                <div className="flex-grow">
+                <div className="grow">
                   <h3 className="font-semibold text-slate-900 mb-1">Verify Identity</h3>
                   <p className="text-sm text-slate-600">
                     Use your official university email to build immediate trust.
@@ -94,15 +94,15 @@ export default function BecomeSellerModal() {
 
               {/* Step 2 */}
               <div className="flex gap-4 mb-8">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-300 text-slate-600 font-bold">
                     2
                   </div>
                 </div>
-                <div className="flex-grow">
+                <div className="grow">
                   <h3 className="font-semibold text-slate-900 mb-1">List Skills</h3>
                   <p className="text-sm text-slate-600">
-                    Define what you're good at. Programming, Photography, or even Designing.
+                    Define what you&apos;re good at. Programming, Photography, or even Designing.
                   </p>
                   <div className="flex gap-2 mt-2">
                     <span className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded">Web Dev</span>
@@ -114,15 +114,15 @@ export default function BecomeSellerModal() {
 
               {/* Step 3 */}
               <div className="flex gap-4 mb-8">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-300 text-slate-600 font-bold">
                     3
                   </div>
                 </div>
-                <div className="flex-grow">
+                <div className="grow">
                   <h3 className="font-semibold text-slate-900 mb-1">Set Availability</h3>
                   <p className="text-sm text-slate-600">
-                    Manage schedule by marking specific hours you're free to teach.
+                    Manage schedule by marking specific hours you&apos;re free to teach.
                   </p>
                 </div>
               </div>
@@ -134,7 +134,7 @@ export default function BecomeSellerModal() {
                 href="/become-a-seller"
                 className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg text-center transition duration-200"
               >
-                Let's Get Started
+                Let&apos;s Get Started
               </Link>
 
               <p className="text-xs text-slate-600 text-center">
