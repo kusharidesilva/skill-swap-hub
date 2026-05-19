@@ -82,7 +82,7 @@ export default function SkillGigsSection() {
                   className="object-cover"
                   sizes="(min-width: 1024px) 240px, (min-width: 640px) 45vw, 90vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/45 via-slate-900/10 to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-slate-900/45 via-slate-900/10 to-transparent" />
                 <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700">
                   {gig.category}
                 </span>
