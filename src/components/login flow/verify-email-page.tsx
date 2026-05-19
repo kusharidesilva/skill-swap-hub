@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useRef } from "react";
 
 interface Props {
   searchParams?: { from?: string };
@@ -23,6 +24,8 @@ export default function VerifyEmailPage({ searchParams }: Props) {
   const isProvider = searchParams?.from === "provider";
   const redirectUrl = isProvider ? "/home/provider" : "/home/buyer";
   const router = useRouter();
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
   const {
     register,
     handleSubmit,
@@ -44,6 +47,35 @@ export default function VerifyEmailPage({ searchParams }: Props) {
       .join("")
       .padEnd(6, "");
     setValue("code", nextCode, { shouldValidate: true });
+
+    // Automatically focus next input box
+    if (sanitized && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Backspace") {
+      if (!codeDigits[index] && index > 0) {
+        // If current is empty, delete previous and go back
+        const nextCode = codeDigits
+          .map((digit, i) => (i === index - 1 ? "" : digit))
+          .join("")
+          .padEnd(6, "");
+        setValue("code", nextCode, { shouldValidate: true });
+        inputRefs.current[index - 1]?.focus();
+      }
+    }
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+    event.preventDefault();
+    const pastedData = event.clipboardData.getData("text");
+    const digits = pastedData.replace(/\D/g, "").slice(0, 6);
+    if (digits.length === 6) {
+      setValue("code", digits, { shouldValidate: true });
+      inputRefs.current[5]?.focus();
+    }
   };
 
   const onSubmit = () => {
@@ -70,12 +102,17 @@ export default function VerifyEmailPage({ searchParams }: Props) {
                 {codeDigits.map((digit, index) => (
                   <input
                     key={index}
+                    ref={(el) => {
+                      inputRefs.current[index] = el;
+                    }}
                     inputMode="numeric"
                     maxLength={1}
                     placeholder=""
                     value={digit}
                     aria-label={`Verification code digit ${index + 1}`}
                     onChange={(event) => handleDigitChange(index, event.target.value)}
+                    onKeyDown={(event) => handleKeyDown(index, event)}
+                    onPaste={handlePaste}
                     className="h-12 w-12 rounded-xl border border-slate-200 text-center text-base font-semibold text-slate-700 focus:border-[#2b62e6] focus:outline-none"
                   />
                 ))}
