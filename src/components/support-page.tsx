@@ -139,7 +139,7 @@ export default function SupportPage() {
             {faqs.map((faq, index) => (
               <div key={faq.question} className="relative">
                 <div
-                  className={`absolute -left-[34px] top-1.5 h-6 w-1 rounded-full ${
+                  className={`absolute -left-8.5 top-1.5 h-6 w-1 rounded-full ${
                     index === 0 ? "bg-[#0f4cbf]" : "bg-slate-300"
                   }`}
                 />

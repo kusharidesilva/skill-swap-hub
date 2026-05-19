@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 type Badge = {
   label: string;
@@ -14,9 +16,32 @@ const badges: Badge[] = [
   { label: "University Exclusive", icon: "cap" },
 ];
 
+const loginSchema = z.object({
+  email: z.string().email("Enter a valid university email."),
+  password: z.string().min(6, "Password must be at least 6 characters."),
+  role: z.enum(["buyer", "provider"]),
+  remember: z.boolean().optional(),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+
 export default function LoginPage() {
   const router = useRouter();
-  const [loginRole, setLoginRole] = useState<"buyer" | "provider">("buyer");
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { role: "buyer", remember: false },
+  });
+
+  const loginRole = watch("role");
+
+  const onSubmit = () => {
+    router.push(`/home/${loginRole}`);
+  };
   return (
     <main className="relative min-h-screen bg-white">
       <div className="fixed inset-0 bg-black/20" aria-hidden="true" />
@@ -73,7 +98,7 @@ export default function LoginPage() {
                 Please enter your university credentials to continue
               </p>
 
-              <form className="mt-8 space-y-5">
+              <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)}>
                 <div>
                   <label className="text-sm font-semibold text-slate-700">
                     University Email
@@ -83,9 +108,13 @@ export default function LoginPage() {
                     <input
                       type="email"
                       placeholder="student.name@uom.ac.lk"
+                      {...register("email")}
                       className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
                     />
                   </div>
+                  {errors.email && (
+                    <p className="mt-2 text-xs text-red-500">{errors.email.message}</p>
+                  )}
                 </div>
 
                 <div>
@@ -105,14 +134,19 @@ export default function LoginPage() {
                     <input
                       type="password"
                       placeholder="••••••••"
+                      {...register("password")}
                       className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
                     />
                   </div>
+                  {errors.password && (
+                    <p className="mt-2 text-xs text-red-500">{errors.password.message}</p>
+                  )}
                 </div>
 
                 <label className="flex items-center gap-2 text-sm text-slate-600">
                   <input
                     type="checkbox"
+                    {...register("remember")}
                     className="h-4 w-4 rounded border-slate-300"
                   />
                   Remember this device
@@ -126,10 +160,8 @@ export default function LoginPage() {
                     <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
                       <input
                         type="radio"
-                        name="role"
                         value="buyer"
-                        checked={loginRole === "buyer"}
-                        onChange={() => setLoginRole("buyer")}
+                        {...register("role")}
                         className="text-[#2b62e6] focus:ring-[#2b62e6]"
                       />
                       Student (Buyer)
@@ -137,10 +169,8 @@ export default function LoginPage() {
                     <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
                       <input
                         type="radio"
-                        name="role"
                         value="provider"
-                        checked={loginRole === "provider"}
-                        onChange={() => setLoginRole("provider")}
+                        {...register("role")}
                         className="text-[#2b62e6] focus:ring-[#2b62e6]"
                       />
                       Provider (Seller)
@@ -149,8 +179,7 @@ export default function LoginPage() {
                 </div>
 
                 <button
-                  type="button"
-                  onClick={() => router.push(`/home/${loginRole}`)}
+                  type="submit"
                   className="w-full rounded-lg bg-[#2b62e6] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
                 >
                   Login

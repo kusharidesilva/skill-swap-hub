@@ -12,7 +12,7 @@ const navLinks = [
 
 export default function ProviderNavbar() {
   return (
-    <header className="relative sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <header className="z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
       <input
         id="nav-toggle"
         type="checkbox"

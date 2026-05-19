@@ -27,8 +27,8 @@ export default function SignOutFlow({ user = defaultUser }: SignOutFlowProps) {
 
   return (
     <main className="relative min-h-screen bg-[#f5f7ff]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_#e6edff_0%,_transparent_55%)]" />
-      <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-[#eaf0ff] to-transparent" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#e6edff_0%,transparent_55%)]" />
+      <div className="absolute inset-x-0 top-0 h-36 bg-linear-to-b from-[#eaf0ff] to-transparent" />
       <div className="relative z-10 flex min-h-screen items-center justify-center px-6 py-10">
         {step === "confirm" ? (
           <ConfirmCard
