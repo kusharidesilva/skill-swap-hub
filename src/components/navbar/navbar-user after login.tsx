@@ -73,7 +73,7 @@ export default function Navbar() {
               <Link href="/help/buyer" className="block rounded-lg px-3 py-2 hover:bg-slate-100">
                 Help & Support
               </Link>
-              <Link href="/" className="block rounded-lg px-3 py-2 text-red-500 hover:bg-red-50">
+              <Link href="/sign-out" className="block rounded-lg px-3 py-2 text-red-500 hover:bg-red-50">
                 Sign Out
               </Link>
             </div>
@@ -117,7 +117,7 @@ export default function Navbar() {
             <Link href="/help/buyer" className="text-slate-600 hover:text-slate-900">
               Help & Support
             </Link>
-            <Link href="/" className="text-slate-600 hover:text-red-500">
+            <Link href="/sign-out" className="text-slate-600 hover:text-red-500">
               Sign Out
             </Link>
           </div>
