@@ -18,7 +18,7 @@ const steps = [
 
 export default function HowItWorksSection() {
   return (
-    <section className="bg-white">
+    <section id="how-it-works" className="bg-white scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6 py-14">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-slate-900 sm:text-2xl">

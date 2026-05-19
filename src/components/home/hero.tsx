@@ -53,7 +53,7 @@ export default function HeroSection() {
               Get Started
             </Link>
             <Link
-              href="/explore"
+              href="/#explore-skills"
               className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900"
             >
               Explore Skills

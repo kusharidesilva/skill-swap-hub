@@ -48,7 +48,7 @@ const gigs: Gig[] = [
 
 export default function SkillGigsSection() {
   return (
-    <section className="bg-white">
+    <section id="explore-skills" className="bg-white scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6 py-14">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -60,7 +60,7 @@ export default function SkillGigsSection() {
             </p>
           </div>
           <Link
-            href="/explore"
+            href="/#explore-skills"
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f4cbf]"
           >
             View All Skills

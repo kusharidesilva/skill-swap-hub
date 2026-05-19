@@ -11,8 +11,8 @@ const footerColumns: FooterColumn[] = [
     title: "Quick Links",
     links: [
       { label: "Home", href: "/" },
-      { label: "Explore Now", href: "/explore" },
-      { label: "How It Works", href: "/how-it-works" },
+      { label: "Explore Now", href: "/#explore-skills" },
+      { label: "How It Works", href: "/#how-it-works" },
       { label: "Features", href: "/features" },
       { label: "Trust", href: "/trust" },
     ],
