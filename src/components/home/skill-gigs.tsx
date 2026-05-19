@@ -87,7 +87,10 @@ export default function SkillGigsSection() {
                   {gig.category}
                 </span>
                 <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-xs font-semibold text-slate-700">
-                  <StarIcon className="h-3 w-3 text-amber-400" aria-hidden="true" />
+                  <StarIcon
+                    className="h-3 w-3 text-amber-400"
+                    aria-hidden="true"
+                  />
                   {gig.rating.toFixed(1)}
                 </span>
               </div>

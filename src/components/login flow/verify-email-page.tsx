@@ -10,7 +10,10 @@ export default function VerifyEmailPage({ searchParams }: Props) {
   const redirectUrl = isProvider ? "/home/provider" : "/home/buyer";
   return (
     <main className="relative min-h-screen bg-white">
-      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" aria-hidden="true" />
+      <div
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm"
+        aria-hidden="true"
+      />
       <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
         <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-white px-8 py-10 shadow-2xl">
           <div className="flex justify-end">
@@ -27,10 +30,12 @@ export default function VerifyEmailPage({ searchParams }: Props) {
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#e8f1ff] text-[#2b62e6]">
               <MailIcon className="h-5 w-5" />
             </div>
-            <h1 className="mt-4 text-lg font-semibold text-slate-900">Verify Your University Email</h1>
+            <h1 className="mt-4 text-lg font-semibold text-slate-900">
+              Verify Your University Email
+            </h1>
             <p className="mt-2 text-xs text-slate-500">
-              We sent a 5-digit verification code to your email. Enter the code to finish account
-              setup and secure your access.
+              We sent a 5-digit verification code to your email. Enter the code
+              to finish account setup and secure your access.
             </p>
           </div>
 
@@ -71,8 +76,8 @@ export default function VerifyEmailPage({ searchParams }: Props) {
                 <ShieldIcon className="h-3 w-3" />
               </span>
               <span>
-                This step helps Skill Swap Hub to limit the platform to verified university
-                students. Accessing or sharing codes is not allowed.
+                This step helps Skill Swap Hub to limit the platform to verified
+                university students. Accessing or sharing codes is not allowed.
               </span>
             </div>
           </div>
@@ -94,7 +99,13 @@ export default function VerifyEmailPage({ searchParams }: Props) {
 
 function MailIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
       <path d="M4 6h16v12H4z" />
       <path d="M4 7l8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -103,16 +114,32 @@ function MailIcon({ className }: { className?: string }) {
 
 function ShieldIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
       <path d="M12 3l7 3v6c0 4.1-2.8 7.7-7 9-4.2-1.3-7-4.9-7-9V6l7-3z" />
-      <path d="M9.5 12.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M9.5 12.5l2 2 4-4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 function CloseIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
       <path d="M6 6l12 12" strokeLinecap="round" />
       <path d="M18 6L6 18" strokeLinecap="round" />
     </svg>

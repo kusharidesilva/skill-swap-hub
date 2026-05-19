@@ -13,7 +13,8 @@ type Feature = {
 const features: Feature[] = [
   {
     title: "University Email Verification",
-    description: "Strict access for students only. Every user must have a valid campus domain email.",
+    description:
+      "Strict access for students only. Every user must have a valid campus domain email.",
     Icon: MailIcon,
     tone: "bg-[#e8f1ff] text-[#0f4cbf]",
   },
@@ -42,8 +43,8 @@ export default function VerifiedStudentsSection() {
             Built for Verified University Students
           </h2>
           <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">
-            Students are verified using their official email and a verification code to create a
-            trusted student-only environment.
+            Students are verified using their official email and a verification
+            code to create a trusted student-only environment.
           </p>
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
@@ -60,7 +61,9 @@ export default function VerifiedStudentsSection() {
               <h3 className="mt-4 text-sm font-semibold text-slate-900">
                 {feature.title}
               </h3>
-              <p className="mt-2 text-sm text-slate-600">{feature.description}</p>
+              <p className="mt-2 text-sm text-slate-600">
+                {feature.description}
+              </p>
             </div>
           ))}
         </div>
@@ -71,7 +74,13 @@ export default function VerifiedStudentsSection() {
 
 function MailIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      {...props}
+    >
       <path d="M4 6h16v12H4z" />
       <path d="M4 7l8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -80,7 +89,13 @@ function MailIcon(props: SVGProps<SVGSVGElement>) {
 
 function UsersIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      {...props}
+    >
       <path d="M8 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4z" />
       <path d="M17 15a3 3 0 1 0-3-3 3 3 0 0 0 3 3z" />
       <path d="M2 20c1.4-2.3 3.8-3.5 6.5-3.5" strokeLinecap="round" />
@@ -91,9 +106,19 @@ function UsersIcon(props: SVGProps<SVGSVGElement>) {
 
 function ShieldIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      {...props}
+    >
       <path d="M12 3l7 3v6c0 4.1-2.8 7.7-7 9-4.2-1.3-7-4.9-7-9V6l7-3z" />
-      <path d="M9.5 12.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M9.5 12.5l2 2 4-4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

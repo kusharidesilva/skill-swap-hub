@@ -62,9 +62,9 @@ export default function AboutPage({
               <span className="block">to Grow Together.</span>
             </h1>
             <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
-              Skill Swap Hub is a trusted student-only platform for Sri Lankan university students
-              to share skills, request services, learn from verified peers, and gain practical
-              experience.
+              Skill Swap Hub is a trusted student-only platform for Sri Lankan
+              university students to share skills, request services, learn from
+              verified peers, and gain practical experience.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
@@ -120,28 +120,33 @@ export default function AboutPage({
             <div className="mt-2 h-1 w-10 rounded-full bg-[#0f4cbf]" />
             <div className="mt-4 space-y-4 text-sm leading-relaxed text-slate-600">
               <p>
-                Many university students in Sri Lanka have useful skills such as programming,
-                graphic design, tutoring, writing, CV preparation, presentation design, and content
-                creation. However, most students do not have a trusted and organized platform to
-                offer these skills or request help from other students.
+                Many university students in Sri Lanka have useful skills such as
+                programming, graphic design, tutoring, writing, CV preparation,
+                presentation design, and content creation. However, most
+                students do not have a trusted and organized platform to offer
+                these skills or request help from other students.
               </p>
               <p>
-                At present, students often depend on friends, WhatsApp groups, Facebook groups, or
-                global freelance platforms. These methods are not always reliable because students
-                may face slow responses, poor quality services, lack of trust, and difficulty
+                At present, students often depend on friends, WhatsApp groups,
+                Facebook groups, or global freelance platforms. These methods
+                are not always reliable because students may face slow
+                responses, poor quality services, lack of trust, and difficulty
                 finding the right person for a specific skill.
               </p>
               <p>
-                Skill Swap Hub was created to solve this problem by building a student-focused
-                platform where verified university students can post skill offers, request
-                services, find suitable matches, chat privately, and give ratings and reviews after
-                completing a service or skill exchange.
+                Skill Swap Hub was created to solve this problem by building a
+                student-focused platform where verified university students can
+                post skill offers, request services, find suitable matches, chat
+                privately, and give ratings and reviews after completing a
+                service or skill exchange.
               </p>
             </div>
             <div className="mt-8 flex flex-wrap gap-6 text-sm font-semibold text-slate-700">
               <div>
                 <div className="text-3xl font-semibold text-[#0f4cbf]">15+</div>
-                <div className="text-xs uppercase tracking-wide">Universities</div>
+                <div className="text-xs uppercase tracking-wide">
+                  Universities
+                </div>
               </div>
               <div>
                 <div className="text-3xl font-semibold text-[#0f4cbf]">5k+</div>
@@ -149,7 +154,9 @@ export default function AboutPage({
               </div>
               <div>
                 <div className="text-3xl font-semibold text-[#0f4cbf]">10+</div>
-                <div className="text-xs uppercase tracking-wide">Skill Categories</div>
+                <div className="text-xs uppercase tracking-wide">
+                  Skill Categories
+                </div>
               </div>
             </div>
           </div>
@@ -159,7 +166,9 @@ export default function AboutPage({
       <section className="bg-white">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-slate-900">Our Core Values</h2>
+            <h2 className="text-xl font-semibold text-slate-900">
+              Our Core Values
+            </h2>
             <p className="mt-2 text-sm text-slate-600">
               The values that guide every interaction on Skill Swap Hub.
             </p>
@@ -173,8 +182,12 @@ export default function AboutPage({
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef1ff] text-[#0f4cbf]">
                   <ValueIcon type={value.icon} className="h-5 w-5" />
                 </div>
-                <h3 className="mt-4 text-sm font-semibold text-slate-900">{value.title}</h3>
-                <p className="mt-2 text-sm text-slate-600">{value.description}</p>
+                <h3 className="mt-4 text-sm font-semibold text-slate-900">
+                  {value.title}
+                </h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  {value.description}
+                </p>
               </div>
             ))}
           </div>
@@ -190,8 +203,9 @@ export default function AboutPage({
               Ready to swap your first skill?
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm text-white/90">
-              Join a trusted student-only platform where Sri Lankan university students can share
-              skills, request services, connect with peers, and grow together.
+              Join a trusted student-only platform where Sri Lankan university
+              students can share skills, request services, connect with peers,
+              and grow together.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link
@@ -217,16 +231,32 @@ export default function AboutPage({
 function ValueIcon({ type, className }: { type: string; className?: string }) {
   if (type === "shield") {
     return (
-      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <svg
+        className={className}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
         <path d="M12 3l7 3v6c0 4.1-2.8 7.7-7 9-4.2-1.3-7-4.9-7-9V6l7-3z" />
-        <path d="M9.5 12.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d="M9.5 12.5l2 2 4-4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     );
   }
 
   if (type === "users") {
     return (
-      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <svg
+        className={className}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
         <path d="M8 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4z" />
         <path d="M17 15a3 3 0 1 0-3-3 3 3 0 0 0 3 3z" />
         <path d="M2 20c1.4-2.3 3.8-3.5 6.5-3.5" strokeLinecap="round" />
@@ -236,7 +266,13 @@ function ValueIcon({ type, className }: { type: string; className?: string }) {
   }
 
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
       <path d="M4 5h16v14H4z" />
       <path d="M7 8h10" strokeLinecap="round" />
       <path d="M7 12h10" strokeLinecap="round" />

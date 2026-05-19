@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, type ReactNode } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useState, type ReactNode } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const defaultUser = {
-  name: 'Jamie Dawson',
-  email: 'jamie.dawson@university.edu',
-  avatarUrl: '/img/01.png',
+  name: "Jamie Dawson",
+  email: "jamie.dawson@university.edu",
+  avatarUrl: "/img/01.png",
 };
 
 type SignOutFlowProps = {
@@ -19,10 +19,10 @@ type SignOutFlowProps = {
   };
 };
 
-type Step = 'confirm' | 'success';
+type Step = "confirm" | "success";
 
 export default function SignOutFlow({ user = defaultUser }: SignOutFlowProps) {
-  const [step, setStep] = useState<Step>('confirm');
+  const [step, setStep] = useState<Step>("confirm");
   const router = useRouter();
 
   return (
@@ -30,11 +30,11 @@ export default function SignOutFlow({ user = defaultUser }: SignOutFlowProps) {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_#e6edff_0%,_transparent_55%)]" />
       <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-[#eaf0ff] to-transparent" />
       <div className="relative z-10 flex min-h-screen items-center justify-center px-6 py-10">
-        {step === 'confirm' ? (
+        {step === "confirm" ? (
           <ConfirmCard
             user={user}
             onCancel={() => router.back()}
-            onSignOut={() => setStep('success')}
+            onSignOut={() => setStep("success")}
           />
         ) : (
           <SuccessCard />
@@ -63,7 +63,9 @@ function ConfirmCard({ user, onCancel, onSignOut }: ConfirmCardProps) {
         </span>
         <div>
           <p className="text-sm font-semibold text-red-500">Sign Out</p>
-          <h1 className="text-base font-semibold text-slate-900">Are you sure you want to sign out?</h1>
+          <h1 className="text-base font-semibold text-slate-900">
+            Are you sure you want to sign out?
+          </h1>
         </div>
       </div>
       <p className="mt-2 text-xs text-slate-500">
@@ -73,7 +75,13 @@ function ConfirmCard({ user, onCancel, onSignOut }: ConfirmCardProps) {
       <div className="mt-4 flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
         <div className="h-10 w-10 overflow-hidden rounded-full bg-slate-200">
           {user.avatarUrl ? (
-            <Image src={user.avatarUrl} alt={user.name} width={40} height={40} className="h-full w-full object-cover" />
+            <Image
+              src={user.avatarUrl}
+              alt={user.name}
+              width={40}
+              height={40}
+              className="h-full w-full object-cover"
+            />
           ) : (
             <span className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-600">
               {user.name.charAt(0)}
@@ -114,20 +122,30 @@ function SuccessCard() {
           <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
             <DoorIcon className="h-5 w-5" />
           </div>
-          <h2 className="mt-4 text-base font-semibold text-slate-900">Securely Disconnected</h2>
+          <h2 className="mt-4 text-base font-semibold text-slate-900">
+            Securely Disconnected
+          </h2>
           <p className="mt-2 text-sm text-slate-500">
-            Your session has been safely closed. All your skill swaps and messages are protected until
-            your next visit.
+            Your session has been safely closed. All your skill swaps and
+            messages are protected until your next visit.
           </p>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl border border-slate-100 bg-white px-4 py-3">
-              <p className="text-xs font-semibold text-slate-800">Data Encrypted</p>
-              <p className="mt-1 text-xs text-slate-500">Private data stays secure and locked.</p>
+              <p className="text-xs font-semibold text-slate-800">
+                Data Encrypted
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Private data stays secure and locked.
+              </p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-white px-4 py-3">
-              <p className="text-xs font-semibold text-slate-800">Fast Reload</p>
-              <p className="mt-1 text-xs text-slate-500">Pick up where you left off quickly.</p>
+              <p className="text-xs font-semibold text-slate-800">
+                Fast Reload
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Pick up where you left off quickly.
+              </p>
             </div>
           </div>
         </div>
@@ -136,10 +154,12 @@ function SuccessCard() {
           <span className="inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
             Success
           </span>
-          <h3 className="mt-3 text-xl font-semibold text-slate-900">See you soon!</h3>
+          <h3 className="mt-3 text-xl font-semibold text-slate-900">
+            See you soon!
+          </h3>
           <p className="mt-2 text-sm text-slate-500">
-            You have been successfully signed out. Thank you for being part of the Skill Swap Hub
-            community.
+            You have been successfully signed out. Thank you for being part of
+            the Skill Swap Hub community.
           </p>
 
           <div className="mt-6 space-y-3">
@@ -158,11 +178,22 @@ function SuccessCard() {
           </div>
 
           <div className="mt-6 flex items-center gap-4 text-slate-400">
-            <span className="text-[10px] uppercase tracking-[0.2em]">Connect with us</span>
+            <span className="text-[10px] uppercase tracking-[0.2em]">
+              Connect with us
+            </span>
             <div className="flex gap-3">
-              <IconButton label="Twitter" icon={<TwitterIcon className="h-4 w-4" />} />
-              <IconButton label="LinkedIn" icon={<LinkedInIcon className="h-4 w-4" />} />
-              <IconButton label="GitHub" icon={<GitHubIcon className="h-4 w-4" />} />
+              <IconButton
+                label="Twitter"
+                icon={<TwitterIcon className="h-4 w-4" />}
+              />
+              <IconButton
+                label="LinkedIn"
+                icon={<LinkedInIcon className="h-4 w-4" />}
+              />
+              <IconButton
+                label="GitHub"
+                icon={<GitHubIcon className="h-4 w-4" />}
+              />
             </div>
           </div>
         </div>
@@ -185,7 +216,13 @@ function IconButton({ label, icon }: { label: string; icon: ReactNode }) {
 
 function ArrowIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
       <path d="M6 12h12" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M12 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -194,7 +231,13 @@ function ArrowIcon({ className }: { className?: string }) {
 
 function DoorIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
       <path d="M5 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5z" />
       <path d="M9 12h4" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M9 7h4" strokeLinecap="round" strokeLinejoin="round" />

@@ -4,7 +4,10 @@ import Link from "next/link";
 export default function RegisterPage() {
   return (
     <main className="relative min-h-screen bg-white">
-      <div className="fixed inset-0 bg-black/25 backdrop-blur-sm" aria-hidden="true" />
+      <div
+        className="fixed inset-0 bg-black/25 backdrop-blur-sm"
+        aria-hidden="true"
+      />
       <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
         <div className="grid w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
           <section className="relative bg-white px-10 py-10">
@@ -17,7 +20,9 @@ export default function RegisterPage() {
             </Link>
 
             <div className="max-w-md">
-              <h1 className="text-2xl font-semibold text-slate-900">Create Your Account</h1>
+              <h1 className="text-2xl font-semibold text-slate-900">
+                Create Your Account
+              </h1>
               <p className="mt-2 text-sm text-slate-600">
                 Empower your journey through peer-to-peer knowledge exchange.
               </p>
@@ -25,7 +30,9 @@ export default function RegisterPage() {
               <form className="mt-6 space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="text-xs font-semibold text-slate-600">Full Name</label>
+                    <label className="text-xs font-semibold text-slate-600">
+                      Full Name
+                    </label>
                     <input
                       type="text"
                       placeholder="Your Full Name"
@@ -33,7 +40,9 @@ export default function RegisterPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-slate-600">University Email</label>
+                    <label className="text-xs font-semibold text-slate-600">
+                      University Email
+                    </label>
                     <input
                       type="email"
                       placeholder="mail@uni.ac.lk"
@@ -45,14 +54,17 @@ export default function RegisterPage() {
                 <div className="flex items-start gap-3 rounded-lg bg-[#eef2ff] px-3 py-3 text-xs text-slate-600">
                   <InfoIcon className="mt-0.5 h-4 w-4 text-[#2b54d6]" />
                   <span>
-                    Use your official university email address. A verification code will be sent to
-                    this email to ensure you are a verified university student.
+                    Use your official university email address. A verification
+                    code will be sent to this email to ensure you are a verified
+                    university student.
                   </span>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="text-xs font-semibold text-slate-600">Password</label>
+                    <label className="text-xs font-semibold text-slate-600">
+                      Password
+                    </label>
                     <input
                       type="password"
                       placeholder="Password"
@@ -60,7 +72,9 @@ export default function RegisterPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-slate-600">Confirm Password</label>
+                    <label className="text-xs font-semibold text-slate-600">
+                      Confirm Password
+                    </label>
                     <input
                       type="password"
                       placeholder="Confirm Password"
@@ -70,8 +84,13 @@ export default function RegisterPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-600">University Name</label>
-                  <select title="Select your University" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none">
+                  <label className="text-xs font-semibold text-slate-600">
+                    University Name
+                  </label>
+                  <select
+                    title="Select your University"
+                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none"
+                  >
                     <option>Select your University</option>
                     <option>University of Colombo</option>
                     <option>University of Moratuwa</option>
@@ -81,7 +100,9 @@ export default function RegisterPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="text-xs font-semibold text-slate-600">Degree Programme</label>
+                    <label className="text-xs font-semibold text-slate-600">
+                      Degree Programme
+                    </label>
                     <input
                       type="text"
                       placeholder="Degree Programme Name"
@@ -89,8 +110,13 @@ export default function RegisterPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-slate-600">Year of Study</label>
-                    <select title="Select Year of Study" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none">
+                    <label className="text-xs font-semibold text-slate-600">
+                      Year of Study
+                    </label>
+                    <select
+                      title="Select Year of Study"
+                      className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none"
+                    >
                       <option>1st Year</option>
                       <option>2nd Year</option>
                       <option>3rd Year</option>
@@ -137,8 +163,9 @@ export default function RegisterPage() {
                   Exclusively for Students
                 </h2>
                 <p className="mt-2 text-xs text-slate-600">
-                  Skill Swap Hub is a secure system reserved for verified university students across
-                  Sri Lanka. Exchange skills, build your portfolio, and grow together.
+                  Skill Swap Hub is a secure system reserved for verified
+                  university students across Sri Lanka. Exchange skills, build
+                  your portfolio, and grow together.
                 </p>
               </div>
             </div>
@@ -151,7 +178,13 @@ export default function RegisterPage() {
 
 function InfoIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 8v.5" strokeLinecap="round" />
       <path d="M12 11v5" strokeLinecap="round" />
@@ -161,16 +194,32 @@ function InfoIcon({ className }: { className?: string }) {
 
 function ShieldIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
       <path d="M12 3l7 3v6c0 4.1-2.8 7.7-7 9-4.2-1.3-7-4.9-7-9V6l7-3z" />
-      <path d="M9.5 12.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M9.5 12.5l2 2 4-4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 function CloseIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
       <path d="M6 6l12 12" strokeLinecap="round" />
       <path d="M18 6L6 18" strokeLinecap="round" />
     </svg>

@@ -57,22 +57,38 @@ export default function Navbar() {
             Get Started
           </Link>
         </div>
-
       </div>
 
       <label
         htmlFor="nav-toggle"
         className="absolute right-6 top-5 inline-flex items-center rounded-md p-2 text-slate-700 transition-colors hover:text-slate-900 md:hidden"
       >
-        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        <svg
+          className="h-6 w-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 6h16M4 12h16M4 18h16"
+          />
         </svg>
       </label>
 
       <div className="max-h-0 overflow-hidden border-b border-slate-200 bg-white/95 opacity-0 transition-[max-height,opacity] duration-300 ease-out peer-checked:max-h-96 peer-checked:opacity-100 md:hidden">
-        <nav id="mobile-nav" className="flex flex-col gap-4 px-6 pb-6 pt-4 text-sm font-medium">
+        <nav
+          id="mobile-nav"
+          className="flex flex-col gap-4 px-6 pb-6 pt-4 text-sm font-medium"
+        >
           {navLinks.map((link) => (
-            <Link key={link.name} href={link.href} className="text-slate-600 hover:text-slate-900">
+            <Link
+              key={link.name}
+              href={link.href}
+              className="text-slate-600 hover:text-slate-900"
+            >
               {link.name}
             </Link>
           ))}

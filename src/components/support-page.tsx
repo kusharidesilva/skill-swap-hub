@@ -58,7 +58,8 @@ const faqs = [
       "No. Skill Swap Hub does not process bank transactions. If two students agree on a paid service, payment is handled outside the platform and the payment slip can be shared privately inside chat.",
   },
   {
-    question: "What happens if a student takes money but does not complete the service?",
+    question:
+      "What happens if a student takes money but does not complete the service?",
     answer:
       "The affected student can give a low rating, write a review, and report the issue. These ratings and reports help other students identify unreliable users.",
   },
@@ -87,27 +88,36 @@ export default function SupportPage() {
             Skill Swap Hub Help & Support
           </h1>
           <p className="max-w-2xl text-sm text-slate-600">
-            Find simple guides for account setup, university email verification, skill swapping,
-            private chat, ratings, reviews, and safe student-to-student communication.
+            Find simple guides for account setup, university email verification,
+            skill swapping, private chat, ratings, reviews, and safe
+            student-to-student communication.
           </p>
         </div>
       </section>
 
       <section className="bg-white">
         <div className="mx-auto max-w-6xl px-6 py-14">
-          <h2 className="text-xl font-semibold text-slate-900">Information Categories</h2>
+          <h2 className="text-xl font-semibold text-slate-900">
+            Information Categories
+          </h2>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             {categories.map((item) => (
               <div
                 key={item.title}
                 className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
               >
-                <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${item.tone}`}>
+                <div
+                  className={`flex h-11 w-11 items-center justify-center rounded-2xl ${item.tone}`}
+                >
                   <CategoryIcon type={item.icon} className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">{item.title}</h3>
-                  <p className="mt-2 text-sm text-slate-600">{item.description}</p>
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-600">
+                    {item.description}
+                  </p>
                 </div>
               </div>
             ))}
@@ -117,8 +127,12 @@ export default function SupportPage() {
 
       <section className="bg-white">
         <div className="mx-auto max-w-4xl px-6 pb-6 pt-4 text-center">
-          <h2 className="text-xl font-semibold text-slate-900">Frequently Asked Questions</h2>
-          <p className="mt-2 text-sm text-slate-600">Quick reference for common community inquiries.</p>
+          <h2 className="text-xl font-semibold text-slate-900">
+            Frequently Asked Questions
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Quick reference for common community inquiries.
+          </p>
         </div>
         <div className="mx-auto max-w-4xl px-6 pb-12">
           <div className="space-y-6 border-l-2 border-slate-200 pl-6">
@@ -129,7 +143,9 @@ export default function SupportPage() {
                     index === 0 ? "bg-[#0f4cbf]" : "bg-slate-300"
                   }`}
                 />
-                <h3 className="text-sm font-semibold text-slate-900">{faq.question}</h3>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  {faq.question}
+                </h3>
                 <p className="mt-2 text-sm text-slate-600">{faq.answer}</p>
               </div>
             ))}
@@ -143,24 +159,33 @@ export default function SupportPage() {
             <div>
               <h2 className="text-xl font-semibold">Contact Information</h2>
               <p className="mt-3 text-sm text-white/85">
-                Our support team is available to help students with account issues, verification
-                problems, reports, and platform-related questions.
+                Our support team is available to help students with account
+                issues, verification problems, reports, and platform-related
+                questions.
               </p>
               <div className="mt-6 grid gap-3 text-sm text-white/90">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">@</span>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+                    @
+                  </span>
                   support@skillswap.lk
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">☎</span>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+                    ☎
+                  </span>
                   Student Help Desk
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">🕒</span>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+                    🕒
+                  </span>
                   Mon-Fri: 9AM - 6PM
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">📍</span>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+                    📍
+                  </span>
                   Colombo, Sri Lanka
                 </div>
               </div>
@@ -181,19 +206,41 @@ export default function SupportPage() {
   );
 }
 
-function CategoryIcon({ type, className }: { type: string; className?: string }) {
+function CategoryIcon({
+  type,
+  className,
+}: {
+  type: string;
+  className?: string;
+}) {
   if (type === "shield") {
     return (
-      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <svg
+        className={className}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
         <path d="M12 3l7 3v6c0 4.1-2.8 7.7-7 9-4.2-1.3-7-4.9-7-9V6l7-3z" />
-        <path d="M9.5 12.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d="M9.5 12.5l2 2 4-4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     );
   }
 
   if (type === "swap") {
     return (
-      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <svg
+        className={className}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
         <path d="M7 7h11l-3-3" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M17 17H6l3 3" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M7 7v10" strokeLinecap="round" strokeLinejoin="round" />
@@ -203,7 +250,13 @@ function CategoryIcon({ type, className }: { type: string; className?: string })
 
   if (type === "wallet") {
     return (
-      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <svg
+        className={className}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
         <path d="M3 7h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
         <path d="M3 7V5a2 2 0 0 1 2-2h12" />
         <circle cx="17" cy="12" r="1.5" fill="currentColor" />
@@ -212,7 +265,13 @@ function CategoryIcon({ type, className }: { type: string; className?: string })
   }
 
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
       <path d="M8 10a4 4 0 1 0-4-4 4 4 0 0 0 4 4z" />
       <path d="M12 20c.5-3 3.3-5 6-5s5.5 2 6 5" />
       <path d="M2 20c.7-2.3 2.8-3.8 5.3-4" />

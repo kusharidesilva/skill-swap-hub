@@ -51,7 +51,8 @@ export default function SiteFooter() {
               {/* <span className="text-base font-semibold text-slate-900">Skill Swap Hub</span> */}
             </Link>
             <p className="mx-auto mt-4 max-w-sm text-center text-sm text-slate-600">
-              Connecting Sri Lankan university students through peer-to-peer knowledge sharing.
+              Connecting Sri Lankan university students through peer-to-peer
+              knowledge sharing.
             </p>
           </div>
           <div className="grid gap-8 sm:grid-cols-3">
@@ -62,7 +63,11 @@ export default function SiteFooter() {
                 </h3>
                 <div className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
                   {column.links.map((link) => (
-                    <Link key={link.label} href={link.href} className="hover:text-slate-900">
+                    <Link
+                      key={link.label}
+                      href={link.href}
+                      className="hover:text-slate-900"
+                    >
                       {link.label}
                     </Link>
                   ))}

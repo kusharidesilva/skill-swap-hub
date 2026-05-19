@@ -29,7 +29,11 @@ export default function HeroSection() {
         <div>
           <div className="flex flex-wrap items-center gap-3">
             {highlights.map((item) => (
-              <HighlightBadge key={item.label} label={item.label} Icon={item.Icon} />
+              <HighlightBadge
+                key={item.label}
+                label={item.label}
+                Icon={item.Icon}
+              />
             ))}
           </div>
           <h1 className="mt-6 text-4xl font-semibold text-slate-900 sm:text-5xl">
@@ -38,8 +42,8 @@ export default function HeroSection() {
             <span className="block">Grow Faster</span>
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
-            A trusted student-only platform for Sri Lankan university students to offer skills,
-            request services, and connect with verified peers.
+            A trusted student-only platform for Sri Lankan university students
+            to offer skills, request services, and connect with verified peers.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
@@ -108,7 +112,13 @@ function HighlightBadge({ label, Icon }: { label: string; Icon: IconType }) {
 
 function VerifiedIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      {...props}
+    >
       <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
       <path
         d="M12 3l2.6 1.4 2.9.4.4 2.9 1.4 2.6-1.4 2.6-.4 2.9-2.9.4L12 21l-2.6-1.4-2.9-.4-.4-2.9L4.7 12l1.4-2.6.4-2.9 2.9-.4L12 3z"
@@ -121,7 +131,13 @@ function VerifiedIcon(props: SVGProps<SVGSVGElement>) {
 
 function MatchIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      {...props}
+    >
       <path d="M8 16c-2.5 0-4.5-2-4.5-4.5S5.5 7 8 7s4.5 2 4.5 4.5S10.5 16 8 16z" />
       <path d="M16 17c1.9 0 3.5-1.6 3.5-3.5S17.9 10 16 10s-3.5 1.6-3.5 3.5S14.1 17 16 17z" />
       <path
@@ -134,7 +150,13 @@ function MatchIcon(props: SVGProps<SVGSVGElement>) {
 
 function SearchIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      {...props}
+    >
       <circle cx="11" cy="11" r="7" />
       <path d="M20 20l-3-3" strokeLinecap="round" />
     </svg>
