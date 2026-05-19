@@ -10,7 +10,7 @@ export default function AboutProvider() {
         primaryCtaLabel="Learn More"
         primaryCtaHref="/learn-more"
         secondaryCtaLabel="Explore Skills"
-        secondaryCtaHref="/explore"
+        secondaryCtaHref="/#explore-skills"
         ctaButtonLabel="Go to Dashboard"
         ctaButtonHref="/dashboard"
       />

@@ -1,3 +1,7 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -9,6 +13,42 @@ const navLinks = [
 ];
 
 export default function Navbar() {
+  const pathname = usePathname();
+  const [activeSection, setActiveSection] = useState("Home");
+
+  useEffect(() => {
+    if (pathname !== "/") {
+      if (pathname.startsWith("/about")) {
+        setActiveSection("About");
+      } else {
+        setActiveSection("");
+      }
+      return;
+    }
+
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 200; // offset for navbar height
+
+      const exploreSection = document.getElementById("explore-skills");
+      const howItWorksSection = document.getElementById("how-it-works");
+
+      if (howItWorksSection && scrollPosition >= howItWorksSection.offsetTop) {
+        setActiveSection("How It Works");
+      } else if (exploreSection && scrollPosition >= exploreSection.offsetTop) {
+        setActiveSection("Explore Skills");
+      } else {
+        setActiveSection("Home");
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [pathname]);
+
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
       <input
@@ -28,19 +68,23 @@ export default function Navbar() {
             className="h-11 w-11"
             priority
           />
-          {/* <span className="text-base font-semibold text-slate-900">Skill Swap Hub</span> */}
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
-          {navLinks.map((link) => (
-            <Link
-              key={link.name}
-              href={link.href}
-              className="transition-colors hover:text-slate-900"
-            >
-              {link.name}
-            </Link>
-          ))}
+          {navLinks.map((link) => {
+            const isActive = activeSection === link.name;
+            return (
+              <Link
+                key={link.name}
+                href={link.href}
+                className={`transition-colors font-semibold ${
+                  isActive ? "text-[#2b62e6]" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {link.name}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
@@ -83,15 +127,20 @@ export default function Navbar() {
           id="mobile-nav"
           className="flex flex-col gap-4 px-6 pb-6 pt-4 text-sm font-medium"
         >
-          {navLinks.map((link) => (
-            <Link
-              key={link.name}
-              href={link.href}
-              className="text-slate-600 hover:text-slate-900"
-            >
-              {link.name}
-            </Link>
-          ))}
+          {navLinks.map((link) => {
+            const isActive = activeSection === link.name;
+            return (
+              <Link
+                key={link.name}
+                href={link.href}
+                className={`transition-colors font-semibold ${
+                  isActive ? "text-[#2b62e6]" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {link.name}
+              </Link>
+            );
+          })}
           <div className="mt-2 flex flex-col gap-3">
             <Link href="/login" className="text-slate-600 hover:text-slate-900">
               Login

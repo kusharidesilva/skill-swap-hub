@@ -48,17 +48,25 @@ export default function AboutPage({
 }: AboutPageProps) {
   return (
     <main className="bg-white">
-      <section className="bg-[#eef1ff]">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-14 lg:grid-cols-[1.1fr_0.9fr] lg:py-20">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-[#d9f4ea] px-3 py-1 text-xs font-semibold text-[#0f8a6b]">
+      <section className="relative overflow-hidden bg-[#eef1ff]">
+        <div
+          className="absolute -left-24 top-8 h-64 w-64 rounded-full bg-white/70 blur-3xl"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute right-0 top-0 h-72 w-72 rounded-full bg-[#c3cfff] blur-3xl"
+          aria-hidden="true"
+        />
+        <div className="mx-auto grid w-full max-w-6xl gap-8 px-6 lg:grid-cols-2 min-h-[calc(100vh-84px)]">
+          <div className="relative z-10 flex flex-col justify-center py-12 lg:py-16">
+            <span className="inline-flex items-center gap-2 rounded-full bg-[#d9f4ea] px-3 py-1 text-xs font-semibold text-[#0f8a6b] self-start">
               <span className="h-2 w-2 rounded-full bg-[#0f8a6b]" />
               OUR MISSION
             </span>
-            <h1 className="mt-5 text-4xl font-semibold text-slate-900 sm:text-5xl">
+            <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl leading-tight">
               <span className="block">Empowering</span>
-              <span className="block text-[#0f4cbf]">Sri Lankan</span>
-              <span className="block text-[#0f4cbf]">University Students</span>
+              <span className="block text-[#2b62e6]">Sri Lankan</span>
+              <span className="block text-[#2b62e6]">University Students</span>
               <span className="block">to Grow Together.</span>
             </h1>
             <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
@@ -66,30 +74,30 @@ export default function AboutPage({
               university students to share skills, request services, learn from
               verified peers, and gain practical experience.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap gap-4">
               <Link
                 href={primaryCtaHref}
-                className="rounded-lg bg-[#0f4cbf] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0d3fa1]"
+                className="rounded-lg bg-[#2b62e6] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
               >
                 {primaryCtaLabel}
               </Link>
               <Link
                 href={secondaryCtaHref}
-                className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+                className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900"
               >
                 {secondaryCtaLabel}
               </Link>
             </div>
           </div>
-          <div className="flex justify-center lg:justify-end">
+          <div className="relative flex items-end justify-center lg:justify-end pb-4 lg:pb-8">
             <Image
               src="/img/about%20img.png"
               alt="Student using a laptop"
-              width={520}
-              height={560}
-              className="h-auto w-full max-w-md object-contain"
+              width={600}
+              height={600}
+              className="h-auto w-full max-w-[300px] sm:max-w-md lg:max-w-[520px] object-contain transition-all duration-300 hover:scale-[1.02] block"
               priority
-              sizes="(min-width: 1024px) 480px, 80vw"
+              sizes="(min-width: 1024px) 520px, 80vw"
             />
           </div>
         </div>
@@ -101,14 +109,14 @@ export default function AboutPage({
             {storyImages.map((image) => (
               <div
                 key={image.src}
-                className="overflow-hidden rounded-2xl border border-slate-100 shadow-sm"
+                className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-100 shadow-sm"
               >
                 <Image
                   src={image.src}
                   alt={image.alt}
-                  width={280}
-                  height={220}
-                  className="h-full w-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 50vw, 280px"
                 />
               </div>
             ))}
@@ -215,7 +223,7 @@ export default function AboutPage({
                 {ctaButtonLabel}
               </Link>
               <Link
-                href="/explore"
+                href="/#explore-skills"
                 className="rounded-lg border border-white/30 px-5 py-2.5 text-sm font-semibold text-white"
               >
                 Browse Skills

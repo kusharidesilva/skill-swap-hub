@@ -18,29 +18,39 @@ const steps = [
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="bg-white scroll-mt-20">
-      <div className="mx-auto max-w-6xl px-6 py-14">
+    <section id="how-it-works" className="relative overflow-hidden bg-[#ebf5f0] py-16 sm:py-24 scroll-mt-20">
+      <div
+        className="absolute -right-24 bottom-8 h-64 w-64 rounded-full bg-white/60 blur-3xl"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute left-0 bottom-0 h-72 w-72 rounded-full bg-[#d2f1e4] blur-3xl"
+        aria-hidden="true"
+      />
+      <div className="relative z-10 mx-auto max-w-6xl px-6">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-slate-900 sm:text-2xl">
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl leading-tight">
             How It Works
           </h2>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mx-auto mt-4 max-w-2xl text-base sm:text-lg text-slate-700">
             Simple steps to start learning and teaching.
           </p>
         </div>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
+        <div className="mt-14 grid gap-8 md:grid-cols-3">
           {steps.map((step, index) => (
             <div
               key={step.title}
-              className="rounded-2xl border border-slate-200 bg-[#f8f9ff] p-6 text-center shadow-sm"
+              className="group relative rounded-2xl border border-emerald-100/50 bg-white/80 backdrop-blur-xs p-8 text-center shadow-md transition-all duration-300 hover:scale-[1.03] hover:bg-white hover:shadow-lg"
             >
-              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#e8f1ff] text-base font-semibold text-[#0f4cbf]">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#e6fcf4] text-xl font-bold text-[#0f8a6b] shadow-xs group-hover:scale-110 transition-transform duration-300">
                 {index + 1}
               </span>
-              <h3 className="mt-4 text-sm font-semibold text-slate-900">
+              <h3 className="mt-6 text-lg sm:text-xl font-bold text-slate-900">
                 {step.title}
               </h3>
-              <p className="mt-2 text-sm text-slate-600">{step.description}</p>
+              <p className="mt-3 text-sm sm:text-base leading-relaxed text-slate-600">
+                {step.description}
+              </p>
             </div>
           ))}
         </div>

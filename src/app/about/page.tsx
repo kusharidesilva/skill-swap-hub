@@ -10,7 +10,7 @@ export default function About() {
         primaryCtaLabel="Join the Hub"
         primaryCtaHref="/get-started"
         secondaryCtaLabel="Explore Skills"
-        secondaryCtaHref="/explore"
+        secondaryCtaHref="/#explore-skills"
         ctaButtonLabel="Create Your Profile"
         ctaButtonHref="/get-started"
       />
