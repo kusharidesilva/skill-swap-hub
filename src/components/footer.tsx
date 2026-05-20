@@ -39,7 +39,7 @@ export default function SiteFooter() {
     <footer className="bg-[#f3f5ff] border-t border-slate-200/80">
       <div className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
         <div className="grid gap-10 md:grid-cols-[1.1fr_2fr]">
-          <div className="flex flex-col items-center text-center md:items-start md:text-left">
+          <div className="flex flex-col items-center text-center">
             <Link href="/" className="inline-block transition hover:opacity-90">
               <Image
                 src="/img/Skill Swap Hub Logo.png"
