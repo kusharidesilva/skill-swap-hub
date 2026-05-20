@@ -18,13 +18,13 @@ const steps = [
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="relative overflow-hidden bg-[#ebf5f0] py-16 sm:py-24 scroll-mt-20">
+    <section id="how-it-works" className="relative overflow-hidden bg-white py-16 sm:py-24 scroll-mt-20">
       <div
         className="absolute -right-24 bottom-8 h-64 w-64 rounded-full bg-white/60 blur-3xl"
         aria-hidden="true"
       />
       <div
-        className="absolute left-0 bottom-0 h-72 w-72 rounded-full bg-[#d2f1e4] blur-3xl"
+        className="absolute left-0 bottom-0 h-72 w-72 rounded-full bg-[#e6fcf4]/70 blur-3xl"
         aria-hidden="true"
       />
       <div className="relative z-10 mx-auto max-w-6xl px-6">
@@ -40,7 +40,7 @@ export default function HowItWorksSection() {
           {steps.map((step, index) => (
             <div
               key={step.title}
-              className="group relative rounded-2xl border border-emerald-100/50 bg-white/80 backdrop-blur-xs p-8 text-center shadow-md transition-all duration-300 hover:scale-[1.03] hover:bg-white hover:shadow-lg"
+              className="group relative rounded-2xl border border-emerald-100/60 bg-[#f4fbf7]/40 p-8 text-center shadow-xs transition-all duration-300 hover:scale-[1.03] hover:bg-white hover:border-emerald-300/80 hover:shadow-md"
             >
               <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#e6fcf4] text-xl font-bold text-[#0f8a6b] shadow-xs group-hover:scale-110 transition-transform duration-300">
                 {index + 1}

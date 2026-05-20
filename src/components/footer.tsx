@@ -36,7 +36,7 @@ const footerColumns: FooterColumn[] = [
 
 export default function SiteFooter() {
   return (
-    <footer className="bg-white border-t border-slate-100">
+    <footer className="bg-[#f3f5ff] border-t border-slate-200/80">
       <div className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
         <div className="grid gap-10 md:grid-cols-[1.1fr_2fr]">
           <div className="flex flex-col items-center text-center md:items-start md:text-left">
@@ -49,7 +49,7 @@ export default function SiteFooter() {
                 className="h-auto w-36 sm:w-40"
               />
             </Link>
-            <p className="mt-4 max-w-xs text-sm sm:text-base leading-relaxed text-slate-500">
+            <p className="mt-4 max-w-xs text-sm sm:text-base leading-relaxed text-slate-600">
               Connecting Sri Lankan university students through peer-to-peer knowledge sharing.
             </p>
           </div>
@@ -74,7 +74,7 @@ export default function SiteFooter() {
             ))}
           </div>
         </div>
-        <div className="mt-12 border-t border-slate-100 pt-8 text-sm font-medium text-slate-400 text-center">
+        <div className="mt-12 border-t border-slate-200/80 pt-8 text-sm font-semibold text-slate-500 text-center">
           © 2026 Skill Swap Hub | All Rights Reserved
         </div>
       </div>

@@ -36,32 +36,32 @@ const features: Feature[] = [
 
 export default function VerifiedStudentsSection() {
   return (
-    <section className="bg-[#f3f5ff]">
-      <div className="mx-auto max-w-6xl px-6 py-14">
+    <section className="bg-white py-16 sm:py-20">
+      <div className="mx-auto max-w-6xl px-6">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-slate-900 sm:text-2xl">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl leading-tight">
             Built for Verified University Students
           </h2>
-          <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">
+          <p className="mx-auto mt-3 max-w-2xl text-sm sm:text-base text-slate-600">
             Students are verified using their official email and a verification
             code to create a trusted student-only environment.
           </p>
         </div>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100"
+              className="group rounded-2xl bg-slate-50/60 p-6 border border-slate-100/80 shadow-xs transition-all duration-300 hover:scale-[1.02] hover:bg-white hover:border-slate-200/80 hover:shadow-md"
             >
               <div
-                className={`flex h-12 w-12 items-center justify-center rounded-2xl ${feature.tone}`}
+                className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 ${feature.tone}`}
               >
                 <feature.Icon className="h-6 w-6" aria-hidden="true" />
               </div>
-              <h3 className="mt-4 text-sm font-semibold text-slate-900">
+              <h3 className="mt-5 text-base font-bold text-slate-900">
                 {feature.title}
               </h3>
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm sm:text-base leading-relaxed text-slate-600">
                 {feature.description}
               </p>
             </div>
