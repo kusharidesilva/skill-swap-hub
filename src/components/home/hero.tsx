@@ -25,7 +25,7 @@ export default function HeroSection() {
         className="absolute right-0 top-0 h-72 w-72 rounded-full bg-[#d2f1e4] blur-3xl"
         aria-hidden="true"
       />
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 py-14 lg:grid-cols-2 lg:py-20">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_85px)]">
         <div className="relative z-10">
           <div className="flex flex-wrap items-center gap-3">
             {highlights.map((item) => (
@@ -79,15 +79,15 @@ export default function HeroSection() {
             </button>
           </form>
         </div>
-        <div className="relative flex items-end justify-center lg:justify-end -mb-14 lg:-mb-20 lg:-mt-28 self-end lg:translate-x-16">
+        <div className="relative flex items-end justify-center lg:justify-end -mb-5 lg:-mb-10 self-end lg:translate-x-16">
           <Image
             src="/img/hero-illustration.png"
             alt="Student learning with laptop"
             width={720}
             height={720}
-            className="h-auto w-full max-w-md object-contain sm:max-w-lg lg:max-w-[680px] lg:w-[680px] transition-all duration-300 hover:scale-[1.02]"
+            className="h-auto w-full max-w-md object-contain sm:max-w-lg lg:max-w-[630px] lg:w-[630px] transition-all duration-300 hover:scale-[1.02]"
             priority
-            sizes="(min-width: 1024px) 720px, 80vw"
+            sizes="(min-width: 1024px) 630px, 80vw"
           />
         </div>
       </div>

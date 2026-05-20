@@ -57,8 +57,8 @@ export default function AboutPage({
           className="absolute right-0 top-0 h-72 w-72 rounded-full bg-[#c3cfff] blur-3xl"
           aria-hidden="true"
         />
-        <div className="mx-auto grid w-full max-w-6xl gap-8 px-6 lg:grid-cols-2 min-h-[calc(100vh-84px)]">
-          <div className="relative z-10 flex flex-col justify-center py-12 lg:py-16">
+        <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_85px)]">
+          <div className="relative z-10 flex flex-col justify-center">
             <span className="inline-flex items-center gap-2 rounded-full bg-[#d9f4ea] px-3 py-1 text-xs font-semibold text-[#0f8a6b] self-start">
               <span className="h-2 w-2 rounded-full bg-[#0f8a6b]" />
               OUR MISSION
@@ -89,15 +89,15 @@ export default function AboutPage({
               </Link>
             </div>
           </div>
-          <div className="relative flex items-end justify-center lg:justify-end pb-4 lg:pb-8">
+          <div className="relative flex items-end justify-center lg:justify-end -mb-5 lg:-mb-10 self-end lg:translate-x-16">
             <Image
               src="/img/about%20img.png"
               alt="Student using a laptop"
-              width={600}
-              height={600}
-              className="h-auto w-full max-w-[300px] sm:max-w-md lg:max-w-[520px] object-contain transition-all duration-300 hover:scale-[1.02] block"
+              width={720}
+              height={720}
+              className="h-auto w-full max-w-md object-contain sm:max-w-lg lg:max-w-[590px] lg:w-[590px] transition-all duration-300 hover:scale-[1.02] block"
               priority
-              sizes="(min-width: 1024px) 520px, 80vw"
+              sizes="(min-width: 1024px) 590px, 80vw"
             />
           </div>
         </div>
