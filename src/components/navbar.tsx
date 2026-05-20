@@ -55,6 +55,8 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   };
 
   const navLinks = getNavLinks();
+  const profileHref = role === "provider" ? "/profile/provider" : "/profile/buyer";
+  const settingsHref = role === "provider" ? "/profile/provider/settings" : "/profile/buyer/settings";
 
   // Scroll spy active section effect
   useEffect(() => {
@@ -173,13 +175,13 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                 </summary>
                 <div className="absolute right-0 mt-3 w-48 rounded-xl border border-slate-200 bg-white p-2 text-sm text-slate-600 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
                   <Link
-                    href="/profile"
+                    href={profileHref}
                     className="block rounded-lg px-3 py-2 hover:bg-slate-100"
                   >
                     Profile
                   </Link>
                   <Link
-                    href="/settings"
+                    href={settingsHref}
                     className="block rounded-lg px-3 py-2 hover:bg-slate-100"
                   >
                     Settings
@@ -272,13 +274,13 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                   Favorites
                 </Link>
                 <Link
-                  href="/profile"
+                  href={profileHref}
                   className="rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
                 >
                   Profile
                 </Link>
                 <Link
-                  href="/settings"
+                  href={settingsHref}
                   className="text-slate-600 hover:text-slate-900"
                 >
                   Settings
