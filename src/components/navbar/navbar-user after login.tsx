@@ -10,7 +10,7 @@ const navLinks = [
 ];
 
 export default function Navbar() {
-  return (
+  return ( 
     <header className="relative z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
       <input
         id="nav-toggle"
@@ -29,7 +29,6 @@ export default function Navbar() {
             className="h-11 w-11"
             priority
           />
-          {/* <span className="text-base font-semibold text-slate-900">Skill Swap Hub</span> */}
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">

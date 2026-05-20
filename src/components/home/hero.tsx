@@ -17,7 +17,7 @@ const highlights: Highlight[] = [
 export default function HeroSection() {
   return (
     <section className="relative overflow-hidden bg-[#ebf5f0]">
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 py-14 lg:grid-cols-2 lg:py-20">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 py-14 lg:grid-cols-2 lg:py-19">
         <div className="relative z-10">
           <div className="flex flex-wrap items-center gap-3">
             {highlights.map((item) => (
@@ -71,7 +71,7 @@ export default function HeroSection() {
             </button>
           </form>
         </div>
-        <div className="relative flex items-end justify-center lg:justify-end -mb-14 lg:-mb-20 lg:-mt-28 self-end lg:translate-x-16">
+        <div className="relative flex items-end justify-center lg:justify-end -mb-14 lg:-mb-20 lg:-mt-24 self-end lg:translate-x-20">
           <Image
             src="/img/hero-illustration.png"
             alt="Student learning with laptop"
