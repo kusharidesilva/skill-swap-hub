@@ -18,15 +18,7 @@ const steps = [
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="relative overflow-hidden bg-white py-16 sm:py-24 scroll-mt-20">
-      <div
-        className="absolute -right-24 bottom-8 h-64 w-64 rounded-full bg-white/60 blur-3xl"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute left-0 bottom-0 h-72 w-72 rounded-full bg-[#e6fcf4]/70 blur-3xl"
-        aria-hidden="true"
-      />
+    <section id="how-it-works" className="bg-white py-16 sm:py-24 scroll-mt-20">
       <div className="relative z-10 mx-auto max-w-6xl px-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl leading-tight">

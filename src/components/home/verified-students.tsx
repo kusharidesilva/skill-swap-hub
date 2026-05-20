@@ -36,7 +36,7 @@ const features: Feature[] = [
 
 export default function VerifiedStudentsSection() {
   return (
-    <section className="bg-white py-16 sm:py-20">
+    <section className="bg-[#f3f5ff] py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center">
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl leading-tight">
@@ -51,7 +51,7 @@ export default function VerifiedStudentsSection() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="group rounded-2xl bg-slate-50/60 p-6 border border-slate-100/80 shadow-xs transition-all duration-300 hover:scale-[1.02] hover:bg-white hover:border-slate-200/80 hover:shadow-md"
+              className="group rounded-2xl bg-white p-6 border border-slate-100/80 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
             >
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 ${feature.tone}`}
