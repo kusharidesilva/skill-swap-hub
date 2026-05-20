@@ -61,11 +61,6 @@ export default function Navbar({ role: propRole }: NavbarProps) {
     const isHomePage = pathname === "/" || pathname === "/home/buyer" || pathname === "/home/provider";
 
     if (!isHomePage) {
-      if (pathname.startsWith("/about")) {
-        setActiveSection("About");
-      } else {
-        setActiveSection("");
-      }
       return;
     }
 
@@ -92,6 +87,14 @@ export default function Navbar({ role: propRole }: NavbarProps) {
     };
   }, [pathname]);
 
+  // Dynamically compute active section for non-home pages during render (avoids cascading render warning)
+  const isHomePage = pathname === "/" || pathname === "/home/buyer" || pathname === "/home/provider";
+  const currentActiveSection = isHomePage
+    ? activeSection
+    : pathname.startsWith("/about")
+    ? "About"
+    : "";
+
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
       <input
@@ -116,7 +119,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
         {/* Desktop Navigation */}
         <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
           {navLinks.map((link) => {
-            const isActive = activeSection === link.name;
+            const isActive = currentActiveSection === link.name;
             return (
               <Link
                 key={link.name}
@@ -227,7 +230,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
           className="flex flex-col gap-4 px-6 pb-6 pt-4 text-sm font-medium"
         >
           {navLinks.map((link) => {
-            const isActive = activeSection === link.name;
+            const isActive = currentActiveSection === link.name;
             return (
               <Link
                 key={link.name}
