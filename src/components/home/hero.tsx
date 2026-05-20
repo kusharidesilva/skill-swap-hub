@@ -17,7 +17,6 @@ const highlights: Highlight[] = [
 export default function HeroSection() {
   return (
     <section className="relative overflow-hidden bg-[#ebf5f0]">
-<<<<<<< HEAD
       <div
         className="absolute -left-24 top-8 h-64 w-64 rounded-full bg-white/70 blur-3xl"
         aria-hidden="true"
@@ -27,9 +26,6 @@ export default function HeroSection() {
         aria-hidden="true"
       />
       <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_85px)]">
-=======
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 py-14 lg:grid-cols-2 lg:py-19">
->>>>>>> 6a6e5d0e5e912247c4510c24a006bd15b3530627
         <div className="relative z-10">
           <div className="flex flex-wrap items-center gap-3">
             {highlights.map((item) => (
@@ -83,15 +79,15 @@ export default function HeroSection() {
             </button>
           </form>
         </div>
-        <div className="relative flex items-end justify-center lg:justify-end -mb-14 lg:-mb-20 lg:-mt-24 self-end lg:translate-x-20">
+        <div className="relative flex items-end justify-center lg:justify-end -mb-5 lg:-mb-10 self-end lg:translate-x-16">
           <Image
             src="/img/hero-illustration.png"
             alt="Student learning with laptop"
             width={720}
             height={720}
-            className="h-auto w-full max-w-md object-contain sm:max-w-lg lg:max-w-[590px] lg:w-[590px] transition-all duration-300 hover:scale-[1.02]"
+            className="h-auto w-full max-w-md object-contain sm:max-w-lg lg:max-w-[630px] lg:w-[630px] transition-all duration-300 hover:scale-[1.02]"
             priority
-            sizes="(min-width: 1024px) 590px, 80vw"
+            sizes="(min-width: 1024px) 630px, 80vw"
           />
         </div>
       </div>

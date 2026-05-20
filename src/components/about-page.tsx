@@ -89,7 +89,7 @@ export default function AboutPage({
               </Link>
             </div>
           </div>
-          <div className="relative flex items-end justify-center lg:justify-end -mb-14 lg:-mb-20 lg:-mt-24 self-end lg:translate-x-20">
+          <div className="relative flex items-end justify-center lg:justify-end -mb-5 lg:-mb-10 self-end lg:translate-x-16">
             <Image
               src="/img/about%20img.png"
               alt="Student using a laptop"
