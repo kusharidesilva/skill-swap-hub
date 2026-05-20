@@ -17,14 +17,6 @@ const highlights: Highlight[] = [
 export default function HeroSection() {
   return (
     <section className="relative overflow-hidden bg-[#ebf5f0]">
-      <div
-        className="absolute -left-24 top-8 h-64 w-64 rounded-full bg-white/70 blur-3xl"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute right-0 top-0 h-72 w-72 rounded-full bg-[#d2f1e4] blur-3xl"
-        aria-hidden="true"
-      />
       <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 py-14 lg:grid-cols-2 lg:py-20">
         <div className="relative z-10">
           <div className="flex flex-wrap items-center gap-3">
