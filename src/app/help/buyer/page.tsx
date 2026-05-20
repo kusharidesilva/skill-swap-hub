@@ -1,6 +1,6 @@
 import SiteFooter from "@/components/footer";
 import SupportPage from "@/components/support-page";
-import Navbar from "@/components/navbar/navbar-user after login";
+import Navbar from "@/components/navbar";
 
 export default function HelpBuyer() {
   return (

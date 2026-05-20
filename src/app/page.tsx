@@ -3,7 +3,7 @@ import HowItWorksSection from "@/components/home/how-it-works";
 import SiteFooter from "@/components/footer";
 import SkillGigsSection from "@/components/home/skill-gigs";
 import VerifiedStudentsSection from "@/components/home/verified-students";
-import Navbar from "@/components/navbar/navbar-all users";
+import Navbar from "@/components/navbar";
 
 export default function Home() {
   return (

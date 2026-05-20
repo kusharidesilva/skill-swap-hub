@@ -1,5 +1,5 @@
 import AboutPage from "@/components/about-page";
-import Navbar from "@/components/navbar/navbar-user after login";
+import Navbar from "@/components/navbar";
 import SiteFooter from "@/components/footer";
 
 export default function AboutBuyer() {
