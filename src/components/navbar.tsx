@@ -55,12 +55,23 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   };
 
   const navLinks = getNavLinks();
-  const profileHref = role === "provider" ? "/profile/provider" : "/profile/buyer";
-  const settingsHref = role === "provider" ? "/profile/provider/settings" : "/profile/buyer/settings";
+  const profileHref =
+    role === "provider" ? "/profile/provider" : "/profile/buyer";
+  const settingsHref =
+    role === "provider"
+      ? "/profile/provider/settings"
+      : "/profile/buyer/settings";
+  const isFavoritesPage =
+    pathname === "/favorites" || pathname.startsWith("/favorites/");
+  const isNotificationsPage =
+    pathname === "/notifications" || pathname.startsWith("/notifications/");
 
   // Scroll spy active section effect
   useEffect(() => {
-    const isHomePage = pathname === "/" || pathname === "/home/buyer" || pathname === "/home/provider";
+    const isHomePage =
+      pathname === "/" ||
+      pathname === "/home/buyer" ||
+      pathname === "/home/provider";
 
     if (!isHomePage) {
       return;
@@ -90,12 +101,15 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   }, [pathname]);
 
   // Dynamically compute active section for non-home pages during render (avoids cascading render warning)
-  const isHomePage = pathname === "/" || pathname === "/home/buyer" || pathname === "/home/provider";
+  const isHomePage =
+    pathname === "/" ||
+    pathname === "/home/buyer" ||
+    pathname === "/home/provider";
   const currentActiveSection = isHomePage
     ? activeSection
     : pathname.startsWith("/about")
-    ? "About"
-    : "";
+      ? "About"
+      : "";
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -127,7 +141,9 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                 key={link.name}
                 href={link.href}
                 className={`transition-colors font-semibold ${
-                  isActive ? "text-[#2b62e6]" : "text-slate-600 hover:text-slate-900"
+                  isActive
+                    ? "text-[#2b62e6]"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 {link.name}
@@ -158,14 +174,22 @@ export default function Navbar({ role: propRole }: NavbarProps) {
               <Link
                 href="/notifications"
                 aria-label="Notifications"
-                className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                className={`rounded-full p-2 transition hover:bg-slate-100 ${
+                  isNotificationsPage
+                    ? "text-[#0758d8]"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
               >
                 <BellIcon className="h-5 w-5" />
               </Link>
               <Link
                 href="/favorites"
                 aria-label="Favorites"
-                className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                className={`rounded-full p-2 transition hover:bg-slate-100 ${
+                  isFavoritesPage
+                    ? "text-[#0758d8]"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
               >
                 <HeartIcon className="h-5 w-5" />
               </Link>
@@ -187,7 +211,9 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                     Settings
                   </Link>
                   <Link
-                    href={role === "provider" ? "/help/provider" : "/help/buyer"}
+                    href={
+                      role === "provider" ? "/help/provider" : "/help/buyer"
+                    }
                     className="block rounded-lg px-3 py-2 hover:bg-slate-100"
                   >
                     Help & Support
@@ -238,7 +264,9 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                 key={link.name}
                 href={link.href}
                 className={`transition-colors font-semibold ${
-                  isActive ? "text-[#2b62e6]" : "text-slate-600 hover:text-slate-900"
+                  isActive
+                    ? "text-[#2b62e6]"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 {link.name}
@@ -249,7 +277,10 @@ export default function Navbar({ role: propRole }: NavbarProps) {
           <div className="mt-2 flex flex-col gap-3">
             {role === "guest" ? (
               <>
-                <Link href="/login" className="text-slate-600 hover:text-slate-900">
+                <Link
+                  href="/login"
+                  className="text-slate-600 hover:text-slate-900"
+                >
                   Login
                 </Link>
                 <Link
