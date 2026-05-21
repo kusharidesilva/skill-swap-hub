@@ -126,7 +126,7 @@ export default function RegisterPage() {
                 </div>
 
                 <Link
-                  href="/verify-email"
+                  href="/verify-email?from=buyer"
                   className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2b62e6] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
                 >
                   Create Student Account

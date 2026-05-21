@@ -20,11 +20,11 @@ type SideNavProps = {
 
 const navConfig: Record<Role, NavItem[]> = {
   buyer: [
-    { label: "Dashboard", href: "/dashboard", icon: DashboardIcon },
+    { label: "Dashboard", href: "/dashboard/buyer", icon: DashboardIcon },
     { label: "My Profile", href: "/profile/buyer", icon: UserCircleIcon },
     {
       label: "Profile Settings",
-      href: "/profile/buyer/settings",
+      href: "/profile-settings/buyer",
       icon: SettingsIcon,
     },
     {
@@ -65,11 +65,11 @@ const navConfig: Record<Role, NavItem[]> = {
     },
   ],
   provider: [
-    { label: "Dashboard", href: "/dashboard", icon: DashboardIcon },
+    { label: "Dashboard", href: "/dashboard/provider", icon: DashboardIcon },
     { label: "My Profile", href: "/profile/provider", icon: UserCircleIcon },
     {
       label: "Profile Settings",
-      href: "/profile/provider/settings",
+      href: "/profile-settings/provider",
       icon: SettingsIcon,
     },
     {
@@ -110,14 +110,14 @@ const navConfig: Record<Role, NavItem[]> = {
     },
   ],
   both: [
-    { label: "Dashboard", href: "/dashboard", icon: DashboardIcon },
+    { label: "Dashboard", href: "/dashboard/both", icon: DashboardIcon },
     { label: "My Profile", href: "/profile/both", icon: UserCircleIcon },
     {
-      label: "My Gigs",
-      href: "/my-gigs",
-      section: "find",
-      icon: BriefcaseIcon,
+      label: "Profile Settings",
+      href: "/profile-settings/both",
+      icon: SettingsIcon,
     },
+    { label: "My Gigs", href: "/my-gigs", section: "find", icon: BriefcaseIcon },
     {
       label: "Incoming Requests",
       href: "/incoming-requests",

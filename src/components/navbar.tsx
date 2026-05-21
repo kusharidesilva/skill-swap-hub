@@ -8,7 +8,7 @@ import Link from "next/link";
 type IconProps = { className?: string };
 
 interface NavbarProps {
-  role?: "guest" | "buyer" | "provider";
+  role?: "guest" | "buyer" | "provider" | "both";
 }
 
 export default function Navbar({ role: propRole }: NavbarProps) {
@@ -16,9 +16,11 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   const [activeSection, setActiveSection] = useState("Home");
 
   // Determine the active role based on prop or pathname auto-detection
-  let role: "guest" | "buyer" | "provider" = propRole || "guest";
+  let role: "guest" | "buyer" | "provider" | "both" = propRole || "guest";
   if (!propRole) {
-    if (pathname.includes("/provider")) {
+    if (pathname.includes("/both")) {
+      role = "both";
+    } else if (pathname.includes("/provider")) {
       role = "provider";
     } else if (pathname.includes("/buyer") || pathname.includes("/logged-in")) {
       role = "buyer";
@@ -31,13 +33,23 @@ export default function Navbar({ role: propRole }: NavbarProps) {
       case "provider":
         return [
           { name: "Home", href: "/home/provider" },
+          { name: "Dashboard", href: "/dashboard/provider" },
           { name: "Explore Skills", href: "/home/provider#explore-skills" },
           { name: "How It Works", href: "/home/provider#how-it-works" },
           { name: "About", href: "/about/provider" },
         ];
+      case "both":
+        return [
+          { name: "Home", href: "/home/buyer" },
+          { name: "Dashboard", href: "/dashboard/both" },
+          { name: "Explore Skills", href: "/home/buyer#explore-skills" },
+          { name: "How It Works", href: "/home/buyer#how-it-works" },
+          { name: "About", href: "/about/buyer" },
+        ];
       case "buyer":
         return [
           { name: "Home", href: "/home/buyer" },
+          { name: "Dashboard", href: "/dashboard/buyer" },
           { name: "Explore Skills", href: "/home/buyer#explore-skills" },
           { name: "How It Works", href: "/home/buyer#how-it-works" },
           { name: "About", href: "/about/buyer" },
@@ -55,12 +67,16 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   };
 
   const navLinks = getNavLinks();
+  const homeHref =
+    role === "provider" ? "/home/provider" : role === "guest" ? "/" : "/home/buyer";
   const profileHref =
-    role === "provider" ? "/profile/provider" : "/profile/buyer";
+    role === "provider" ? "/profile/provider" : role === "both" ? "/profile/both" : "/profile/buyer";
   const settingsHref =
     role === "provider"
-      ? "/profile/provider/settings"
-      : "/profile/buyer/settings";
+      ? "/profile-settings/provider"
+      : role === "both"
+        ? "/profile-settings/both"
+        : "/profile-settings/buyer";
   const isFavoritesPage =
     pathname === "/favorites" || pathname.startsWith("/favorites/");
   const isNotificationsPage =
@@ -108,8 +124,10 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   const currentActiveSection = isHomePage
     ? activeSection
     : pathname.startsWith("/about")
-      ? "About"
-      : "";
+    ? "About"
+    : pathname.startsWith("/dashboard")
+    ? "Dashboard"
+    : "";
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -121,7 +139,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
         aria-controls="mobile-nav"
       />
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-10 py-5">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href={homeHref} className="flex items-center gap-3">
           <Image
             src="/img/Skill%20Swap%20Hub%20Logo%20icon-no%20bg.svg"
             alt="Skill Swap Hub"

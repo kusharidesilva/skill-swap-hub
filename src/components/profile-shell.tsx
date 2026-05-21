@@ -12,11 +12,9 @@ type ProfileShellProps = {
 };
 
 export default function ProfileShell({ role, children }: ProfileShellProps) {
-  const navRole = role === "both" ? "buyer" : role;
-
   return (
     <div className="min-h-screen bg-[#f5f7ff] text-slate-900">
-      <Navbar role={navRole} />
+      <Navbar role={role} />
       <div className="mx-auto flex w-full max-w-6xl gap-8 px-6 py-8">
         <SideNav role={role} />
         <main className="min-w-0 flex-1">{children}</main>
