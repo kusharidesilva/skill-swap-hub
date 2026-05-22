@@ -8,17 +8,17 @@ type DashboardViewProps = {
 
 const dashboardCopy: Record<Role, { title: string; description: string; stats: string[] }> = {
   buyer: {
-    title: "Buyer Dashboard",
+    title: "",
     description: "Track service requests, saved providers, chats, and ratings from one place.",
     stats: ["Active requests", "Saved services", "Unread chats"],
   },
   provider: {
-    title: "Provider Dashboard",
+    title: "",
     description: "Manage your gigs, incoming requests, conversations, and student feedback.",
     stats: ["Published gigs", "Incoming requests", "Average rating"],
   },
   both: {
-    title: "Buyer & Provider Dashboard",
+    title: "",
     description: "Use buyer and provider tools together without switching accounts.",
     stats: ["Service requests", "Provider gigs", "Open chats"],
   },

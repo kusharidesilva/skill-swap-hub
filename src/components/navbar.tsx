@@ -33,7 +33,6 @@ export default function Navbar({ role: propRole }: NavbarProps) {
       case "provider":
         return [
           { name: "Home", href: "/home/provider" },
-          { name: "Dashboard", href: "/dashboard/provider" },
           { name: "Explore Skills", href: "/home/provider#explore-skills" },
           { name: "How It Works", href: "/home/provider#how-it-works" },
           { name: "About", href: "/about/provider" },
@@ -41,7 +40,6 @@ export default function Navbar({ role: propRole }: NavbarProps) {
       case "both":
         return [
           { name: "Home", href: "/home/buyer" },
-          { name: "Dashboard", href: "/dashboard/both" },
           { name: "Explore Skills", href: "/home/buyer#explore-skills" },
           { name: "How It Works", href: "/home/buyer#how-it-works" },
           { name: "About", href: "/about/buyer" },
@@ -49,7 +47,6 @@ export default function Navbar({ role: propRole }: NavbarProps) {
       case "buyer":
         return [
           { name: "Home", href: "/home/buyer" },
-          { name: "Dashboard", href: "/dashboard/buyer" },
           { name: "Explore Skills", href: "/home/buyer#explore-skills" },
           { name: "How It Works", href: "/home/buyer#how-it-works" },
           { name: "About", href: "/about/buyer" },
@@ -125,8 +122,8 @@ export default function Navbar({ role: propRole }: NavbarProps) {
     ? activeSection
     : pathname.startsWith("/about")
     ? "About"
-    : pathname.startsWith("/dashboard")
-    ? "Dashboard"
+    // : pathname.startsWith("/dashboard")
+    // ? "Dashboard"
     : "";
 
   return (
