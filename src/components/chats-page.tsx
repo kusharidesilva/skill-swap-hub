@@ -1,6 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
+import {
+  profileHref,
+  scopedHref,
+  type Role,
+} from "@/lib/role-routes";
 import { useMemo, useState } from "react";
 
 type Conversation = {
@@ -93,7 +99,11 @@ const messagesByConversation: Record<number, ChatMessage[]> = {
   ],
 };
 
-export default function ChatsPage() {
+type ChatsPageProps = {
+  role?: Role;
+};
+
+export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   const [activeId, setActiveId] = useState(conversations[0].id);
   const [searchTerm, setSearchTerm] = useState("");
   const [draftMessage, setDraftMessage] = useState("");
@@ -160,7 +170,7 @@ export default function ChatsPage() {
         </aside>
 
         <div className="flex min-h-[720px] flex-col bg-[#eef2ff]">
-          <ChatHeader conversation={activeConversation} />
+          <ChatHeader conversation={activeConversation} role={role} />
 
           <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8">
             <div className="mb-6 flex justify-center">
@@ -247,7 +257,13 @@ function ConversationButton({
   );
 }
 
-function ChatHeader({ conversation }: { conversation: Conversation }) {
+function ChatHeader({
+  conversation,
+  role,
+}: {
+  conversation: Conversation;
+  role: Role;
+}) {
   return (
     <header className="border-b border-blue-200 bg-[#eef2ff] px-5 py-4 sm:px-6">
       <div className="flex items-center justify-between gap-4">
@@ -282,15 +298,18 @@ function ChatHeader({ conversation }: { conversation: Conversation }) {
           <HeaderActionButton
             icon={<UserIcon className="h-4 w-4" />}
             label="View Profile"
+            href={profileHref(role)}
           />
           <HeaderActionButton
             icon={<StarIcon className="h-4 w-4" />}
             label="Submit Review"
+            href={scopedHref("/ratings", role)}
           />
           <HeaderActionButton
             icon={<FlagIcon className="h-4 w-4" />}
             label="Report Issue"
             tone="danger"
+            href={scopedHref("/report-issue", role)}
           />
         </div>
       </div>
@@ -301,23 +320,31 @@ function ChatHeader({ conversation }: { conversation: Conversation }) {
 function HeaderActionButton({
   icon,
   label,
+  href,
   tone = "default",
 }: {
   icon: React.ReactNode;
   label: string;
+  href?: string;
   tone?: "default" | "danger";
 }) {
+  const className = `inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-semibold transition ${
+    tone === "danger"
+      ? "border-red-100 bg-red-100 text-red-700 hover:bg-red-200"
+      : "border-slate-200 bg-white/80 text-slate-700 hover:bg-white hover:text-slate-950"
+  }`;
+
+  if (href) {
+    return (
+      <Link href={href} title={label} aria-label={label} className={className}>
+        {icon}
+        <span className="sr-only">{label}</span>
+      </Link>
+    );
+  }
+
   return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-semibold transition ${
-        tone === "danger"
-          ? "border-red-100 bg-red-100 text-red-700 hover:bg-red-200"
-          : "border-slate-200 bg-white/80 text-slate-700 hover:bg-white hover:text-slate-950"
-      }`}
-    >
+    <button type="button" title={label} aria-label={label} className={className}>
       {icon}
       <span className="sr-only">{label}</span>
     </button>

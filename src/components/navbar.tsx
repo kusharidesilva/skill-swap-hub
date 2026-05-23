@@ -4,11 +4,21 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react"; 
 import Image from "next/image";
 import Link from "next/link";
+import {
+  aboutHref,
+  helpHref,
+  homeHref,
+  profileHref as roleProfileHref,
+  scopedHref,
+  settingsHref as roleSettingsHref,
+  type Role,
+  type SiteRole,
+} from "@/lib/role-routes";
 
 type IconProps = { className?: string }; 
 
 interface NavbarProps { 
-  role?: "guest" | "buyer" | "provider" | "both"; 
+  role?: SiteRole;
 } 
 
 export default function Navbar({ role: propRole }: NavbarProps) { 
@@ -16,7 +26,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   const [activeSection, setActiveSection] = useState("Home");
 
   // Determine the active role based on prop or pathname auto-detection
-  let role: "guest" | "buyer" | "provider" | "both" = propRole || "guest";
+  let role: SiteRole = propRole || "guest";
   if (!propRole) {
     if (pathname.includes("/both")) {
       role = "both";
@@ -29,27 +39,30 @@ export default function Navbar({ role: propRole }: NavbarProps) {
 
   // Set up nav links dynamically based on role
   const getNavLinks = () => {
+    const roleHomeHref = homeHref(role);
+    const roleAboutHref = aboutHref(role);
+
     switch (role) {
       case "provider":
         return [
-          { name: "Home", href: "/home/provider" },
-          { name: "Explore Skills", href: "/home/provider#explore-skills" },
-          { name: "How It Works", href: "/home/provider#how-it-works" },
-          { name: "About", href: "/about/provider" },
+          { name: "Home", href: roleHomeHref },
+          { name: "Explore Skills", href: `${roleHomeHref}#explore-skills` },
+          { name: "How It Works", href: `${roleHomeHref}#how-it-works` },
+          { name: "About", href: roleAboutHref },
         ];
       case "both":
         return [
-          { name: "Home", href: "/home/buyer" },
-          { name: "Explore Skills", href: "/home/buyer#explore-skills" },
-          { name: "How It Works", href: "/home/buyer#how-it-works" },
-          { name: "About", href: "/about/buyer" },
+          { name: "Home", href: roleHomeHref },
+          { name: "Explore Skills", href: `${roleHomeHref}#explore-skills` },
+          { name: "How It Works", href: `${roleHomeHref}#how-it-works` },
+          { name: "About", href: roleAboutHref },
         ];
       case "buyer":
         return [
-          { name: "Home", href: "/home/buyer" },
-          { name: "Explore Skills", href: "/home/buyer#explore-skills" },
-          { name: "How It Works", href: "/home/buyer#how-it-works" },
-          { name: "About", href: "/about/buyer" },
+          { name: "Home", href: roleHomeHref },
+          { name: "Explore Skills", href: `${roleHomeHref}#explore-skills` },
+          { name: "How It Works", href: `${roleHomeHref}#how-it-works` },
+          { name: "About", href: roleAboutHref },
           { name: "Become a Seller", href: "/become-a-seller-intro" },
         ];
       case "guest":
@@ -64,27 +77,24 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   };
 
   const navLinks = getNavLinks();
-  const homeHref =
-    role === "provider" ? "/home/provider" : role === "guest" ? "/" : "/home/buyer";
-  const profileHref =
-    role === "provider" ? "/profile/provider" : role === "both" ? "/profile/both" : "/profile/buyer";
-  const settingsHref =
-    role === "provider"
-      ? "/profile-settings/provider"
-      : role === "both"
-        ? "/profile-settings/both"
-        : "/profile-settings/buyer";
+  const homeLinkHref = homeHref(role);
+  const accountRole: Role = role === "guest" ? "buyer" : role;
+  const profileHref = roleProfileHref(accountRole);
+  const settingsHref = roleSettingsHref(accountRole);
+  const favoritesHref = scopedHref("/favorites", accountRole);
+  const notificationsHref = scopedHref("/notifications", accountRole);
   const isFavoritesPage =
-    role === "provider" ? "/favorites/provider" : role === "both" ? "/favorites/both" : "/favorites/buyer";
+    pathname === favoritesHref || pathname.startsWith(`${favoritesHref}/`);
   const isNotificationsPage =
-    role === "provider" ? "/notifications/provider" : role === "both" ? "/notifications/both" : "/notifications/buyer";
+    pathname === notificationsHref || pathname.startsWith(`${notificationsHref}/`);
 
   // Scroll spy active section effect
   useEffect(() => {
     const isHomePage =
       pathname === "/" ||
       pathname === "/home/buyer" ||
-      pathname === "/home/provider";
+      pathname === "/home/provider" ||
+      pathname === "/home/both";
 
     if (!isHomePage) {
       return;
@@ -117,7 +127,8 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   const isHomePage =
     pathname === "/" ||
     pathname === "/home/buyer" ||
-    pathname === "/home/provider";
+    pathname === "/home/provider" ||
+    pathname === "/home/both";
   const currentActiveSection = isHomePage
     ? activeSection
     : pathname.startsWith("/about")
@@ -136,7 +147,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
         aria-controls="mobile-nav"
       />
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-10 py-5">
-        <Link href={homeHref} className="flex items-center gap-3">
+        <Link href={homeLinkHref} className="flex items-center gap-3">
           <Image
             src="/img/Skill%20Swap%20Hub%20Logo%20icon-no%20bg.svg"
             alt="Skill Swap Hub"
@@ -187,7 +198,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
           ) : (
             <>
               <Link
-                href="/notifications"
+                href={notificationsHref}
                 aria-label="Notifications"
                 className={`rounded-full p-2 transition hover:bg-slate-100 ${
                   isNotificationsPage
@@ -198,7 +209,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                 <BellIcon className="h-5 w-5" />
               </Link>
               <Link
-                href="/favorites"
+                href={favoritesHref}
                 aria-label="Favorites"
                 className={`rounded-full p-2 transition hover:bg-slate-100 ${
                   isFavoritesPage
@@ -226,9 +237,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                     Settings
                   </Link>
                   <Link
-                    href={
-                      role === "provider" ? "/help/provider" : "/help/buyer"
-                    }
+                    href={helpHref(accountRole)}
                     className="block rounded-lg px-3 py-2 hover:bg-slate-100"
                   >
                     Help & Support
@@ -308,13 +317,13 @@ export default function Navbar({ role: propRole }: NavbarProps) {
             ) : (
               <>
                 <Link
-                  href="/notifications"
+                  href={notificationsHref}
                   className="text-slate-600 hover:text-slate-900"
                 >
                   Notifications
                 </Link>
                 <Link
-                  href="/favorites"
+                  href={favoritesHref}
                   className="text-slate-600 hover:text-slate-900"
                 >
                   Favorites
@@ -332,7 +341,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                   Settings
                 </Link>
                 <Link
-                  href={role === "provider" ? "/help/provider" : "/help/buyer"}
+                  href={helpHref(accountRole)}
                   className="text-slate-600 hover:text-slate-900"
                 >
                   Help & Support

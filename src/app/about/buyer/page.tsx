@@ -10,11 +10,11 @@ export default function AboutBuyer() {
         primaryCtaLabel="Learn More"
         primaryCtaHref="/learn-more"
         secondaryCtaLabel="Explore Skills"
-        secondaryCtaHref="/#explore-skills"
+        secondaryCtaHref="/home/buyer#explore-skills"
         ctaButtonLabel="Go to Dashboard"
-        ctaButtonHref="/dashboard"
+        ctaButtonHref="/dashboard/buyer"
       />
-      <SiteFooter />
+      <SiteFooter role="buyer" />
     </div>
   );
 }

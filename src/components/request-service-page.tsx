@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { scopedHref, type Role } from "@/lib/role-routes";
 
 const recentRequests = [
   {
@@ -39,7 +40,13 @@ const skillCategories = [
 
 const levelOptions = ["Beginner", "Intermediate", "Advanced"];
 
-export default function RequestServiceContent() {
+type RequestServiceContentProps = {
+  role?: Role;
+};
+
+export default function RequestServiceContent({
+  role = "buyer",
+}: RequestServiceContentProps) {
   return (
     <div className="flex w-full max-w-[1080px] flex-col gap-6 pb-8">
       <header>
@@ -51,7 +58,7 @@ export default function RequestServiceContent() {
 
       <section className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
         <RequestForm />
-        <RecentRequestsPanel />
+        <RecentRequestsPanel role={role} />
       </section>
     </div>
   );
@@ -164,7 +171,7 @@ function RequestForm() {
 }
 
 
-function RecentRequestsPanel() {
+function RecentRequestsPanel({ role }: { role: Role }) {
   return (
     <aside className="min-w-0">
       <h2 className="text-2xl font-semibold text-slate-900">My Recent Requests</h2>
@@ -216,13 +223,13 @@ function RecentRequestsPanel() {
 
             {item.id === "active-react-native" ? (
               <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
+                <Link
+                  href={scopedHref("/find-services", role)}
                   className="inline-flex h-10 min-w-40 items-center justify-center rounded-lg border border-slate-300 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
                 >
                   <UserIcon className="mr-2 h-4 w-4" />
                   View Matches
-                </button>
+                </Link>
                 <button
                   type="button"
                   className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100"
@@ -242,13 +249,13 @@ function RecentRequestsPanel() {
 
             {item.id === "matched-thesis" ? (
               <div className="mt-4 border-t border-slate-200 pt-4">
-                <button
-                  type="button"
+                <Link
+                  href={scopedHref("/chats", role)}
                   className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-[#2f66e7] px-4 text-sm font-semibold text-white transition hover:bg-[#2557cf]"
                 >
                   <ChatIcon className="mr-2 h-4 w-4" />
                   Open Chat
-                </button>
+                </Link>
               </div>
             ) : null}
           </article>
@@ -257,7 +264,7 @@ function RecentRequestsPanel() {
 
       <div className="mt-4 flex justify-end">
         <Link
-          href="/request-service/all"
+          href={`${scopedHref("/request-service", role)}/all`}
           className="text-sm font-medium text-[#2f66e7] transition hover:text-[#2557cf]"
         >
           View All

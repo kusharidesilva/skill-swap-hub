@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { scopedHref, type Role } from "@/lib/role-routes";
 
 type RequestCardData = {
   id: string;
@@ -84,7 +85,13 @@ const tips = [
   },
 ];
 
-export default function AllRequestServicePage() {
+type AllRequestServicePageProps = {
+  role?: Role;
+};
+
+export default function AllRequestServicePage({
+  role = "buyer",
+}: AllRequestServicePageProps) {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("All Requests");
 
   const filters: Array<{ label: FilterKey; count: number }> = [
@@ -114,7 +121,7 @@ export default function AllRequestServicePage() {
         </div>
 
         <Link
-          href="/request-service"
+          href={scopedHref("/request-service", role)}
           className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#2f66e7] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2557cf] sm:w-auto"
         >
           <PlusIcon className="h-4 w-4" />

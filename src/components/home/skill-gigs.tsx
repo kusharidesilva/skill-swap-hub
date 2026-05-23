@@ -53,11 +53,14 @@ export default function SkillGigsSection() {
   const pathname = usePathname();
   const isBuyerHome = pathname === "/home/buyer";
   const isProviderHome = pathname === "/home/provider";
+  const isBothHome = pathname === "/home/both";
   const viewAllHref = isBuyerHome
-    ? "/find-services"
+    ? "/find-services/buyer"
     : isProviderHome
       ? "/explore-services?role=provider"
-      : "/explore-services";
+      : isBothHome
+        ? "/find-services/both"
+        : "/explore-services";
 
   return (
     <section id="explore-skills" className="bg-white scroll-mt-20">

@@ -1,6 +1,7 @@
 import type { ReactElement, SVGProps } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { dashboardHref, homeHref, type SiteRole } from "@/lib/role-routes";
 
 type IconType = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -14,7 +15,15 @@ const highlights: Highlight[] = [
   { label: "Peer Matching", Icon: MatchIcon },
 ];
 
-export default function HeroSection() {
+type HeroSectionProps = {
+  role?: SiteRole;
+};
+
+export default function HeroSection({ role = "guest" }: HeroSectionProps) {
+  const exploreHref = `${homeHref(role)}#explore-skills`;
+  const primaryHref = role === "guest" ? "/get-started" : dashboardHref(role);
+  const primaryLabel = role === "guest" ? "Get Started" : "Go to Dashboard";
+
   return (
     <section className="relative overflow-hidden bg-[#ebf5f0]">
       <div
@@ -47,13 +56,13 @@ export default function HeroSection() {
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link
-              href="/get-started"
+              href={primaryHref}
               className="rounded-lg bg-[#2b62e6] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
             >
-              Get Started
+              {primaryLabel}
             </Link>
             <Link
-              href="/#explore-skills"
+              href={exploreHref}
               className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900"
             >
               Explore Skills

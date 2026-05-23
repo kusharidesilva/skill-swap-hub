@@ -10,12 +10,12 @@ export default function ProviderHome() {
     <div className="min-h-screen bg-[#f5f7ff] text-slate-900">
       <Navbar />
       <main>
-        <HeroSection />
+        <HeroSection role="provider" />
         <SkillGigsSection />
         <VerifiedStudentsSection />
         <HowItWorksSection />
       </main>
-      <SiteFooter />
+      <SiteFooter role="provider" />
     </div>
   );
 }

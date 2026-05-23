@@ -4,7 +4,7 @@ import ProfileShell from "@/components/profile-shell";
 export default function FindServicesPage() {
   return (
     <ProfileShell role="buyer">
-      <FindServicesPageContent />
+      <FindServicesPageContent role="buyer" />
     </ProfileShell>
   );
 }

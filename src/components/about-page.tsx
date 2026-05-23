@@ -223,7 +223,7 @@ export default function AboutPage({
                 {ctaButtonLabel}
               </Link>
               <Link
-                href="/#explore-skills"
+                href={secondaryCtaHref}
                 className="rounded-lg border border-white/30 px-5 py-2.5 text-sm font-semibold text-white"
               >
                 Browse Skills

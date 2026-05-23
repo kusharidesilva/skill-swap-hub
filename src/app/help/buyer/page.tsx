@@ -7,7 +7,7 @@ export default function HelpBuyer() {
     <div className="min-h-screen bg-[#f5f7ff] text-slate-900">
       <Navbar />
       <SupportPage />
-      <SiteFooter />
+      <SiteFooter role="buyer" />
     </div>
   );
 }

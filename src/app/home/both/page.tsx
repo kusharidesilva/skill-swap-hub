@@ -5,17 +5,17 @@ import VerifiedStudentsSection from "@/components/home/verified-students";
 import SiteFooter from "@/components/footer";
 import Navbar from "@/components/navbar";
 
-export default function BuyerHome() {
+export default function BothHome() {
   return (
     <div className="min-h-screen bg-[#f5f7ff] text-slate-900">
-      <Navbar />
+      <Navbar role="both" />
       <main>
-        <HeroSection role="buyer" />
+        <HeroSection role="both" />
         <SkillGigsSection />
         <VerifiedStudentsSection />
         <HowItWorksSection />
       </main>
-      <SiteFooter role="buyer" />
+      <SiteFooter role="both" />
     </div>
   );
 }

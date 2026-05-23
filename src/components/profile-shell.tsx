@@ -3,8 +3,7 @@ import type { ReactNode } from "react";
 import SiteFooter from "@/components/footer";
 import Navbar from "@/components/navbar";
 import SideNav from "@/components/side-nav";
-
-type Role = "buyer" | "provider" | "both";
+import type { Role } from "@/lib/role-routes";
 
 type ProfileShellProps = {
   role: Role;
@@ -19,7 +18,7 @@ export default function ProfileShell({ role, children }: ProfileShellProps) {
         <SideNav role={role} />
         <main className="min-w-0 flex-1">{children}</main>
       </div>
-      <SiteFooter />
+      <SiteFooter role={role} />
     </div>
   );
 }

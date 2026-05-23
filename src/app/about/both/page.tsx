@@ -2,19 +2,19 @@ import AboutPage from "@/components/about-page";
 import Navbar from "@/components/navbar";
 import SiteFooter from "@/components/footer";
 
-export default function AboutProvider() {
+export default function AboutBoth() {
   return (
     <div className="min-h-screen bg-[#f5f7ff] text-slate-900">
-      <Navbar />
+      <Navbar role="both" />
       <AboutPage
         primaryCtaLabel="Learn More"
         primaryCtaHref="/learn-more"
         secondaryCtaLabel="Explore Skills"
-        secondaryCtaHref="/home/provider#explore-skills"
+        secondaryCtaHref="/home/both#explore-skills"
         ctaButtonLabel="Go to Dashboard"
-        ctaButtonHref="/dashboard/provider"
+        ctaButtonHref="/dashboard/both"
       />
-      <SiteFooter role="provider" />
+      <SiteFooter role="both" />
     </div>
   );
 }

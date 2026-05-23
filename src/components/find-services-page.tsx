@@ -1,3 +1,7 @@
+import Link from "next/link";
+
+import { scopedHref, type Role } from "@/lib/role-routes";
+
 const providerCards = [
   {
     id: "sarah-jenkins",
@@ -39,7 +43,16 @@ const filterConfig = [
   { label: "Sort By", options: ["Match Score", "Highest Rated", "Most Reviews"] },
 ];
 
-export default function FindServicesPageContent() {
+type FindServicesPageContentProps = {
+  role?: Role;
+};
+
+export default function FindServicesPageContent({
+  role,
+}: FindServicesPageContentProps) {
+  const requestHref = role ? scopedHref("/request-service", role) : "/login";
+  const chatHref = role ? scopedHref("/chats", role) : "/login";
+
   return (
     <div className="flex w-full flex-col gap-8 pb-10">
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_26px_rgba(15,23,42,0.04)] md:p-8">
@@ -157,19 +170,19 @@ export default function FindServicesPageContent() {
                 >
                   View Profile
                 </button>
-                <button
-                  type="button"
+                <Link
+                  href={requestHref}
                   className="inline-flex h-11 min-w-0 items-center justify-center rounded-lg bg-[#2f66e7] px-4 text-sm font-medium text-white transition hover:bg-[#2557cf]"
                 >
                   Request Service
-                </button>
-                <button
-                  type="button"
+                </Link>
+                <Link
+                  href={chatHref}
                   aria-label="Open chat"
                   className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50"
                 >
                   <ChatIcon className="h-5 w-5" />
-                </button>
+                </Link>
               </div>
             </div>
           </article>

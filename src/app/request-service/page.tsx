@@ -4,9 +4,8 @@ import ProfileShell from "@/components/profile-shell";
 export default function RequestServicePage() {
   return (
     <ProfileShell role="buyer">
-      <RequestServiceContent />
+      <RequestServiceContent role="buyer" />
     </ProfileShell>
   );
 }
-
 

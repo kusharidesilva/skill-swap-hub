@@ -4,8 +4,7 @@ import type { ReactElement } from "react";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-type Role = "buyer" | "provider" | "both";
+import { scopedHref, type Role } from "@/lib/role-routes";
 
 type NavItem = {
   label: string;
@@ -29,31 +28,31 @@ const navConfig: Record<Role, NavItem[]> = {
     },
     {
       label: "Request Service",
-      href: "/request-service",
+      href: scopedHref("/request-service", "buyer"),
       section: "find",
       icon: PlusCircleIcon,
     },
     {
       label: "Find Services",
-      href: "/find-services",
+      href: scopedHref("/find-services", "buyer"),
       section: "find",
       icon: SearchUserIcon,
     },
     {
       label: "Chat",
-      href: "/chats",
+      href: scopedHref("/chats", "buyer"),
       section: "community",
       icon: ChatIcon,
     },
     {
       label: "Ratings",
-      href: "/ratings",
+      href: scopedHref("/ratings", "buyer"),
       section: "community",
       icon: StarBadgeIcon,
     },
     {
       label: "Report Issue",
-      href: "/report-issue",
+      href: scopedHref("/report-issue", "buyer"),
       section: "footer",
       icon: AlertTriangleIcon,
     },
@@ -74,31 +73,31 @@ const navConfig: Record<Role, NavItem[]> = {
     },
     {
       label: "My Gigs",
-      href: "/my-gigs",
+      href: scopedHref("/my-gigs", "provider"),
       section: "find",
       icon: BriefcaseIcon,
     },
     {
       label: "Incoming Requests",
-      href: "/incoming-requests",
+      href: scopedHref("/incoming-requests", "provider"),
       section: "find",
       icon: InboxIcon,
     },
     {
       label: "Chat",
-      href: "/chats",
+      href: scopedHref("/chats", "provider"),
       section: "community",
       icon: ChatIcon,
     },
     {
       label: "Ratings",
-      href: "/ratings",
+      href: scopedHref("/ratings", "provider"),
       section: "community",
       icon: StarBadgeIcon,
     },
     {
       label: "Report Issue",
-      href: "/report-issue",
+      href: scopedHref("/report-issue", "provider"),
       section: "footer",
       icon: AlertTriangleIcon,
     },
@@ -117,40 +116,40 @@ const navConfig: Record<Role, NavItem[]> = {
       href: "/profile-settings/both",
       icon: SettingsIcon,
     },
-    { label: "My Gigs", href: "/my-gigs", section: "find", icon: BriefcaseIcon },
+    { label: "My Gigs", href: scopedHref("/my-gigs", "both"), section: "find", icon: BriefcaseIcon },
     {
       label: "Incoming Requests",
-      href: "/incoming-requests",
+      href: scopedHref("/incoming-requests", "both"),
       section: "find",
       icon: InboxIcon,
     },
     {
       label: "Request Service",
-      href: "/request-service",
+      href: scopedHref("/request-service", "both"),
       section: "find",
       icon: PlusCircleIcon,
     },
     {
       label: "Find Services",
-      href: "/find-services",
+      href: scopedHref("/find-services", "both"),
       section: "find",
       icon: SearchUserIcon,
     },
     {
       label: "Chat",
-      href: "/chats",
+      href: scopedHref("/chats", "both"),
       section: "community",
       icon: ChatIcon,
     },
     {
       label: "Ratings",
-      href: "/ratings",
+      href: scopedHref("/ratings", "both"),
       section: "community",
       icon: StarBadgeIcon,
     },
     {
       label: "Report Issue",
-      href: "/report-issue",
+      href: scopedHref("/report-issue", "both"),
       section: "footer",
       icon: AlertTriangleIcon,
     },
