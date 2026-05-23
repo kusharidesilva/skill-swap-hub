@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import type { SVGProps } from "react";
+import { usePathname } from "next/navigation";
 
 type Gig = {
   title: string;
@@ -47,6 +50,15 @@ const gigs: Gig[] = [
 ];
 
 export default function SkillGigsSection() {
+  const pathname = usePathname();
+  const isBuyerHome = pathname === "/home/buyer";
+  const isProviderHome = pathname === "/home/provider";
+  const viewAllHref = isBuyerHome
+    ? "/find-services"
+    : isProviderHome
+      ? "/explore-services?role=provider"
+      : "/explore-services";
+
   return (
     <section id="explore-skills" className="bg-white scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6 py-14">
@@ -60,7 +72,7 @@ export default function SkillGigsSection() {
             </p>
           </div>
           <Link
-            href="/#explore-skills"
+            href={viewAllHref}
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f4cbf]"
           >
             View All Skills
