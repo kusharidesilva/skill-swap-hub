@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 const recentRequests = [
@@ -255,12 +256,12 @@ function RecentRequestsPanel() {
       </div>
 
       <div className="mt-4 flex justify-end">
-        <button
-          type="button"
+        <Link
+          href="/request-service/all"
           className="text-sm font-medium text-[#2f66e7] transition hover:text-[#2557cf]"
         >
           View All
-        </button>
+        </Link>
       </div>
     </aside>
   );
