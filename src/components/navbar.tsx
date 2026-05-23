@@ -1,17 +1,17 @@
-"use client";
+"use client"; 
 
-import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation"; 
+import { useState, useEffect } from "react"; 
 import Image from "next/image";
 import Link from "next/link";
 
-type IconProps = { className?: string };
+type IconProps = { className?: string }; 
 
-interface NavbarProps {
-  role?: "guest" | "buyer" | "provider" | "both";
-}
+interface NavbarProps { 
+  role?: "guest" | "buyer" | "provider" | "both"; 
+} 
 
-export default function Navbar({ role: propRole }: NavbarProps) {
+export default function Navbar({ role: propRole }: NavbarProps) { 
   const pathname = usePathname();
   const [activeSection, setActiveSection] = useState("Home");
 
@@ -75,9 +75,9 @@ export default function Navbar({ role: propRole }: NavbarProps) {
         ? "/profile-settings/both"
         : "/profile-settings/buyer";
   const isFavoritesPage =
-    pathname === "/favorites" || pathname.startsWith("/favorites/");
+    role === "provider" ? "/favorites/provider" : role === "both" ? "/favorites/both" : "/favorites/buyer";
   const isNotificationsPage =
-    pathname === "/notifications" || pathname.startsWith("/notifications/");
+    role === "provider" ? "/notifications/provider" : role === "both" ? "/notifications/both" : "/notifications/buyer";
 
   // Scroll spy active section effect
   useEffect(() => {
