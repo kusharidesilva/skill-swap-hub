@@ -110,9 +110,9 @@ export default function BuyerProfile() {
               <span className="font-semibold text-emerald-700">★ 5.0</span>
             </div>
             <p className="mt-2 text-sm text-slate-600">
-              "Alex is an amazing Python tutor! He explained list comprehensions in a
+              &quot;Alex is an amazing Python tutor! He explained list comprehensions in a
               way that finally clicked for me. In return, I helped him with his Tableau
-              dashboard. Truly a great exchange."
+              dashboard. Truly a great exchange.&quot;
             </p>
             <p className="mt-3 text-xs text-slate-500">Oct 12, 2023 - Python & Django swap</p>
           </div>
@@ -123,8 +123,8 @@ export default function BuyerProfile() {
               <span className="font-semibold text-emerald-700">★ 4.5</span>
             </div>
             <p className="mt-2 text-sm text-slate-600">
-              "Very patient and knowledgeable about UI design. We spent two hours
-              going over mobile app flows. He is very professional and punctual."
+              &quot;Very patient and knowledgeable about UI design. We spent two hours
+              going over mobile app flows. He is very professional and punctual.&quot;
             </p>
             <p className="mt-3 text-xs text-slate-500">Sep 28, 2023 - UI/UX Design swap</p>
           </div>
