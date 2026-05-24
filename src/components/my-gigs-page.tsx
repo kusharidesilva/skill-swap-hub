@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 const gigs = [
   {
@@ -81,7 +82,7 @@ export default function MyGigsPageContent({ activeTab = "offered" }: MyGigsPageC
               <div
                 className="h-36 w-full overflow-hidden bg-slate-100"
               >
-                <img src={gig.image} alt={gig.title} className="h-full w-full object-cover" />
+                <Image src={gig.image} alt={gig.title} width={600} height={240} className="h-full w-full object-cover" />
               </div>
 
               <div className="p-4">
