@@ -52,6 +52,10 @@ export default function FindServicesPageContent({
 }: FindServicesPageContentProps) {
   const requestHref = role ? scopedHref("/service", role) : "/get-started";
   const chatHref = role ? scopedHref("/chats", role) : "/get-started";
+  const profileHref = (providerId: string) =>
+    role
+      ? `/provider-profile/${providerId}?role=${role}`
+      : `/provider-profile/${providerId}`;
 
   return (
     <div className="flex w-full flex-col gap-8 pb-10">
@@ -164,12 +168,12 @@ export default function FindServicesPageContent({
               </div>
 
               <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_44px] gap-2">
-                <button
-                  type="button"
+                <Link
+                  href={profileHref(provider.id)}
                   className="inline-flex h-11 min-w-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                 >
                   View Profile
-                </button>
+                </Link>
                 <Link
                   href={requestHref}
                   className="inline-flex h-11 min-w-0 items-center justify-center rounded-lg bg-[#2f66e7] px-4 text-sm font-medium text-white transition hover:bg-[#2557cf]"

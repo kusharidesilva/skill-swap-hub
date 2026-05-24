@@ -226,8 +226,12 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
 }
 
 function SideNavLink({ link, pathname }: { link: NavItem; pathname: string }) {
+  const isInsideServicePage = pathname.startsWith("/service/");
+  const isFindServicesLink = link.label === "Find Services";
   const isActive =
-    pathname === link.href || pathname.startsWith(`${link.href}/`);
+    pathname === link.href ||
+    pathname.startsWith(`${link.href}/`) ||
+    (isInsideServicePage && isFindServicesLink);
   const Icon = link.icon;
   const isSignOut = link.label === "Sign Out";
 
