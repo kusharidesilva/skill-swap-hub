@@ -6,12 +6,19 @@ import { isRole } from "@/lib/role-routes";
 
 type RolePageProps = {
   params: Promise<{ role?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[] }>;
 };
 
 export default async function RoleIncomingRequestsPage({
   params,
+  searchParams,
 }: RolePageProps) {
   const { role } = await params;
+  const tabValue = (await searchParams).tab;
+  const activeTab =
+    tabValue === "accepted" || tabValue === "completed" || tabValue === "declined"
+      ? tabValue
+      : "new";
 
   if (!isRole(role)) {
     notFound();
@@ -19,7 +26,7 @@ export default async function RoleIncomingRequestsPage({
 
   return (
     <ProfileShell role={role}>
-      <IncomingRequestsPageContent />
+      <IncomingRequestsPageContent activeTab={activeTab} role={role === "both" ? "both" : "provider"} />
     </ProfileShell>
   );
 }

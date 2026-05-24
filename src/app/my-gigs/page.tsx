@@ -11,7 +11,7 @@ export default async function MyGigsPage({ searchParams }: MyGigsPageProps) {
 
   return (
     <ProfileShell role="provider">
-      <MyGigsPageContent activeTab={activeTab} />
+      <MyGigsPageContent activeTab={activeTab} role="provider" />
     </ProfileShell>
   );
 }

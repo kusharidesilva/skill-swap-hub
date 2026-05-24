@@ -230,11 +230,18 @@ function SideNavLink({ link, pathname }: { link: NavItem; pathname: string }) {
   const isFindServicesLink = link.label === "Find Services";
   const isReportProfilePage = pathname.startsWith("/report-profile");
   const isReportIssueLink = link.label === "Report Issue";
+  const isPostGigPage = pathname.startsWith("/post-gig");
+  const isGigPreviewPage = pathname.startsWith("/gig-preview");
+  const isEditGigPage = pathname.startsWith("/edit-gig");
+  const isMyGigsLink = link.label === "My Gigs";
   const isActive =
     pathname === link.href ||
     pathname.startsWith(`${link.href}/`) ||
     (isInsideServicePage && isFindServicesLink) ||
-    (isReportProfilePage && isReportIssueLink);
+    (isReportProfilePage && isReportIssueLink) ||
+    (isPostGigPage && isMyGigsLink) ||
+    (isGigPreviewPage && isMyGigsLink) ||
+    (isEditGigPage && isMyGigsLink);
   const Icon = link.icon;
   const isSignOut = link.label === "Sign Out";
 

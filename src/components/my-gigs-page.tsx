@@ -33,9 +33,13 @@ const gigs = [
 
 type MyGigsPageContentProps = {
   activeTab?: "offered" | "manage";
+  role?: "provider" | "both";
 };
 
-export default function MyGigsPageContent({ activeTab = "offered" }: MyGigsPageContentProps) {
+export default function MyGigsPageContent({
+  activeTab = "offered",
+  role = "provider",
+}: MyGigsPageContentProps) {
   const isManageTab = activeTab === "manage";
 
   return (
@@ -104,9 +108,12 @@ export default function MyGigsPageContent({ activeTab = "offered" }: MyGigsPageC
                 {isManageTab ? (
                   <div className="mt-5 border-t border-slate-200 pt-4">
                     <div className="flex items-center gap-3">
-                      <button className="flex-1 rounded-lg bg-[#e5e7f2] px-3 py-2 text-sm font-semibold text-slate-800">
-                        ✎ Edit
-                      </button>
+                      <Link
+                        href={`/edit-gig/${role}/${gig.id}`}
+                        className="flex-1 rounded-lg bg-[#e5e7f2] px-3 py-2 text-center text-sm font-semibold text-slate-800"
+                      >
+                        Edit
+                      </Link>
                       <button
                         aria-label="Pause gig"
                         className="h-9 w-9 rounded-full border border-slate-300 text-slate-500"
@@ -129,10 +136,16 @@ export default function MyGigsPageContent({ activeTab = "offered" }: MyGigsPageC
 
         {isManageTab ? (
           <div className="mt-6 rounded-xl border-2 border-dashed border-[#c8d0ee] bg-[#f3f5ff] py-12 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-4 border-slate-500 text-2xl text-slate-500">
+            <Link
+              href={`/post-gig/${role}`}
+              aria-label="Post a New Gig"
+              className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-4 border-slate-500 text-2xl text-slate-500"
+            >
               +
-            </div>
-            <p className="mt-4 text-3xl font-semibold text-slate-700">Post a New Gig</p>
+            </Link>
+            <Link href={`/post-gig/${role}`} className="mt-4 block text-3xl font-semibold text-slate-700">
+              Post a New Gig
+            </Link>
             <p className="mt-2 text-base text-slate-500">Offer your expertise to fellow students</p>
           </div>
         ) : null}

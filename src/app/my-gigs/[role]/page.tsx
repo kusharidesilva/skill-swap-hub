@@ -20,7 +20,7 @@ export default async function RoleMyGigsPage({ params, searchParams }: RolePageP
 
   return (
     <ProfileShell role={role}>
-      <MyGigsPageContent activeTab={activeTab} />
+      <MyGigsPageContent activeTab={activeTab} role={role === "both" ? "both" : "provider"} />
     </ProfileShell>
   );
 }
