@@ -28,11 +28,12 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   // Determine the active role based on prop or pathname auto-detection
   let role: SiteRole = propRole || "guest";
   if (!propRole) {
-    if (pathname.includes("/both")) {
+    const pathSegments = pathname.split("/");
+    if (pathSegments.includes("both")) {
       role = "both";
-    } else if (pathname.includes("/provider")) {
+    } else if (pathSegments.includes("provider")) {
       role = "provider";
-    } else if (pathname.includes("/buyer") || pathname.includes("/logged-in")) {
+    } else if (pathSegments.includes("buyer") || pathSegments.includes("logged-in")) {
       role = "buyer";
     }
   }

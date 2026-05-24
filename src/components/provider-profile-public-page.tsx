@@ -9,35 +9,141 @@ type ProviderProfilePublicPageProps = {
   activeTab: "gigs" | "reviews";
 };
 
-const offeredGigs = [
-  {
-    id: "book-cover",
-    title: "Creative Book Cover Design",
-    rating: "5.0",
-    reviews: 12,
-    category: "Graphic Design",
-    points: 20,
-    image: "/img/package%201.jpg",
-  },
-  {
-    id: "arch-viz",
-    title: "3D Architectural Visualization",
-    rating: "5.0",
-    reviews: 8,
-    category: "Architecture",
-    points: 45,
-    image: "/img/package%202.jpg",
-  },
-  {
-    id: "logo-design",
-    title: "Minimalist Logo Design",
+const providersData: Record<string, {
+  name: string;
+  degree: string;
+  university: string;
+  rating: string;
+  reviewsCount: number;
+  image: string;
+  verified: boolean;
+  topRated: boolean;
+  trustScore: string;
+  totalSwaps: string;
+  avgRating: string;
+  avgResponse: string;
+  gigs: Array<{
+    id: string;
+    title: string;
+    rating: string;
+    reviews: number;
+    category: string;
+    points: number;
+    image: string;
+  }>;
+}> = {
+  "sarah-jenkins": {
+    name: "Sarah Jenkins",
+    degree: "BSc Computer Science",
+    university: "Univ of Colombo",
     rating: "4.9",
-    reviews: 22,
-    category: "Branding",
-    points: 30,
-    image: "/img/package%203.jpg",
+    reviewsCount: 42,
+    image: "/img/favorites/sofia.jpg",
+    verified: true,
+    topRated: true,
+    trustScore: "98%",
+    totalSwaps: "42",
+    avgRating: "4.9",
+    avgResponse: "2h",
+    gigs: [
+      {
+        id: "react-web",
+        title: "Modern React Web Development",
+        rating: "4.9",
+        reviews: 30,
+        category: "Programming",
+        points: 40,
+        image: "/img/package%201.jpg",
+      },
+      {
+        id: "node-api",
+        title: "RESTful API with Node.js & Express",
+        rating: "4.8",
+        reviews: 12,
+        category: "Backend Development",
+        points: 50,
+        image: "/img/package%202.jpg",
+      },
+    ]
   },
-];
+  "michael-chen": {
+    name: "Michael Chen",
+    degree: "BA Graphic Design",
+    university: "Univ of Moratuwa",
+    rating: "4.7",
+    reviewsCount: 28,
+    image: "/img/favorites/david.jpg",
+    verified: true,
+    topRated: false,
+    trustScore: "95%",
+    totalSwaps: "28",
+    avgRating: "4.7",
+    avgResponse: "1h",
+    gigs: [
+      {
+        id: "figma-design",
+        title: "High-Fidelity UI/UX Design in Figma",
+        rating: "4.8",
+        reviews: 18,
+        category: "UI/UX Design",
+        points: 35,
+        image: "/img/package%203.jpg",
+      },
+      {
+        id: "logo-brand",
+        title: "Modern Minimalist Logo Design",
+        rating: "4.6",
+        reviews: 10,
+        category: "Branding",
+        points: 25,
+        image: "/img/package%201.jpg",
+      },
+    ]
+  },
+  "alex-rivera": {
+    name: "Alex Rivera",
+    degree: "BSc Design",
+    university: "University of Moratuwa",
+    rating: "5.0",
+    reviewsCount: 68,
+    image: "/img/favorites/alex.jpg",
+    verified: true,
+    topRated: true,
+    trustScore: "99%",
+    totalSwaps: "68",
+    avgRating: "5.0",
+    avgResponse: "1h",
+    gigs: [
+      {
+        id: "book-cover",
+        title: "Creative Book Cover Design",
+        rating: "5.0",
+        reviews: 12,
+        category: "Graphic Design",
+        points: 20,
+        image: "/img/package%201.jpg",
+      },
+      {
+        id: "arch-viz",
+        title: "3D Architectural Visualization",
+        rating: "5.0",
+        reviews: 8,
+        category: "Architecture",
+        points: 45,
+        image: "/img/package%202.jpg",
+      },
+      {
+        id: "logo-design",
+        title: "Minimalist Logo Design",
+        rating: "4.9",
+        reviews: 22,
+        category: "Branding",
+        points: 30,
+        image: "/img/package%203.jpg",
+      },
+    ]
+  }
+};
 
 const allReviews = [
   {
@@ -83,6 +189,9 @@ export default function ProviderProfilePublicPage({
   role,
   activeTab,
 }: ProviderProfilePublicPageProps) {
+  const profile = providersData[providerId] || providersData["alex-rivera"];
+  const firstName = profile.name.split(" ")[0];
+
   const messageHref = role ? scopedHref("/chats", role) : "/get-started";
   const favoriteHref = role ? scopedHref("/favorites", role) : "/get-started";
   const reportHref = role
@@ -101,8 +210,8 @@ export default function ProviderProfilePublicPage({
         <div className="grid gap-5 md:grid-cols-[152px_minmax(0,1fr)]">
           <div className="relative h-[152px] w-[152px] overflow-hidden rounded-xl">
             <Image
-              src="/img/favorites/alex.jpg"
-              alt="Alex Rivera"
+              src={profile.image}
+              alt={profile.name}
               fill
               className="object-cover"
               sizes="152px"
@@ -113,23 +222,28 @@ export default function ProviderProfilePublicPage({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-semibold leading-none text-[#1453c4] md:text-[2.2rem]">
-                Alex Rivera
+                {profile.name}
               </h1>
-              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-[#1453c4]">
-                Verified Student
-              </span>
-              <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-700">
-                Top Rated
-              </span>
+              {profile.verified && (
+                <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-[#1453c4]">
+                  Verified Student
+                </span>
+              )}
+              {profile.topRated && (
+                <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-700">
+                  Top Rated
+                </span>
+              )}
             </div>
-            <p className="mt-2 text-xl text-slate-700 md:text-[1.85rem]">University of Moratuwa</p>
+            <p className="mt-2 text-xl text-slate-700 md:text-[1.85rem]">{profile.university}</p>
+            <p className="mt-1 text-sm text-slate-500 font-semibold">{profile.degree}</p>
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Link
                 href={messageHref}
                 className="inline-flex h-11 items-center justify-center rounded-lg bg-[#1453c4] px-5 text-sm font-semibold text-white transition hover:bg-[#0f43a1]"
               >
-                Message Alex
+                Message {firstName}
               </Link>
               <Link
                 href={favoriteHref}
@@ -149,10 +263,10 @@ export default function ProviderProfilePublicPage({
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Trust Score" value="99%" sub=" " accent />
-        <MetricCard title="Total Swaps" value="68" sub="Completed" />
-        <MetricCard title="Avg. Rating" value="5.0" sub="★★★★★" teal />
-        <MetricCard title="Avg. Response" value="1h" sub="Highly Responsive" />
+        <MetricCard title="Trust Score" value={profile.trustScore} sub=" " accent />
+        <MetricCard title="Total Swaps" value={profile.totalSwaps} sub="Completed" />
+        <MetricCard title="Avg. Rating" value={profile.avgRating} sub="★★★★★" teal />
+        <MetricCard title="Avg. Response" value={profile.avgResponse} sub="Highly Responsive" />
       </section>
 
       <section>
@@ -175,13 +289,13 @@ export default function ProviderProfilePublicPage({
                 : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
-            Reviews (4)
+            Reviews ({profile.reviewsCount})
           </Link>
         </div>
 
         {activeTab === "gigs" ? (
           <div className="mt-5 grid gap-4 lg:grid-cols-3">
-            {offeredGigs.map((gig) => (
+            {profile.gigs.map((gig) => (
               <article
                 key={gig.id}
                 className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
