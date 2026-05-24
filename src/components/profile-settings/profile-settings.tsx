@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 
 const offeredSkills = ["Graphic Design", "Python", "Web Dev", "Tutoring"];
+const neededSkills = ["Java", "UI/UX", "Research Writing", "Assignment Formatting"];
 const weekDays = [
   { key: "MON", enabled: true },
   { key: "TUE", enabled: true },
@@ -12,34 +13,47 @@ const weekDays = [
   { key: "SUN", enabled: false },
 ];
 
-export default function ProviderProfileSettings() {
+export type Role = "buyer" | "provider" | "both";
+
+export default function ProfileSettings({ role }: { role: Role }) {
+  const showOffered = role === "provider" || role === "both";
+  const showNeeded = role === "buyer" || role === "both";
+  const showAvailability = role === "provider" || role === "both";
+
+  const description =
+    role === "both"
+      ? "Manage your profile details, skills offered/requested, availability, and dashboard security options."
+      : role === "buyer"
+      ? "Manage your profile details, skills requested, and dashboard security options."
+      : "Manage your profile details, skills offered, availability, and dashboard security options.";
+
   return (
-    <div className="flex w-full max-w-[880px] flex-col gap-7 pb-10">
+    <div className="flex w-full flex-col gap-8 pb-10">
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Profile Settings</h1>
+        <p className="mt-2 text-base text-slate-600">{description}</p>
+      </header>
+
       <ProfileHeader />
 
-      <section className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
-        <BasicInformation />
-        <SkillsOffered />
-      </section>
-
-      <WeeklyAvailability />
-
-      <section>
-        <div className="mb-5 flex items-center gap-2 text-base font-semibold text-slate-900">
-          <DashboardIcon className="h-5 w-5 text-[#0758d8]" />
-          Account Dashboard
-        </div>
-
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,1fr)]">
+      {/* Main Settings Grid */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        {/* Left Column */}
+        <div className="grid gap-6">
+          <BasicInformation />
+          {showAvailability && <WeeklyAvailability />}
           <LoginSecurity />
-          <div className="grid gap-6">
-            <NotificationSettings />
-            <PrivacySettings />
-          </div>
         </div>
-      </section>
 
-      <DangerZone />
+        {/* Right Column */}
+        <div className="grid gap-6">
+          {showOffered && <SkillsOffered />}
+          {showNeeded && <SkillsNeeded />}
+          <NotificationSettings />
+          <PrivacySettings />
+          <DangerZone />
+        </div>
+      </div>
     </div>
   );
 }
@@ -108,6 +122,24 @@ function BasicInformation() {
       <form className="mt-6 grid gap-5">
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Full Name" defaultValue="Alex Rivera" />
+          
+          <label className="grid gap-2 text-sm font-medium text-slate-600">
+            Current Email
+            <div className="flex min-w-0 overflow-hidden rounded-md border border-slate-300 bg-[#f1f4ff] focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100">
+              <input
+                type="email"
+                defaultValue="alex.rivera@stanford.edu"
+                className="min-w-0 flex-1 bg-transparent px-4 py-3 text-base font-medium text-slate-800 outline-none"
+              />
+              <button
+                type="button"
+                className="min-w-20 shrink-0 border-l border-slate-300 px-4 text-sm font-semibold text-[#0758d8] transition hover:bg-blue-50 hover:text-[#0648b4]"
+              >
+                Change
+              </button>
+            </div>
+          </label>
+
           <Field label="University" defaultValue="Stanford University" />
           <Field label="Degree Program" defaultValue="B.Sc. Computer Science" />
 
@@ -125,23 +157,6 @@ function BasicInformation() {
             </select>
           </label>
         </div>
-
-        <label className="grid gap-2 text-sm font-medium text-slate-600">
-          Current Email
-          <div className="flex min-w-0 overflow-hidden rounded-md border border-slate-300 bg-[#f1f4ff] focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100">
-            <input
-              type="email"
-              defaultValue="alex.rivera@stanford.edu"
-              className="min-w-0 flex-1 bg-transparent px-4 py-3 text-base font-medium text-slate-800 outline-none"
-            />
-            <button
-              type="button"
-              className="min-w-20 shrink-0 border-l border-slate-300 px-4 text-sm font-semibold text-[#0758d8] transition hover:bg-blue-50 hover:text-[#0648b4]"
-            >
-              Change
-            </button>
-          </div>
-        </label>
 
         <label className="grid gap-2 text-sm font-medium text-slate-600">
           Bio
@@ -185,12 +200,41 @@ function SkillsOffered() {
   );
 }
 
+function SkillsNeeded() {
+  return (
+    <section className="h-fit rounded-xl border border-slate-100 border-l-4 border-l-[#0758d8] bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-base font-semibold text-slate-800">Skills I Need</h2>
+        <button
+          type="button"
+          aria-label="Add needed skill"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-[#0758d8] transition hover:bg-blue-50"
+        >
+          <PlusCircleIcon className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {neededSkills.map((skill) => (
+          <button
+            key={skill}
+            type="button"
+            className="inline-flex max-w-full items-center rounded-full bg-blue-100 px-3 py-1.5 text-sm font-semibold text-[#2f66e7] transition hover:bg-blue-200"
+          >
+            <span className="truncate">{skill} x</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function WeeklyAvailability() {
   return (
     <section className="rounded-xl border border-slate-100 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
       <SectionTitle icon={<CalendarIcon className="h-5 w-5" />} title="Weekly Availability" />
 
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-7">
         {weekDays.map((day) => (
           <label
             key={day.key}
@@ -281,17 +325,17 @@ function PrivacySettings() {
 function DangerZone() {
   return (
     <section className="rounded-xl border border-red-200 bg-red-50/50 p-6">
-      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-        <div className="min-w-0">
+      <div className="flex flex-col gap-4">
+        <div>
           <h2 className="text-base font-semibold text-red-700">Danger Zone</h2>
-          <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-slate-600">
+          <p className="mt-1 text-sm font-medium leading-6 text-slate-600">
             Permanently deactivate your account. This action is irreversible and all your
             data, including swap history, will be removed.
           </p>
         </div>
         <button
           type="button"
-          className="min-h-12 w-full shrink-0 rounded-md bg-red-700 px-8 py-3 text-sm font-semibold leading-5 text-white transition hover:bg-red-800 sm:w-auto md:max-w-44"
+          className="h-11 w-full rounded-md bg-red-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-red-800"
         >
           Deactivate Account
         </button>
@@ -474,17 +518,6 @@ function CheckIcon({ className }: IconProps) {
       strokeWidth={3}
     >
       <path d="M5 13l4 4L19 7" />
-    </svg>
-  );
-}
-
-function DashboardIcon({ className }: IconProps) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M4 4h7v7H4z" />
-      <path d="M13 4h7v7h-7z" />
-      <path d="M4 13h7v7H4z" />
-      <path d="M13 13h3v3h4v4h-7z" />
     </svg>
   );
 }

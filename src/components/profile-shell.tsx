@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import SiteFooter from "@/components/footer";
 import Navbar from "@/components/navbar";
 import SideNav from "@/components/side-nav";
+import MobileNav from "@/components/mobile-nav";
 import type { Role } from "@/lib/role-routes";
 
 type ProfileShellProps = {
@@ -14,8 +15,17 @@ export default function ProfileShell({ role, children }: ProfileShellProps) {
   return (
     <div className="min-h-screen bg-[#f5f7ff] text-slate-900">
       <Navbar role={role} />
-      <div className="mx-auto flex w-full max-w-6xl gap-8 px-6 py-8">
-        <SideNav role={role} />
+
+      {/* Mobile / tablet horizontal nav — hidden on xl+ */}
+      <div className="xl:hidden sticky top-[84px] z-30 border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm">
+        <MobileNav role={role} />
+      </div>
+
+      <div className="mx-auto flex w-full max-w-6xl flex-col xl:flex-row gap-8 px-6 pt-6 xl:pt-10 pb-8">
+        {/* Desktop sidebar — hidden below xl */}
+        <div className="hidden xl:block w-64 shrink-0">
+          <SideNav role={role} />
+        </div>
         <main className="min-w-0 flex-1">{children}</main>
       </div>
       <SiteFooter role={role} />

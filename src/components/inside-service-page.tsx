@@ -110,7 +110,7 @@ export default function InsideServicePage({ role }: InsideServicePageProps) {
           </p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <article className="hidden xl:block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <h4 className="text-xl font-semibold text-[#1453c4]">Skill Match</h4>
             <span className="text-xl font-semibold text-teal-700">92%</span>

@@ -13,9 +13,9 @@ const recentRequests = [
   },
   {
     id: "matched-thesis",
-    category: "",
+    category: "Writing",
     title: "Thesis Proofreading",
-    description: "",
+    description: "Looking for an experienced academic writer to proofread my thesis.",
     status: "Matched",
     style: "blue",
   },
@@ -48,7 +48,7 @@ export default function RequestServiceContent({
   role = "buyer",
 }: RequestServiceContentProps) {
   return (
-    <div className="flex w-full max-w-[1080px] flex-col gap-6 pb-8">
+    <div className="flex w-full flex-col gap-8 pb-10">
       <header>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Request a Service</h1>
         <p className="mt-2 text-base text-slate-600">
@@ -194,7 +194,7 @@ function RecentRequestsPanel({ role }: { role: Role }) {
                   item.style === "emerald"
                     ? "bg-emerald-100 text-emerald-700"
                     : item.style === "blue"
-                      ? "bg-slate-200 text-transparent"
+                      ? "bg-blue-100 text-[#2f66e7]"
                       : "bg-slate-200 text-slate-600"
                 }`}
               >
@@ -281,7 +281,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
   return (
     <label className="grid min-w-0 gap-2">
-      <span className="min-h-12 text-base font-semibold leading-6 text-slate-800">
+      <span className="text-sm font-semibold text-slate-700">
         {labelText}
         {isOptional ? (
           <span className="ml-1 text-xs font-medium text-slate-500">(Optional)</span>

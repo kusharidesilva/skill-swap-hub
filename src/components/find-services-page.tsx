@@ -102,7 +102,7 @@ export default function FindServicesPageContent({
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
+      <section className="grid gap-6 xl:grid-cols-2">
         {providerCards.map((provider) => (
           <article
             key={provider.id}

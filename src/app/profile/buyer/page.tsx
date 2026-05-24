@@ -1,10 +1,10 @@
-import BuyerProfile from "@/components/profile/buyer-profile";
+import Profile from "@/components/profile/profile";
 import ProfileShell from "@/components/profile-shell";
 
 export default function BuyerProfilePage() {
   return (
     <ProfileShell role="buyer">
-      <BuyerProfile />
+      <Profile role="buyer" />
     </ProfileShell>
   );
 }

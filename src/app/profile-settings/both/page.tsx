@@ -1,10 +1,10 @@
-import BothProfileSettings from "@/components/profile-settings/both-profile-settings";
+import ProfileSettings from "@/components/profile-settings/profile-settings";
 import ProfileShell from "@/components/profile-shell";
 
 export default function BothProfileSettingsPage() {
   return (
     <ProfileShell role="both">
-      <BothProfileSettings />
+      <ProfileSettings role="both" />
     </ProfileShell>
   );
 }

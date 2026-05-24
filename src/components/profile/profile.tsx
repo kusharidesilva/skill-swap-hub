@@ -1,8 +1,19 @@
 import Image from "next/image";
 
-export default function ProviderProfile() {
+export type Role = "buyer" | "provider" | "both";
+
+const offeredSkills = ["Python & Django", "UI/UX Design", "Figma", "C++ Fundamentals", "Mobile App Dev"];
+const neededSkills = ["Data Analysis", "Tableau", "Public Speaking", "Econometrics"];
+const availableDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const activeDays = new Set(["Tue", "Wed", "Fri"]);
+
+export default function Profile({ role }: { role: Role }) {
+  const showOffered = role === "provider" || role === "both";
+  const showNeeded = role === "buyer" || role === "both";
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Profile Header */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-5">
@@ -38,6 +49,7 @@ export default function ProviderProfile() {
         </div>
       </section>
 
+      {/* Identity Verified Banner */}
       <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
         <div className="flex items-start gap-3">
           <span className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
@@ -52,7 +64,8 @@ export default function ProviderProfile() {
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+      {/* About + Skills */}
+      <section className="grid gap-6 xl:grid-cols-[2fr_1fr]">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-600">
@@ -70,32 +83,52 @@ export default function ProviderProfile() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-              ✓
-            </span>
-            Skills I Can Offer
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {[
-              "Python & Django",
-              "UI/UX Design",
-              "Figma",
-              "C++ Fundamentals",
-              "Mobile App Dev",
-            ].map((skill) => (
-              <span
-                key={skill}
-                className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
-              >
-                {skill}
-              </span>
-            ))}
-          </div>
+        <div className="flex flex-col gap-4">
+          {showOffered && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                  ✓
+                </span>
+                Skills I Can Offer
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {offeredSkills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showNeeded && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                  ✓
+                </span>
+                Skills I Need
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {neededSkills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
+      {/* Recent Reviews */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -120,7 +153,7 @@ export default function ProviderProfile() {
               way that finally clicked for me. In return, I helped him with his Tableau
               dashboard. Truly a great exchange.&quot;
             </p>
-            <p className="mt-3 text-xs text-slate-500">Oct 12, 2023 - Python & Django swap</p>
+            <p className="mt-3 text-xs text-slate-500">Oct 12, 2023 - Python &amp; Django swap</p>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -137,6 +170,7 @@ export default function ProviderProfile() {
         </div>
       </section>
 
+      {/* Availability */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
@@ -146,11 +180,11 @@ export default function ProviderProfile() {
         </div>
         <p className="mt-2 text-xs text-slate-500">Usually responds within 2 hours</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          {"Mon,Tue,Wed,Thu,Fri,Sat".split(",").map((day) => (
+          {availableDays.map((day) => (
             <span
               key={day}
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                day === "Tue" || day === "Wed" || day === "Fri"
+                activeDays.has(day)
                   ? "bg-blue-600 text-white"
                   : "bg-slate-100 text-slate-500"
               }`}
