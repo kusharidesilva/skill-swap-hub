@@ -6,10 +6,13 @@ import { isRole } from "@/lib/role-routes";
 
 type RolePageProps = {
   params: Promise<{ role?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[] }>;
 };
 
-export default async function RoleMyGigsPage({ params }: RolePageProps) {
+export default async function RoleMyGigsPage({ params, searchParams }: RolePageProps) {
   const { role } = await params;
+  const tabValue = (await searchParams).tab;
+  const activeTab = tabValue === "manage" ? "manage" : "offered";
 
   if (!isRole(role)) {
     notFound();
@@ -17,7 +20,7 @@ export default async function RoleMyGigsPage({ params }: RolePageProps) {
 
   return (
     <ProfileShell role={role}>
-      <MyGigsPageContent />
+      <MyGigsPageContent activeTab={activeTab} />
     </ProfileShell>
   );
 }
