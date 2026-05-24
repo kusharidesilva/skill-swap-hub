@@ -50,8 +50,8 @@ type FindServicesPageContentProps = {
 export default function FindServicesPageContent({
   role,
 }: FindServicesPageContentProps) {
-  const requestHref = role ? scopedHref("/request-service", role) : "/login";
-  const chatHref = role ? scopedHref("/chats", role) : "/login";
+  const requestHref = role ? scopedHref("/service", role) : "/get-started";
+  const chatHref = role ? scopedHref("/chats", role) : "/get-started";
 
   return (
     <div className="flex w-full flex-col gap-8 pb-10">
