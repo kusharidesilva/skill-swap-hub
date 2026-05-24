@@ -4,7 +4,7 @@ import RatingsPageContent from "@/components/ratings-page";
 export default function RatingsPage() {
   return (
     <ProfileShell role="buyer">
-      <RatingsPageContent />
+      <RatingsPageContent role="buyer" />
     </ProfileShell>
   );
 }

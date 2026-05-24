@@ -17,7 +17,7 @@ export default async function RoleRatingsPage({ params }: RolePageProps) {
 
   return (
     <ProfileShell role={role}>
-      <RatingsPageContent />
+      <RatingsPageContent role={role} />
     </ProfileShell>
   );
 }

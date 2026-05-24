@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  profileHref,
   scopedHref,
   type Role,
 } from "@/lib/role-routes";
@@ -264,6 +263,23 @@ function ChatHeader({
   conversation: Conversation;
   role: Role;
 }) {
+  const peerSlug =
+    conversation.id === 1
+      ? "alex-rivera"
+      : conversation.id === 2
+        ? "sarah-chen"
+        : "marcus-johnson";
+
+  const peerParam =
+    conversation.id === 1
+      ? "alex"
+      : conversation.id === 2
+        ? "sarah"
+        : "marcus";
+
+  const peerProfileHref = `/provider-profile/${peerSlug}?role=${role}`;
+  const reportPeerHref = `/report-profile/${peerSlug}?role=${role}`;
+
   return (
     <header className="border-b border-blue-200 bg-[#eef2ff] px-5 py-4 sm:px-6">
       <div className="flex items-center justify-between gap-4">
@@ -298,18 +314,18 @@ function ChatHeader({
           <HeaderActionButton
             icon={<UserIcon className="h-4 w-4" />}
             label="View Profile"
-            href={profileHref(role)}
+            href={peerProfileHref}
           />
           <HeaderActionButton
             icon={<StarIcon className="h-4 w-4" />}
             label="Submit Review"
-            href={scopedHref("/ratings", role)}
+            href={`${scopedHref("/submit-review", role)}?peer=${peerParam}`}
           />
           <HeaderActionButton
             icon={<FlagIcon className="h-4 w-4" />}
             label="Report Issue"
             tone="danger"
-            href={scopedHref("/report-issue", role)}
+            href={reportPeerHref}
           />
         </div>
       </div>
