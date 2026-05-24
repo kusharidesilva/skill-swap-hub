@@ -85,6 +85,9 @@ export default function ProviderProfilePublicPage({
 }: ProviderProfilePublicPageProps) {
   const messageHref = role ? scopedHref("/chats", role) : "/get-started";
   const favoriteHref = role ? scopedHref("/favorites", role) : "/get-started";
+  const reportHref = role
+    ? `/report-profile/${providerId}?role=${role}`
+    : "/get-started";
 
   const baseProfileHref = role
     ? `/provider-profile/${providerId}?role=${role}`
@@ -134,12 +137,12 @@ export default function ProviderProfilePublicPage({
               >
                 Save to Favorites
               </Link>
-              <button
-                type="button"
+              <Link
+                href={reportHref}
                 className="inline-flex h-11 items-center justify-center rounded-lg px-2 text-sm font-semibold text-red-600 transition hover:text-red-700"
               >
                 Report Profile
-              </button>
+              </Link>
             </div>
           </div>
         </div>

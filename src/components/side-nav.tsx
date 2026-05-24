@@ -52,7 +52,7 @@ const navConfig: Record<Role, NavItem[]> = {
     },
     {
       label: "Report Issue",
-      href: scopedHref("/report-issue", "buyer"),
+      href: "/report-profile?role=buyer",
       section: "footer",
       icon: AlertTriangleIcon,
     },
@@ -97,7 +97,7 @@ const navConfig: Record<Role, NavItem[]> = {
     },
     {
       label: "Report Issue",
-      href: scopedHref("/report-issue", "provider"),
+      href: "/report-profile?role=provider",
       section: "footer",
       icon: AlertTriangleIcon,
     },
@@ -149,7 +149,7 @@ const navConfig: Record<Role, NavItem[]> = {
     },
     {
       label: "Report Issue",
-      href: scopedHref("/report-issue", "both"),
+      href: "/report-profile?role=both",
       section: "footer",
       icon: AlertTriangleIcon,
     },
@@ -228,10 +228,13 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
 function SideNavLink({ link, pathname }: { link: NavItem; pathname: string }) {
   const isInsideServicePage = pathname.startsWith("/service/");
   const isFindServicesLink = link.label === "Find Services";
+  const isReportProfilePage = pathname.startsWith("/report-profile");
+  const isReportIssueLink = link.label === "Report Issue";
   const isActive =
     pathname === link.href ||
     pathname.startsWith(`${link.href}/`) ||
-    (isInsideServicePage && isFindServicesLink);
+    (isInsideServicePage && isFindServicesLink) ||
+    (isReportProfilePage && isReportIssueLink);
   const Icon = link.icon;
   const isSignOut = link.label === "Sign Out";
 
