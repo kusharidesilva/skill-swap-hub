@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { collection, addDoc, query, where, onSnapshot, doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { scopedHref, type Role } from "@/lib/role-routes";
+import { type UserProfile } from "@/lib/auth";
 
 const skillCategories = [
   "Programming",
@@ -48,31 +49,43 @@ export default function RequestServiceContent({
   const searchParams = useSearchParams();
   const providerIdParam = searchParams.get("providerId");
 
-  const [providerName, setProviderName] = useState("");
-  const [targetProviderId, setTargetProviderId] = useState("");
+  const [providerName, setProviderName] = useState(() =>
+    providerIdParam ? "" : "General / Public Request"
+  );
+  const [prevProviderIdParam, setPrevProviderIdParam] = useState(providerIdParam);
+
+  if (providerIdParam !== prevProviderIdParam) {
+    setPrevProviderIdParam(providerIdParam);
+    setProviderName(providerIdParam ? "" : "General / Public Request");
+  }
+
+  const targetProviderId = providerIdParam || "general";
 
   // Fetch designated provider info if target providerId is passed in search query
   useEffect(() => {
-    if (providerIdParam) {
-      setTargetProviderId(providerIdParam);
-      async function fetchProvider() {
-        try {
-          const providerDoc = await getDoc(doc(db, "users", providerIdParam as string));
-          if (providerDoc.exists()) {
-            setProviderName(providerDoc.data().name || "Specified Provider");
-          } else {
-            setProviderName("Direct Request");
-          }
-        } catch (err) {
-          console.error("Error fetching target provider:", err);
+    if (!providerIdParam) return;
+
+    const providerId = providerIdParam;
+    let active = true;
+    async function fetchProvider() {
+      try {
+        const providerDoc = await getDoc(doc(db, "users", providerId));
+        if (!active) return;
+        if (providerDoc.exists()) {
+          setProviderName(providerDoc.data().name || "Specified Provider");
+        } else {
           setProviderName("Direct Request");
         }
+      } catch (err) {
+        if (!active) return;
+        console.error("Error fetching target provider:", err);
+        setProviderName("Direct Request");
       }
-      fetchProvider();
-    } else {
-      setTargetProviderId("general");
-      setProviderName("General / Public Request");
     }
+    fetchProvider();
+    return () => {
+      active = false;
+    };
   }, [providerIdParam]);
 
   if (loading) {
@@ -127,7 +140,7 @@ function RequestForm({
   providerName,
   refreshProfile,
 }: {
-  buyerProfile: any;
+  buyerProfile: UserProfile;
   providerId: string;
   providerName: string;
   refreshProfile: () => Promise<void>;
@@ -190,9 +203,10 @@ function RequestForm({
       setTime("");
       setPreferredUniv("");
       setBudget("");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error submitting request:", err);
-      setFeedback({ type: "error", msg: err.message || "Failed to submit request." });
+      const msg = err instanceof Error ? err.message : "Failed to submit request.";
+      setFeedback({ type: "error", msg });
     } finally {
       setIsSubmitting(false);
     }

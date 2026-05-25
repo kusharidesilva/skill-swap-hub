@@ -228,7 +228,7 @@ export default function ForgotPasswordFlow() {
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="mt-0.5 text-[#2b62e6]">2.</span>
-                    <span>Click the <span className="font-medium text-slate-800">"Reset Password"</span> link in the email.</span>
+                    <span>Click the <span className="font-medium text-slate-800">&quot;Reset Password&quot;</span> link in the email.</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="mt-0.5 text-[#2b62e6]">3.</span>

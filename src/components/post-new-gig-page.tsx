@@ -30,7 +30,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
           <SectionTitle title="Gig Overview" />
           <div className="mt-5 space-y-4">
             <LabeledInput label="Gig Title" placeholder="e.g., I will design a modern book cover for your project" />
-            <p className="-mt-3 text-xs font-medium text-slate-400">Create a catchy title starting with 'I will...'</p>
+            <p className="-mt-3 text-xs font-medium text-slate-400">Create a catchy title starting with &apos;I will...&apos;</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <LabeledSelect label="Category" value="Graphic Design" />
               <LabeledSelect label="Subcategory" value="Book Design" />
@@ -92,6 +92,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
 
           <div className="mt-4 grid grid-cols-4 gap-3">
             <div className="h-24 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/img/package%201.jpg" alt="Gig thumbnail" className="h-full w-full object-cover" />
             </div>
             {Array.from({ length: 3 }).map((_, index) => (

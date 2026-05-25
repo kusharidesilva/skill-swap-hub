@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { upgradeToProvider, checkBuyerHistory } from "@/lib/auth";
@@ -47,7 +47,7 @@ export default function ProviderRegisterPage() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<ProviderValues>({
@@ -93,9 +93,9 @@ export default function ProviderRegisterPage() {
     }
   }, [userProfile, setValue, router]);
 
-  const selectedSkills = watch("skills");
-  const selectedProficiency = watch("proficiency");
-  const selectedAvailability = watch("availability");
+  const selectedSkills = useWatch({ control, name: "skills" }) || [];
+  const selectedProficiency = useWatch({ control, name: "proficiency" }) || "Intermediate";
+  const selectedAvailability = useWatch({ control, name: "availability" }) || [];
 
   // ── Skill tag helpers ────────────────────────────────────────────────────────
 

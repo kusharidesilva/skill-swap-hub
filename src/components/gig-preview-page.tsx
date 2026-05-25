@@ -31,6 +31,7 @@ export default function GigPreviewPage({ role, backHref }: GigPreviewPageProps) 
 
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-[#9d6a2e] shadow-sm">
             <div className="h-[460px] w-full p-6">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/img/package%201.jpg"
                 alt="Creative book cover design"
