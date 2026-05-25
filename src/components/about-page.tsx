@@ -103,7 +103,7 @@ export default function AboutPage({
         </div>
       </section>
 
-      <section className="bg-white">
+      <section id="story" className="bg-white scroll-mt-20">
         <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1fr_1.05fr]">
           <div className="grid grid-cols-2 gap-4">
             {storyImages.map((image) => (

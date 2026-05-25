@@ -8,7 +8,7 @@ export default function AboutBoth() {
       <Navbar role="both" />
       <AboutPage
         primaryCtaLabel="Learn More"
-        primaryCtaHref="/learn-more"
+        primaryCtaHref="#story"
         secondaryCtaLabel="Explore Skills"
         secondaryCtaHref="/home/both#explore-skills"
         ctaButtonLabel="Go to Dashboard"

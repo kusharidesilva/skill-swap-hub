@@ -32,6 +32,7 @@ export interface UserProfile {
   role: Role;
   emailVerified: boolean;
   createdAt: Date | null;
+  neededSkills?: string[];
   providerProfile?: {
     skills: string[];
     proficiency: string;
