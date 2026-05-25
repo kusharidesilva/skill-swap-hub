@@ -39,9 +39,17 @@ export default function AuthGuard({ requiredRole, children }: AuthGuardProps) {
     // 3. Role mismatch (only if requiredRole is set and profile is loaded)
     if (requiredRole && userProfile) {
       const role = userProfile.role;
-      // "both" users can access either buyer or provider pages
+
+      // Access matrix:
+      // "both"     → can access any page (buyer OR provider)
+      // "provider" → can access both provider AND buyer pages
+      //              (providers can browse & buy skills too)
+      // "buyer"    → can only access buyer pages, NOT provider pages
       const hasAccess =
-        role === "both" || role === requiredRole;
+        role === "both" ||
+        role === requiredRole ||
+        role === "provider"; // providers can freely browse buyer pages
+
       if (!hasAccess) {
         router.replace(`/home/${role}`);
       }
