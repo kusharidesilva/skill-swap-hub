@@ -1,4 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
 import ProfileShell from "@/components/profile-shell";
 
 type Role = "buyer" | "provider" | "both";
@@ -7,49 +13,181 @@ type DashboardViewProps = {
   role: Role;
 };
 
-const dashboardCopy: Record<Role, { title: string; description: string; stats: string[] }> = {
-  buyer: {
-    title: "Welcome Back, Buyer!",
-    description: "Track service requests, saved providers, chats, and ratings from one place.",
-    stats: ["Active requests", "Saved services", "Unread chats"],
-  },
-  provider: {
-    title: "Welcome Back, Provider!",
-    description: "Manage your gigs, incoming requests, conversations, and student feedback.",
-    stats: ["Published gigs", "Incoming requests", "Average rating"],
-  },
-  both: {
-    title: "Welcome Back, Swapper!",
-    description: "Use buyer and provider tools together without switching accounts.",
-    stats: ["Service requests", "Provider gigs", "Open chats"],
-  },
-};
-
 export default function DashboardView({ role }: DashboardViewProps) {
-  const content = dashboardCopy[role];
+  const { userProfile, loading } = useAuth();
+  
+  // Stats States
+  const [buyerActiveRequests, setBuyerActiveRequests] = useState(0);
+  const [buyerCompletedRequests, setBuyerCompletedRequests] = useState(0);
+  const [providerIncomingRequests, setProviderIncomingRequests] = useState(0);
+  const [providerActiveJobs, setProviderActiveJobs] = useState(0);
+  const [providerAvgRating, setProviderAvgRating] = useState(5.0);
+  const [providerReviewCount, setProviderReviewCount] = useState(0);
+
+  useEffect(() => {
+    if (!userProfile) return;
+    const uid = userProfile.uid;
+
+    async function fetchStats() {
+      try {
+
+        // 1. Fetch Buyer Stats
+        const buyerQuery = query(collection(db, "requests"), where("buyerId", "==", uid));
+        const buyerSnapshot = await getDocs(buyerQuery);
+        let activeB = 0;
+        let completedB = 0;
+        buyerSnapshot.forEach((doc) => {
+          const status = doc.data().status;
+          if (status === "completed") {
+            completedB++;
+          } else if (status !== "rejected") {
+            activeB++;
+          }
+        });
+        setBuyerActiveRequests(activeB);
+        setBuyerCompletedRequests(completedB);
+
+        // 2. Fetch Provider Stats
+        const providerQuery = query(collection(db, "requests"), where("providerId", "==", uid));
+        const providerSnapshot = await getDocs(providerQuery);
+        let incomingP = 0;
+        let activeP = 0;
+        let totalStars = 0;
+        let reviewsCount = 0;
+
+        providerSnapshot.forEach((doc) => {
+          const data = doc.data();
+          const status = data.status;
+          
+          if (status === "pending") {
+            incomingP++;
+          } else if (status === "working" || status === "revision" || status === "done") {
+            activeP++;
+          } else if (status === "completed") {
+            if (data.review && typeof data.review.rating === "number") {
+              totalStars += data.review.rating;
+              reviewsCount++;
+            }
+          }
+        });
+
+        setProviderIncomingRequests(incomingP);
+        setProviderActiveJobs(activeP);
+        setProviderReviewCount(reviewsCount);
+        if (reviewsCount > 0) {
+          setProviderAvgRating(parseFloat((totalStars / reviewsCount).toFixed(1)));
+        } else {
+          setProviderAvgRating(5.0);
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard statistics:", err);
+      }
+    }
+
+    fetchStats();
+  }, [userProfile]);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
+          <p className="text-sm text-slate-500">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-sm text-slate-500">Please sign in to view dashboard.</p>
+      </div>
+    );
+  }
+
+  const userRole = userProfile.role || role;
 
   return (
-    <ProfileShell role={role}>
+    <ProfileShell role={userRole}>
       <div className="space-y-6">
+        {/* Main Banner */}
         <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-wide text-[#2f66e7]">
-            Dashboard
+            Dashboard Overview
           </p>
-          <h1 className="mt-2 text-2xl font-semibold text-slate-900">{content.title}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600">{content.description}</p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-900">
+            Welcome Back, {userProfile.name}!
+          </h1>
+          <p className="mt-2 max-w-2xl text-base text-slate-600">
+            {userRole === "both"
+              ? "Use both buyer and provider tools together without switching accounts."
+              : userRole === "provider"
+              ? "Manage your incoming requests, active swap sessions, and student feedback."
+              : "Track your active swap requests, saved providers, and ratings from one place."}
+          </p>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {content.stats.map((stat) => (
-              <div key={stat} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-700">{stat}</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-900">0</p>
-              </div>
-            ))}
+          {/* Dynamic Stat Cards */}
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {userRole === "buyer" && (
+              <>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold text-slate-600">Active Requests</p>
+                  <p className="mt-2 text-3xl font-bold text-slate-900">{buyerActiveRequests}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold text-slate-600">Swaps Completed</p>
+                  <p className="mt-2 text-3xl font-bold text-slate-900">{buyerCompletedRequests}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold text-slate-600">University Affiliation</p>
+                  <p className="mt-2.5 text-base font-bold text-blue-700 truncate">{userProfile.university || "Stanford University"}</p>
+                </div>
+              </>
+            )}
+
+            {userRole === "provider" && (
+              <>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold text-slate-600">Incoming Requests</p>
+                  <p className="mt-2 text-3xl font-bold text-amber-600">{providerIncomingRequests}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold text-slate-600">Active Swaps</p>
+                  <p className="mt-2 text-3xl font-bold text-blue-700">{providerActiveJobs}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold text-slate-600">Average Rating</p>
+                  <p className="mt-2 text-3xl font-bold text-emerald-600">
+                    {providerAvgRating.toFixed(1)} <span className="text-sm text-slate-400">({providerReviewCount} reviews)</span>
+                  </p>
+                </div>
+              </>
+            )}
+
+            {userRole === "both" && (
+              <>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold text-slate-600">Learning Requests</p>
+                  <p className="mt-2 text-3xl font-bold text-blue-700">{buyerActiveRequests}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold text-slate-600">Teaching Swaps</p>
+                  <p className="mt-2 text-3xl font-bold text-emerald-600">{providerIncomingRequests + providerActiveJobs}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold text-slate-600">Average Swap Rating</p>
+                  <p className="mt-2 text-3xl font-bold text-amber-500">
+                    {providerAvgRating.toFixed(1)} <span className="text-sm text-slate-400">({providerReviewCount})</span>
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
         {/* Both Details Section (If user is both Buyer and Provider) */}
-        {role === "both" && (
+        {userRole === "both" && (
           <section className="grid gap-6 md:grid-cols-2">
             {/* Buyer Details Sub-section */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-[#2f66e7]/40 transition-colors">
@@ -68,19 +206,15 @@ export default function DashboardView({ role }: DashboardViewProps) {
               <div className="mt-4 space-y-3.5">
                 <div className="flex items-center justify-between text-xs sm:text-sm">
                   <span className="text-slate-500">Active Service Requests</span>
-                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">0</span>
-                </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm">
-                  <span className="text-slate-500">Saved Peer Services</span>
-                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">0</span>
+                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">{buyerActiveRequests}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs sm:text-sm">
                   <span className="text-slate-500">Swaps Completed</span>
-                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">0</span>
+                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">{buyerCompletedRequests}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs sm:text-sm pt-2 border-t border-slate-50">
                   <span className="text-slate-600 font-medium">Estimated Swaps Spent</span>
-                  <span className="font-bold text-[#2f66e7]">0 Swaps</span>
+                  <span className="font-bold text-[#2f66e7]">{buyerCompletedRequests} Swaps</span>
                 </div>
               </div>
               <div className="mt-5">
@@ -109,28 +243,24 @@ export default function DashboardView({ role }: DashboardViewProps) {
               </div>
               <div className="mt-4 space-y-3.5">
                 <div className="flex items-center justify-between text-xs sm:text-sm">
-                  <span className="text-slate-500">Published Gig Listings</span>
-                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">0</span>
-                </div>
-                <div className="flex items-center justify-between text-xs sm:text-sm">
                   <span className="text-slate-500">Incoming Peer Requests</span>
-                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">0</span>
+                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">{providerIncomingRequests}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs sm:text-sm">
-                  <span className="text-slate-500">Swaps Received</span>
-                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">0</span>
+                  <span className="text-slate-500">Active Teaching Swaps</span>
+                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">{providerActiveJobs}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs sm:text-sm pt-2 border-t border-slate-50">
                   <span className="text-slate-600 font-medium">Ratings & Feedback</span>
-                  <span className="font-bold text-[#1caa88]">5.0 ★ (0 reviews)</span>
+                  <span className="font-bold text-[#1caa88]">{providerAvgRating.toFixed(1)} ★ ({providerReviewCount} reviews)</span>
                 </div>
               </div>
               <div className="mt-5">
                 <Link
-                  href="/my-gigs/both"
+                  href="/incoming-requests/both"
                   className="block w-full text-center rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors"
                 >
-                  Manage Your Gigs →
+                  Manage Incoming Requests →
                 </Link>
               </div>
             </div>
@@ -138,7 +268,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
         )}
 
         {/* Become a Seller callout (If Buyer Dashboard) */}
-        {role === "buyer" && (
+        {userRole === "buyer" && (
           <div className="overflow-hidden rounded-2xl border border-blue-100 bg-[#f8faff] p-6 shadow-sm relative">
             <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-48 h-48 bg-blue-100/30 rounded-full blur-2xl pointer-events-none" />
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
@@ -162,7 +292,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
         )}
 
         {/* Become a Buyer callout (If Provider Dashboard) */}
-        {role === "provider" && (
+        {userRole === "provider" && (
           <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-[#f7fdfb] p-6 shadow-sm relative">
             <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-48 h-48 bg-emerald-100/30 rounded-full blur-2xl pointer-events-none" />
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">

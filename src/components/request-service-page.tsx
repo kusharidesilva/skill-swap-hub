@@ -1,36 +1,14 @@
+"use client";
+
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { collection, addDoc, query, where, onSnapshot, doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
 import { scopedHref, type Role } from "@/lib/role-routes";
 
-const recentRequests = [
-  {
-    id: "active-react-native",
-    category: "Programming",
-    title: "React Native Setup",
-    description: "Looking for someone to help set up a React Native environment on",
-    status: "Active",
-    style: "emerald",
-  },
-  {
-    id: "matched-thesis",
-    category: "Writing",
-    title: "Thesis Proofreading",
-    description: "Looking for an experienced academic writer to proofread my thesis.",
-    status: "Matched",
-    style: "blue",
-  },
-  {
-    id: "completed-figma",
-    category: "Design",
-    title: "Figma Prototype Review",
-    description: "",
-    status: "Completed",
-    style: "slate",
-  },
-];
-
 const skillCategories = [
-  "Select Category",
   "Programming",
   "Design",
   "Writing",
@@ -44,123 +22,322 @@ type RequestServiceContentProps = {
   role?: Role;
 };
 
+interface RequestData {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  status: string;
+  providerId: string;
+  providerName: string;
+  level: string;
+  serviceType: string;
+  time: string;
+  budget: string;
+  revisionNotes?: string;
+  review?: {
+    rating: number;
+    comment: string;
+  };
+}
+
 export default function RequestServiceContent({
   role = "buyer",
 }: RequestServiceContentProps) {
+  const { userProfile, loading, refreshProfile } = useAuth();
+  const searchParams = useSearchParams();
+  const providerIdParam = searchParams.get("providerId");
+
+  const [providerName, setProviderName] = useState("");
+  const [targetProviderId, setTargetProviderId] = useState("");
+
+  // Fetch designated provider info if target providerId is passed in search query
+  useEffect(() => {
+    if (providerIdParam) {
+      setTargetProviderId(providerIdParam);
+      async function fetchProvider() {
+        try {
+          const providerDoc = await getDoc(doc(db, "users", providerIdParam as string));
+          if (providerDoc.exists()) {
+            setProviderName(providerDoc.data().name || "Specified Provider");
+          } else {
+            setProviderName("Direct Request");
+          }
+        } catch (err) {
+          console.error("Error fetching target provider:", err);
+          setProviderName("Direct Request");
+        }
+      }
+      fetchProvider();
+    } else {
+      setTargetProviderId("general");
+      setProviderName("General / Public Request");
+    }
+  }, [providerIdParam]);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
+          <p className="text-sm text-slate-500">Loading request service panel...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-sm text-slate-500">Please sign in to request a service.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex w-full flex-col gap-8 pb-10">
       <header>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Request a Service</h1>
         <p className="mt-2 text-base text-slate-600">
-          Describe clearly what help you need so the system can find better matches.
+          Describe clearly what help you need so the system can match you or notify the provider.
         </p>
+        {providerIdParam && (
+          <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700 border border-blue-100">
+            ✉️ Direct Request to: <span className="underline">{providerName}</span>
+          </div>
+        )}
       </header>
 
-      <section className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <RequestForm />
-        <RecentRequestsPanel role={role} />
+      <section className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <RequestForm
+          buyerProfile={userProfile}
+          providerId={targetProviderId}
+          providerName={providerName}
+          refreshProfile={refreshProfile}
+        />
+        <RecentRequestsPanel buyerId={userProfile.uid} role={role} />
       </section>
     </div>
   );
 }
 
-function RequestForm() {
+function RequestForm({
+  buyerProfile,
+  providerId,
+  providerName,
+  refreshProfile,
+}: {
+  buyerProfile: any;
+  providerId: string;
+  providerName: string;
+  refreshProfile: () => Promise<void>;
+}) {
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState(skillCategories[0]);
+  const [description, setDescription] = useState("");
+  const [level, setLevel] = useState(levelOptions[0]);
+  const [serviceType, setServiceType] = useState("Skill Exchange");
+  const [time, setTime] = useState("");
+  const [preferredUniv, setPreferredUniv] = useState("");
+  const [budget, setBudget] = useState("");
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !description.trim()) {
+      setFeedback({ type: "error", msg: "Please fill out the Skill Needed and Description fields." });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFeedback(null);
+
+    try {
+      await addDoc(collection(db, "requests"), {
+        buyerId: buyerProfile.uid,
+        buyerName: buyerProfile.name,
+        buyerUniversity: buyerProfile.university || "",
+        buyerDegree: buyerProfile.degree || "",
+        buyerYearOfStudy: buyerProfile.yearOfStudy || "",
+        providerId,
+        providerName,
+        title: title.trim(),
+        category,
+        description: description.trim(),
+        level,
+        serviceType,
+        time: time.trim() || "Flexible",
+        university: preferredUniv.trim() || "Any University",
+        budget: budget.trim() || "Free Swap",
+        status: "pending",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      // If this user is currently a pure provider who just made their first
+      // buyer request, upgrade their Firestore role to "both" so the
+      // navbar/shell immediately shows the correct dual-role UI.
+      if (buyerProfile.role === "provider") {
+        await updateDoc(doc(db, "users", buyerProfile.uid), { role: "both" });
+        await refreshProfile();
+      }
+
+      setFeedback({ type: "success", msg: "Your skill swap request has been submitted successfully!" });
+      setTitle("");
+      setDescription("");
+      setTime("");
+      setPreferredUniv("");
+      setBudget("");
+    } catch (err: any) {
+      console.error("Error submitting request:", err);
+      setFeedback({ type: "error", msg: err.message || "Failed to submit request." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.04)] md:p-8">
-      <form className="grid gap-6">
+      <form onSubmit={handleSubmit} className="grid gap-6">
+        {feedback && (
+          <div
+            className={`rounded-lg px-4 py-3 text-sm font-semibold border ${
+              feedback.type === "success"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                : "bg-red-50 text-red-800 border-red-200"
+            }`}
+          >
+            {feedback.msg}
+          </div>
+        )}
+
         {/* Skill Needed and Category */}
         <div className="grid gap-5 md:grid-cols-2">
-          <Field label="Skill Needed">
+          <label className="grid min-w-0 gap-2">
+            <span className="text-sm font-semibold text-slate-700">Skill Needed</span>
             <input
               type="text"
               placeholder="e.g., Python Data Analysis"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               className={fieldClassName}
             />
-          </Field>
+          </label>
 
-          <Field label="Skill Category">
+          <label className="grid min-w-0 gap-2">
+            <span className="text-sm font-semibold text-slate-700">Skill Category</span>
             <select
-              defaultValue={skillCategories[0]}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
               title="Skill Category"
               className={fieldClassName}
             >
-              {skillCategories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
+              {skillCategories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
                 </option>
               ))}
             </select>
-          </Field>
+          </label>
         </div>
 
-        <Field label="Description">
+        <label className="grid min-w-0 gap-2">
+          <span className="text-sm font-semibold text-slate-700">Description</span>
           <textarea
             rows={5}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder="Detail the specific tasks, project scope, or areas you need help with..."
             className="w-full resize-none rounded-lg border border-slate-300 bg-[#f7f8ff] px-4 py-3 text-base leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
           />
-        </Field>
+        </label>
 
         {/* Required Level and Service Type */}
         <div className="grid gap-6 md:grid-cols-2">
-          <Field label="Required Level">
+          <label className="grid min-w-0 gap-2">
+            <span className="text-sm font-semibold text-slate-700">Required Level</span>
             <select
-              defaultValue={levelOptions[0]}
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
               title="Required Level"
               className={fieldClassName}
             >
-              {levelOptions.map((level) => (
-                <option key={level} value={level}>
-                  {level}
+              {levelOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
                 </option>
               ))}
             </select>
-          </Field>
+          </label>
 
-          <Field label="Service Type">
-            <div className="flex max-w-[260px] flex-wrap items-center gap-2 pt-0.5">
-              <TypePill label="Free Help" />
-              <TypePill label="Skill Exchange" active />
-              <TypePill label="Paid" />
+          <label className="grid min-w-0 gap-2">
+            <span className="text-sm font-semibold text-slate-700">Service Type</span>
+            <div className="flex max-w-[280px] flex-wrap items-center gap-2 pt-0.5">
+              {["Free Help", "Skill Exchange", "Paid"].map((type) => (
+                <button
+                  type="button"
+                  key={type}
+                  onClick={() => setServiceType(type)}
+                  className={`inline-flex h-8 items-center justify-center rounded-full border px-3 text-xs font-semibold leading-none transition ${
+                    serviceType === type
+                      ? "border-[#2f66e7] bg-[#2f66e7] text-white"
+                      : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
             </div>
-          </Field>
+          </label>
         </div>
 
         {/* Preferred Date/ Time, University, and Budget */}
         <div className="grid items-end gap-3 md:grid-cols-3">
-          <Field label="Preferred Date/ Time">
+          <label className="grid min-w-0 gap-2">
+            <span className="text-sm font-semibold text-slate-700">Preferred Date/ Time</span>
             <input
               type="text"
-              placeholder="Weekends, Evenings"
+              placeholder="e.g., Weekends, Evenings"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
               className={fieldClassName}
             />
-          </Field>
+          </label>
 
-          <Field label="Preferred University (Optional)">
+          <label className="grid min-w-0 gap-2">
+            <span className="text-sm font-semibold text-slate-700">Preferred University</span>
             <input
               type="text"
               placeholder="e.g., State Uni"
+              value={preferredUniv}
+              onChange={(e) => setPreferredUniv(e.target.value)}
               className={fieldClassName}
             />
-          </Field>
+          </label>
 
-          <Field label="Budget (Optional)">
+          <label className="grid min-w-0 gap-2">
+            <span className="text-sm font-semibold text-slate-700">Budget (Optional)</span>
             <input
               type="text"
-              placeholder="e.g., $20/hr"
+              placeholder="e.g., Free Swap"
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
               className={fieldClassName}
             />
-          </Field>
+          </label>
         </div>
 
         {/* Submit Button */}
         <div className="border-t border-slate-200 pt-6">
           <div className="flex justify-end">
             <button
-              type="button"
-              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#2f66e7] px-8 text-base font-semibold text-white shadow-sm transition hover:bg-[#2557cf] sm:w-auto sm:min-w-56"
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#2f66e7] px-8 text-base font-semibold text-white shadow-sm transition hover:bg-[#2557cf] disabled:opacity-60 sm:w-auto sm:min-w-56"
             >
-              Submit Request
+              {isSubmitting ? "Submitting..." : "Submit Request"}
               <SendIcon className="h-4 w-4" />
             </button>
           </div>
@@ -170,174 +347,278 @@ function RequestForm() {
   );
 }
 
+function RecentRequestsPanel({ buyerId, role }: { buyerId: string; role: Role }) {
+  const [requests, setRequests] = useState<RequestData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-function RecentRequestsPanel({ role }: { role: Role }) {
+  // States to reveal interactive review form per card
+  const [activeReviewId, setActiveReviewId] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+
+  // States to reveal interactive revision input per card
+  const [activeRevisionId, setActiveRevisionId] = useState<string | null>(null);
+  const [revisionText, setRevisionText] = useState("");
+
+  // Real-time listener on requests submitted by this buyer
+  useEffect(() => {
+    const q = query(
+      collection(db, "requests"),
+      where("buyerId", "==", buyerId)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const docs: RequestData[] = [];
+      snapshot.forEach((docSnap) => {
+        docs.push({ id: docSnap.id, ...docSnap.data() } as RequestData);
+      });
+      // Sort client-side if serverTimestamp is loading/null
+      docs.sort((a, b) => b.id.localeCompare(a.id));
+      setRequests(docs);
+      setLoading(false);
+    }, (err) => {
+      console.error("Error loading recent requests:", err);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [buyerId]);
+
+  // Handle accepting work & adding review
+  const handleAcceptComplete = async (reqId: string) => {
+    try {
+      await updateDoc(doc(db, "requests", reqId), {
+        status: "completed",
+        updatedAt: serverTimestamp(),
+        review: {
+          rating: reviewRating,
+          comment: reviewComment.trim() || "Outstanding swap session!",
+        },
+      });
+      setActiveReviewId(null);
+      setReviewComment("");
+      setReviewRating(5);
+    } catch (err) {
+      console.error("Error completing request:", err);
+    }
+  };
+
+  // Handle requesting changes / sending revision notes
+  const handleRequestRevision = async (reqId: string) => {
+    if (!revisionText.trim()) return;
+    try {
+      await updateDoc(doc(db, "requests", reqId), {
+        status: "revision",
+        revisionNotes: revisionText.trim(),
+        updatedAt: serverTimestamp(),
+      });
+      setActiveRevisionId(null);
+      setRevisionText("");
+    } catch (err) {
+      console.error("Error requesting revision:", err);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "pending":
+        return { label: "Pending Match", style: "bg-amber-100 text-amber-800 border-amber-200" };
+      case "working":
+        return { label: "In Progress / Working", style: "bg-blue-100 text-blue-800 border-blue-200" };
+      case "done":
+        return { label: "Marked Done by Provider", style: "bg-purple-100 text-purple-800 border-purple-200 border-2 animate-pulse" };
+      case "revision":
+        return { label: "Revision Sent", style: "bg-rose-100 text-rose-800 border-rose-200" };
+      case "completed":
+        return { label: "Completed", style: "bg-emerald-100 text-emerald-800 border-emerald-200" };
+      case "rejected":
+        return { label: "Declined", style: "bg-slate-100 text-slate-600 border-slate-200" };
+      default:
+        return { label: status, style: "bg-slate-100 text-slate-600 border-slate-200" };
+    }
+  };
+
+  if (loading) {
+    return (
+      <aside className="min-w-0">
+        <h2 className="text-2xl font-semibold text-slate-900">Recent Requests</h2>
+        <div className="mt-4 flex items-center justify-center p-6 text-sm text-slate-500">
+          Loading requests...
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside className="min-w-0">
-      <h2 className="text-2xl font-semibold text-slate-900">My Recent Requests</h2>
+      <h2 className="text-2xl font-semibold text-slate-900">Recent Requests</h2>
 
-      <div className="mt-4 grid gap-4">
-        {recentRequests.map((item) => (
-          <article
-            key={item.id}
-            className={`rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_10px_26px_rgba(15,23,42,0.04)] ${
-              item.style === "emerald"
-                ? "border-r-4 border-r-emerald-500"
-                : item.style === "blue"
-                  ? "border-r-4 border-r-[#2f66e7]"
-                  : ""
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <span
-                className={`rounded-full px-3 py-1 text-sm font-medium ${
-                  item.style === "emerald"
-                    ? "bg-emerald-100 text-emerald-700"
-                    : item.style === "blue"
-                      ? "bg-blue-100 text-[#2f66e7]"
-                      : "bg-slate-200 text-slate-600"
-                }`}
+      <div className="mt-4 grid gap-4 max-h-[700px] overflow-y-auto pr-1">
+        {requests.length > 0 ? (
+          requests.map((item) => {
+            const badge = getStatusBadge(item.status);
+            return (
+              <article
+                key={item.id}
+                className={`rounded-2xl border bg-white p-5 shadow-[0_10px_26px_rgba(15,23,42,0.03)] border-slate-200/80`}
               >
-                {item.category || "Category"}
-              </span>
-              <span
-                className={`rounded-lg px-3 py-1 text-sm font-semibold ${
-                  item.style === "emerald"
-                    ? "bg-emerald-100 text-emerald-700"
-                    : item.style === "blue"
-                      ? "bg-blue-50 text-[#2f66e7]"
-                      : "bg-slate-100 text-slate-500"
-                }`}
-              >
-                {item.status}
-              </span>
-            </div>
+                <div className="flex flex-col gap-2 border-b border-slate-100 pb-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-full bg-blue-50 border border-blue-100 px-3 py-0.5 text-xs font-semibold text-blue-700">
+                      {item.category}
+                    </span>
+                    <span className="text-[11px] font-medium text-slate-400">
+                      To: {item.providerName.split(" ")[0]}
+                    </span>
+                  </div>
+                  
+                  <span className={`inline-block self-start rounded-lg border px-3 py-1 text-xs font-semibold ${badge.style}`}>
+                    {badge.label}
+                  </span>
+                </div>
 
-            <h3 className="mt-3 max-w-40 text-lg font-semibold leading-7 text-slate-900">
-              {item.title}
-            </h3>
+                <h3 className="mt-3 text-lg font-bold leading-7 text-slate-900">
+                  {item.title}
+                </h3>
 
-            {item.description ? (
-              <p className="mt-2 text-sm leading-5 text-slate-600">{item.description}</p>
-            ) : null}
+                <p className="mt-2 text-sm leading-6 text-slate-600 line-clamp-3">
+                  {item.description}
+                </p>
 
-            {item.id === "active-react-native" ? (
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Link
-                  href={scopedHref("/find-services", role)}
-                  className="inline-flex h-10 min-w-40 items-center justify-center rounded-lg border border-slate-300 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                >
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  View Matches
-                </Link>
-                <button
-                  type="button"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100"
-                  aria-label="Edit request"
-                >
-                  <EditIcon className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-red-500 transition hover:bg-red-50"
-                  aria-label="Delete request"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </button>
-              </div>
-            ) : null}
+                {item.status === "revision" && item.revisionNotes && (
+                  <div className="mt-3 rounded-lg bg-rose-50 border border-rose-100 p-2.5 text-xs text-rose-700">
+                    <strong className="block font-bold">Your Revision Notes:</strong>
+                    &ldquo;{item.revisionNotes}&rdquo;
+                  </div>
+                )}
 
-            {item.id === "matched-thesis" ? (
-              <div className="mt-4 border-t border-slate-200 pt-4">
-                <Link
-                  href={scopedHref("/chats", role)}
-                  className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-[#2f66e7] px-4 text-sm font-semibold text-white transition hover:bg-[#2557cf]"
-                >
-                  <ChatIcon className="mr-2 h-4 w-4" />
-                  Open Chat
-                </Link>
-              </div>
-            ) : null}
-          </article>
-        ))}
-      </div>
+                {/* DONE ACTION PANEL - Buyer selects to Approve or Request Updates */}
+                {item.status === "done" && !activeReviewId && !activeRevisionId && (
+                  <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3">
+                    <p className="text-xs font-semibold text-slate-500">Provider finished! Check the work:</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setActiveReviewId(item.id)}
+                        className="flex-1 rounded-lg bg-emerald-600 py-2 text-xs font-bold text-white hover:bg-emerald-700"
+                      >
+                        ✓ Accept & Complete
+                      </button>
+                      <button
+                        onClick={() => setActiveRevisionId(item.id)}
+                        className="flex-1 rounded-lg border border-red-300 py-2 text-xs font-bold text-red-700 hover:bg-red-50"
+                      >
+                        ⚠️ Has Errors / Revise
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-      <div className="mt-4 flex justify-end">
-        <Link
-          href={`${scopedHref("/request-service", role)}/all`}
-          className="text-sm font-medium text-[#2f66e7] transition hover:text-[#2557cf]"
-        >
-          View All
-        </Link>
+                {/* Interactive Rating Form */}
+                {activeReviewId === item.id && (
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/40 p-3.5 transition">
+                    <p className="text-xs font-bold text-slate-800">Rate Provider Session:</p>
+                    <div className="flex gap-1.5 mt-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          type="button"
+                          key={star}
+                          onClick={() => setReviewRating(star)}
+                          className={`text-2xl transition ${
+                            reviewRating >= star ? "text-amber-500 scale-110" : "text-slate-300"
+                          }`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      placeholder="How did they do? Share your helpful review..."
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      className="mt-2.5 w-full rounded-md border border-slate-300 bg-white p-2 text-xs text-slate-700 outline-none"
+                      rows={2}
+                    />
+                    <div className="mt-2 flex gap-2 justify-end">
+                      <button
+                        onClick={() => setActiveReviewId(null)}
+                        className="rounded px-3 py-1.5 text-[10px] font-semibold text-slate-500"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleAcceptComplete(item.id)}
+                        className="rounded bg-emerald-600 px-3.5 py-1.5 text-[10px] font-bold text-white hover:bg-emerald-700 shadow-sm"
+                      >
+                        Submit & Complete
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Interactive Revision Form */}
+                {activeRevisionId === item.id && (
+                  <div className="mt-4 rounded-xl border border-red-200 bg-red-50/40 p-3.5 transition">
+                    <p className="text-xs font-bold text-slate-800">Describe the changes needed:</p>
+                    <textarea
+                      placeholder="List what needs to be fixed or updated by the provider..."
+                      value={revisionText}
+                      onChange={(e) => setRevisionText(e.target.value)}
+                      className="mt-2 w-full rounded-md border border-slate-300 bg-white p-2 text-xs text-slate-700 outline-none"
+                      rows={2}
+                    />
+                    <div className="mt-2 flex gap-2 justify-end">
+                      <button
+                        onClick={() => setActiveRevisionId(null)}
+                        className="rounded px-3 py-1.5 text-[10px] font-semibold text-slate-500"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleRequestRevision(item.id)}
+                        disabled={!revisionText.trim()}
+                        className="rounded bg-red-600 px-3.5 py-1.5 text-[10px] font-bold text-white hover:bg-red-700 shadow-sm disabled:opacity-50"
+                      >
+                        Send to Provider
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Completed Details */}
+                {item.status === "completed" && item.review && (
+                  <div className="mt-3 rounded-lg bg-emerald-50/50 border border-emerald-100 p-2.5 text-xs text-emerald-800">
+                    <span className="font-bold block">✓ Swapped & Reviewed:</span>
+                    <span className="text-amber-600 font-bold">{"★".repeat(item.review.rating)}</span>
+                    <p className="italic mt-0.5">&ldquo;{item.review.comment}&rdquo;</p>
+                  </div>
+                )}
+
+                {item.status === "working" && (
+                  <div className="mt-4 border-t border-slate-100 pt-3">
+                    <Link
+                      href={scopedHref("/chats", role)}
+                      className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-blue-600 px-4 text-xs font-bold text-white shadow-xs transition hover:bg-blue-700"
+                    >
+                      <ChatIcon className="mr-1.5 h-3.5 w-3.5" />
+                      Open Session Chat
+                    </Link>
+                  </div>
+                )}
+              </article>
+            );
+          })
+        ) : (
+          <div className="rounded-xl border border-slate-200 border-dashed bg-slate-50/40 p-8 text-center text-sm text-slate-500">
+            You have not submitted any swap requests yet.
+          </div>
+        )}
       </div>
     </aside>
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  const optionalIndex = label.indexOf(" (Optional)");
-  const labelText = optionalIndex > -1 ? label.slice(0, optionalIndex) : label;
-  const isOptional = optionalIndex > -1;
-
-  return (
-    <label className="grid min-w-0 gap-2">
-      <span className="text-sm font-semibold text-slate-700">
-        {labelText}
-        {isOptional ? (
-          <span className="ml-1 text-xs font-medium text-slate-500">(Optional)</span>
-        ) : null}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function TypePill({ label, active = false }: { label: string; active?: boolean }) {
-  return (
-    <button
-      type="button"
-      className={`inline-flex h-8 items-center justify-center rounded-full border px-3 text-xs font-semibold leading-none transition ${
-        active
-          ? "border-[#2f66e7] bg-[#2f66e7] text-white"
-          : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
 const fieldClassName =
   "h-12 w-full rounded-lg border border-slate-300 bg-[#f7f8ff] px-4 text-base text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100";
-
-function UserIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M12 12a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 12 12z" />
-      <path d="M5 19c1.3-2.5 3.8-4 7-4s5.7 1.5 7 4" />
-    </svg>
-  );
-}
-
-function EditIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z" />
-      <path d="M14 7l3 3" />
-    </svg>
-  );
-}
-
-function TrashIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M4 7h16" />
-      <path d="M9 7V5h6v2" />
-      <path d="M7 7l1 13h8l1-13" />
-      <path d="M10 11v6M14 11v6" />
-    </svg>
-  );
-}
 
 function ChatIcon({ className }: { className?: string }) {
   return (

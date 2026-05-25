@@ -86,7 +86,7 @@ export async function registerBuyer(data: {
  */
 export async function checkBuyerHistory(uid: string): Promise<boolean> {
   const requestsQuery = query(
-    collection(db, "serviceRequests"),
+    collection(db, "requests"),
     where("buyerId", "==", uid)
   );
   const requestsSnap = await getDocs(requestsQuery);
@@ -143,8 +143,15 @@ export async function upgradeToProvider(
     throw new Error("User not found.");
   }
 
+  // Only grant "both" role if the user has actual buyer request history.
+  // Without history they stay as "provider" so the navbar/shell renders
+  // the correct provider-only UI. The role is upgraded to "both"
+  // automatically when they submit their first buyer request.
+  const hasBuyerHistory = await checkBuyerHistory(uid);
+  const newRole = hasBuyerHistory ? "both" : "provider";
+
   await updateDoc(userRef, {
-    role: "both",
+    role: newRole,
     university: providerData.university,
     degree: providerData.degree,
     yearOfStudy: providerData.yearOfStudy,
@@ -156,8 +163,6 @@ export async function upgradeToProvider(
     },
   });
 
-  // Check if they have actual requests in buyer history
-  const hasBuyerHistory = await checkBuyerHistory(uid);
   return hasBuyerHistory ? "/home/both" : "/home/provider";
 }
 

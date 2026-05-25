@@ -84,19 +84,41 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
         const q = query(usersRef, where("role", "in", ["provider", "both"]));
         const querySnapshot = await getDocs(q);
         
+        // Fetch completed requests to compute dynamic aggregate star ratings and review counts
+        const requestsSnapshot = await getDocs(
+          query(collection(db, "requests"), where("status", "==", "completed"))
+        );
+        
+        const ratingsMap: Record<string, { totalStars: number; count: number }> = {};
+        requestsSnapshot.forEach((reqDoc) => {
+          const req = reqDoc.data();
+          const pId = req.providerId;
+          if (pId && req.review && typeof req.review.rating === "number") {
+            if (!ratingsMap[pId]) {
+              ratingsMap[pId] = { totalStars: 0, count: 0 };
+            }
+            ratingsMap[pId].totalStars += req.review.rating;
+            ratingsMap[pId].count += 1;
+          }
+        });
+        
         const dbProviders: ProviderCardData[] = [];
         let index = 0;
         
         querySnapshot.forEach((docSnap) => {
           const u = docSnap.data() as UserProfile;
           if (u.providerProfile) {
+            const rData = ratingsMap[u.uid];
+            const avgRating = rData ? parseFloat((rData.totalStars / rData.count).toFixed(1)) : 5.0;
+            const reviewCount = rData ? rData.count : 0;
+
             dbProviders.push({
               id: u.uid,
               name: u.name || "Anonymous Member",
               degree: u.degree || "Undergraduate",
               university: u.university || "Sri Lankan University",
-              rating: 5.0,
-              reviews: 0,
+              rating: avgRating,
+              reviews: reviewCount,
               topSkills: u.providerProfile.skills || [],
               summary: u.providerProfile.bio || "Student partner ready to collaborate and exchange skills.",
               availability: u.providerProfile.availability || "Flexible",
@@ -121,7 +143,8 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
     fetchProviders();
   }, []);
 
-  const requestHref = role ? scopedHref("/request-service", role) : "/get-started";
+  const getRequestHref = (providerId: string) =>
+    role ? `${scopedHref("/request-service", role)}?providerId=${providerId}` : "/get-started";
   const chatHref = role ? scopedHref("/chats", role) : "/get-started";
   const profileHref = (providerId: string) =>
     role
@@ -358,7 +381,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
                         View Profile
                       </Link>
                       <Link
-                        href={requestHref}
+                        href={getRequestHref(provider.id)}
                         className="inline-flex h-11 min-w-0 items-center justify-center rounded-lg bg-[#2f66e7] px-4 text-sm font-medium text-white transition hover:bg-[#2557cf]"
                       >
                         Request Service
