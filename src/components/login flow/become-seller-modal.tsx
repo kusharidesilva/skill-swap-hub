@@ -1,11 +1,52 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { checkBuyerHistory } from "@/lib/auth";
 
 export default function BecomeSellerModal() {
+  const router = useRouter();
+  const { userProfile, loading } = useAuth();
+
+  useEffect(() => {
+    if (userProfile) {
+      if (userProfile.role === "both") {
+        checkBuyerHistory(userProfile.uid).then((hasHistory) => {
+          if (hasHistory) {
+            router.replace("/home/both");
+          } else {
+            router.replace("/home/provider");
+          }
+        });
+      } else if (userProfile.role === "provider") {
+        router.replace("/home/provider");
+      }
+    }
+  }, [userProfile, router]);
+
+  const isUpgraded = userProfile && (userProfile.role === "both" || userProfile.role === "provider");
+
+  if (loading || isUpgraded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f5f7ff]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
+          <p className="text-sm text-slate-500">
+            {isUpgraded ? "Redirecting to your dashboard..." : "Loading…"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[92vh] overflow-y-auto shadow-2xl relative">
         <button
+          onClick={() => router.push("/home/buyer")}
           title="Close"
           className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 z-10"
         >
@@ -137,7 +178,7 @@ export default function BecomeSellerModal() {
 
             <div className="mt-8 border-t border-slate-200 pt-6">
               <Link
-                href="/become-a-seller"
+                href="/become-a-seller?upgrade=true"
                 className="block w-full rounded-full bg-[#2543d7] px-5 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f3ac0]"
               >
                 Let&apos;s Get Started

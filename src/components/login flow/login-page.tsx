@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { loginUser } from "@/lib/auth";
 
 type Badge = {
   label: string;
@@ -19,7 +21,6 @@ const badges: Badge[] = [
 const loginSchema = z.object({
   email: z.string().email("Enter a valid university email."),
   password: z.string().min(6, "Password must be at least 6 characters."),
-  role: z.enum(["buyer", "provider"]),
   remember: z.boolean().optional(),
 });
 
@@ -27,26 +28,63 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const [serverError, setServerError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { role: "buyer", remember: false },
+    defaultValues: { remember: false },
   });
 
-  const loginRole = watch("role");
+  const onSubmit = async (data: LoginFormValues) => {
+    setLoading(true);
+    setServerError("");
+    try {
+      const { user, redirectPath } = await loginUser(data.email, data.password);
 
-  const onSubmit = () => {
-    router.push(`/home/${loginRole}`);
+      // If email not verified, send to verify-email page
+      if (!user.emailVerified) {
+        router.push("/verify-email?from=buyer");
+        return;
+      }
+
+      setLoginSuccess(true);
+      setTimeout(() => {
+        router.push(redirectPath);
+      }, 1000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Login failed.";
+      if (
+        msg.includes("user-not-found") ||
+        msg.includes("wrong-password") ||
+        msg.includes("invalid-credential")
+      ) {
+        setServerError("Incorrect email or password. Please try again.");
+      } else if (msg.includes("too-many-requests")) {
+        setServerError(
+          "Too many failed attempts. Please wait a moment and try again."
+        );
+      } else if (msg.includes("User profile not found")) {
+        setServerError("Account setup incomplete. Please contact support.");
+      } else {
+        setServerError(msg);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
+
   return (
     <main className="relative min-h-screen bg-white">
       <div className="fixed inset-0 bg-black/20" aria-hidden="true" />
       <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
         <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
+          {/* Left Panel */}
           <section className="relative flex flex-col justify-between bg-linear-to-br from-[#2b62e6] via-[#1f5ad7] to-[#0e3a9e] px-10 py-12 text-white">
             <div className="absolute inset-0 opacity-10">
               <div className="h-full w-full bg-[linear-gradient(120deg,rgba(255,255,255,0.15)_0%,rgba(255,255,255,0.02)_50%,transparent_100%)]" />
@@ -81,6 +119,7 @@ export default function LoginPage() {
             </div>
           </section>
 
+          {/* Right Panel – Form */}
           <section className="relative flex flex-col justify-center bg-white px-8 py-12 sm:px-12">
             <Link
               href="/"
@@ -98,7 +137,30 @@ export default function LoginPage() {
                 Please enter your university credentials to continue
               </p>
 
+              {serverError && (
+                <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 border border-red-200 animate-fadeIn">
+                  {serverError}
+                </div>
+              )}
+
+              {loginSuccess && (
+                <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-left shadow-xs animate-pulse">
+                  <div className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 text-xs">
+                      ✓
+                    </span>
+                    <div>
+                      <p className="text-xs font-semibold text-emerald-800">Login Successful!</p>
+                      <p className="mt-1 text-[11px] text-emerald-600">
+                        Welcome back! Redirecting you to your dashboard...
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)}>
+                {/* Email */}
                 <div>
                   <label className="text-sm font-semibold text-slate-700">
                     University Email
@@ -106,6 +168,7 @@ export default function LoginPage() {
                   <div className="mt-2 flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2">
                     <MailIcon className="h-5 w-5 text-slate-400" />
                     <input
+                      id="login-email"
                       type="email"
                       placeholder="student.name@uom.ac.lk"
                       {...register("email")}
@@ -117,6 +180,7 @@ export default function LoginPage() {
                   )}
                 </div>
 
+                {/* Password */}
                 <div>
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-semibold text-slate-700">
@@ -132,6 +196,7 @@ export default function LoginPage() {
                   <div className="mt-2 flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2">
                     <LockIcon className="h-5 w-5 text-slate-400" />
                     <input
+                      id="login-password"
                       type="password"
                       placeholder="••••••••"
                       {...register("password")}
@@ -143,6 +208,7 @@ export default function LoginPage() {
                   )}
                 </div>
 
+                {/* Remember */}
                 <label className="flex items-center gap-2 text-sm text-slate-600">
                   <input
                     type="checkbox"
@@ -152,37 +218,14 @@ export default function LoginPage() {
                   Remember this device
                 </label>
 
-                <div>
-                  <label className="text-sm font-semibold text-slate-700 block mb-2">
-                    Login As
-                  </label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
-                      <input
-                        type="radio"
-                        value="buyer"
-                        {...register("role")}
-                        className="text-[#2b62e6] focus:ring-[#2b62e6]"
-                      />
-                      Student (Buyer)
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
-                      <input
-                        type="radio"
-                        value="provider"
-                        {...register("role")}
-                        className="text-[#2b62e6] focus:ring-[#2b62e6]"
-                      />
-                      Provider (Seller)
-                    </label>
-                  </div>
-                </div>
-
+                {/* Submit */}
                 <button
+                  id="login-submit"
                   type="submit"
-                  className="w-full rounded-lg bg-[#2b62e6] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+                  disabled={loading}
+                  className="w-full rounded-lg bg-[#2b62e6] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc] disabled:opacity-60"
                 >
-                  Login
+                  {loading ? "Logging in…" : "Login"}
                 </button>
 
                 <div className="relative flex items-center justify-center text-xs text-slate-400">

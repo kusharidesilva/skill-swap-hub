@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { resetPassword } from "@/lib/auth";
 
 type Badge = {
   label: string;
@@ -17,52 +18,44 @@ const badges: Badge[] = [
   { label: "University Exclusive", icon: "cap" },
 ];
 
-type Step = "recovery" | "reset";
+// Step 1 – enter email
+// Step 2 – success (email sent)
+type Step = "recovery" | "sent";
 
 const recoverySchema = z.object({
   email: z.string().email("Enter a valid university email."),
 });
 
-const resetSchema = z
-  .object({
-    email: z.string().email("Enter a valid university email."),
-    newPassword: z.string().min(6, "Password must be at least 6 characters."),
-    confirmPassword: z.string().min(6, "Password must be at least 6 characters."),
-    remember: z.boolean().optional(),
-  })
-  .refine((values) => values.newPassword === values.confirmPassword, {
-    message: "Passwords do not match.",
-    path: ["confirmPassword"],
-  });
-
 type RecoveryValues = z.infer<typeof recoverySchema>;
-type ResetValues = z.infer<typeof resetSchema>;
 
 export default function ForgotPasswordFlow() {
   const [step, setStep] = useState<Step>("recovery");
+  const [sentEmail, setSentEmail] = useState("");
+  const [serverError, setServerError] = useState("");
   const router = useRouter();
+
   const {
-    register: registerRecovery,
-    handleSubmit: handleRecoverySubmit,
-    formState: { errors: recoveryErrors },
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
   } = useForm<RecoveryValues>({
     resolver: zodResolver(recoverySchema),
   });
-  const {
-    register: registerReset,
-    handleSubmit: handleResetSubmit,
-    formState: { errors: resetErrors },
-  } = useForm<ResetValues>({
-    resolver: zodResolver(resetSchema),
-    defaultValues: { remember: false },
-  });
 
-  const onRecoverySubmit = () => {
-    setStep("reset");
-  };
-
-  const onResetSubmit = () => {
-    router.push("/verify-email?from=buyer");
+  const onRecoverySubmit = async (data: RecoveryValues) => {
+    setServerError("");
+    try {
+      await resetPassword(data.email);
+      setSentEmail(data.email);
+      setStep("sent");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong.";
+      if (msg.includes("user-not-found")) {
+        setServerError("No account found with that email address.");
+      } else {
+        setServerError(msg);
+      }
+    }
   };
 
   return (
@@ -70,6 +63,7 @@ export default function ForgotPasswordFlow() {
       <div className="fixed inset-0 bg-black/20" aria-hidden="true" />
       <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
         <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
+          {/* Left panel */}
           <section className="relative flex flex-col justify-between bg-linear-to-br from-[#2b62e6] via-[#1f5ad7] to-[#0e3a9e] px-10 py-12 text-white">
             <div className="absolute inset-0 opacity-10">
               <div className="h-full w-full bg-[linear-gradient(120deg,rgba(255,255,255,0.15)_0%,rgba(255,255,255,0.02)_50%,transparent_100%)]" />
@@ -80,12 +74,12 @@ export default function ForgotPasswordFlow() {
                 <h1 className="text-3xl font-semibold sm:text-4xl">
                   {step === "recovery"
                     ? "Master new skills through peer exchange."
-                    : "Elevate your academic journey through peer-to-peer exchange."}
+                    : "Check your inbox."}
                 </h1>
                 <p className="mt-4 max-w-md text-sm text-white/80">
                   {step === "recovery"
                     ? "Connect with fellow students to trade knowledge. Teach what you excel at, learn what you are curious about, and build a stronger community."
-                    : "Join a trusted student-only platform to share skills, request support, and connect with verified university students."}
+                    : "A password reset link has been sent. Follow the link in your email to set a new password."}
                 </p>
               </div>
             </div>
@@ -107,6 +101,7 @@ export default function ForgotPasswordFlow() {
             </div>
           </section>
 
+          {/* Right panel */}
           <section className="relative flex flex-col justify-center bg-white px-8 py-12 sm:px-12">
             <Link
               href="/"
@@ -117,17 +112,25 @@ export default function ForgotPasswordFlow() {
             </Link>
 
             {step === "recovery" ? (
+              /* ── Step 1: Enter email ── */
               <div className="max-w-md">
                 <h2 className="text-2xl font-semibold text-slate-900">
                   Account Recovery
                 </h2>
                 <p className="mt-2 text-sm text-slate-600">
-                  Enter your university email and we will send you a verification code to reset your password.
+                  Enter your university email and we will send you a link to
+                  reset your password.
                 </p>
+
+                {serverError && (
+                  <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 border border-red-200">
+                    {serverError}
+                  </div>
+                )}
 
                 <form
                   className="mt-8 space-y-5"
-                  onSubmit={handleRecoverySubmit(onRecoverySubmit)}
+                  onSubmit={handleSubmit(onRecoverySubmit)}
                 >
                   <div>
                     <label className="text-sm font-semibold text-slate-700">
@@ -136,14 +139,17 @@ export default function ForgotPasswordFlow() {
                     <div className="mt-2 flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2">
                       <MailIcon className="h-5 w-5 text-slate-400" />
                       <input
+                        id="forgot-email"
                         type="email"
                         placeholder="mail@uni.ac.lk"
-                        {...registerRecovery("email")}
+                        {...register("email")}
                         className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
                       />
                     </div>
-                    {recoveryErrors.email && (
-                      <p className="mt-2 text-xs text-red-500">{recoveryErrors.email.message}</p>
+                    {errors.email && (
+                      <p className="mt-2 text-xs text-red-500">
+                        {errors.email.message}
+                      </p>
                     )}
                     <p className="mt-2 text-xs text-slate-400">
                       Must be a valid institutional email address.
@@ -151,10 +157,12 @@ export default function ForgotPasswordFlow() {
                   </div>
 
                   <button
+                    id="forgot-submit"
                     type="submit"
-                    className="w-full rounded-lg bg-[#2b62e6] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+                    disabled={isSubmitting}
+                    className="w-full rounded-lg bg-[#2b62e6] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc] disabled:opacity-60"
                   >
-                    Reset Your Password
+                    {isSubmitting ? "Sending…" : "Send Reset Link"}
                   </button>
 
                   <div className="text-center">
@@ -174,95 +182,89 @@ export default function ForgotPasswordFlow() {
                         Need more help?
                       </p>
                       <p className="text-xs text-slate-500">
-                        If you no longer have access to your email, contact our support team to verify your identity.
+                        If you no longer have access to your email, contact our
+                        support team to verify your identity.
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
+              /* ── Step 2: Email sent success ── */
               <div className="max-w-md">
-                <h2 className="text-2xl font-semibold text-slate-900">
-                  Welcome back
+                {/* Success badge */}
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 shadow-sm">
+                  <MailCheckIcon className="h-7 w-7" />
+                </div>
+
+                {/* Headline */}
+                <h2 className="mt-5 text-2xl font-semibold text-slate-900">
+                  Reset link sent!
                 </h2>
-                <p className="mt-2 text-sm text-slate-600">
-                  Please enter your university credentials to continue
+
+                {/* Success message card */}
+                <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 p-4">
+                  <div className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">
+                      ✓
+                    </span>
+                    <div>
+                      <p className="text-xs font-semibold text-emerald-800">Password Reset Email Sent!</p>
+                      <p className="mt-1 text-[11px] text-emerald-600">
+                        We sent a reset link to{" "}
+                        <span className="font-semibold">{sentEmail}</span>.
+                        Check your inbox and click the link to create a new password.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Next steps */}
+                <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 px-4 py-4 space-y-2 text-xs text-slate-600">
+                  <p className="font-semibold text-slate-700 mb-1">What to do next:</p>
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 text-[#2b62e6]">1.</span>
+                    <span>Open your email inbox for <span className="font-medium text-slate-800">{sentEmail}</span>.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 text-[#2b62e6]">2.</span>
+                    <span>Click the <span className="font-medium text-slate-800">"Reset Password"</span> link in the email.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 text-[#2b62e6]">3.</span>
+                    <span>Set your new password and log back in.</span>
+                  </div>
+                </div>
+
+                {/* Spam notice */}
+                <p className="mt-3 text-center text-[11px] text-slate-400">
+                  Didn&apos;t receive it? Check your spam folder or{" "}
+                  <button
+                    type="button"
+                    onClick={() => setStep("recovery")}
+                    className="font-semibold text-[#0f4cbf] hover:underline"
+                  >
+                    try a different email
+                  </button>
+                  .
                 </p>
 
-                <form
-                  className="mt-8 space-y-5"
-                  onSubmit={handleResetSubmit(onResetSubmit)}
-                >
-                  <div>
-                    <label className="text-sm font-semibold text-slate-700">
-                      University Email
-                    </label>
-                    <div className="mt-2 flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2">
-                      <MailIcon className="h-5 w-5 text-slate-400" />
-                      <input
-                        type="email"
-                        placeholder="student.name@uom.ac.lk"
-                        {...registerReset("email")}
-                        className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
-                      />
-                    </div>
-                    {resetErrors.email && (
-                      <p className="mt-2 text-xs text-red-500">{resetErrors.email.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-semibold text-slate-700">
-                      New Password
-                    </label>
-                    <div className="mt-2 flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2">
-                      <LockIcon className="h-5 w-5 text-slate-400" />
-                      <input
-                        type="password"
-                        placeholder="••••••••"
-                        {...registerReset("newPassword")}
-                        className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
-                      />
-                    </div>
-                    {resetErrors.newPassword && (
-                      <p className="mt-2 text-xs text-red-500">{resetErrors.newPassword.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-semibold text-slate-700">
-                      Confirm Password
-                    </label>
-                    <div className="mt-2 flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2">
-                      <LockIcon className="h-5 w-5 text-slate-400" />
-                      <input
-                        type="password"
-                        placeholder="••••••••"
-                        {...registerReset("confirmPassword")}
-                        className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
-                      />
-                    </div>
-                    {resetErrors.confirmPassword && (
-                      <p className="mt-2 text-xs text-red-500">{resetErrors.confirmPassword.message}</p>
-                    )}
-                  </div>
-
-                  <label className="flex items-center gap-2 text-sm text-slate-600">
-                    <input
-                      type="checkbox"
-                      {...registerReset("remember")}
-                      className="h-4 w-4 rounded border-slate-300"
-                    />
-                    Remember this device
-                  </label>
-
-                  <button
-                    type="submit"
-                    className="w-full rounded-lg bg-[#2b62e6] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+                {/* Actions */}
+                <div className="mt-6 space-y-3">
+                  <Link
+                    href="/login"
+                    className="block w-full rounded-lg bg-[#2b62e6] px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
                   >
-                    Login
+                    Back to Login
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/")}
+                    className="block w-full rounded-lg border border-slate-200 px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:border-slate-300"
+                  >
+                    Go to Homepage
                   </button>
-                </form>
+                </div>
               </div>
             )}
           </section>
@@ -271,6 +273,8 @@ export default function ForgotPasswordFlow() {
     </main>
   );
 }
+
+// ── Icons ────────────────────────────────────────────────────────────────────
 
 function BadgeIcon({
   type,
@@ -293,7 +297,6 @@ function BadgeIcon({
       </svg>
     );
   }
-
   return (
     <svg
       className={className}
@@ -303,11 +306,7 @@ function BadgeIcon({
       strokeWidth={2}
     >
       <path d="M12 3l7 3v6c0 4.1-2.8 7.7-7 9-4.2-1.3-7-4.9-7-9V6l7-3z" />
-      <path
-        d="M9.5 12.5l2 2 4-4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M9.5 12.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -327,7 +326,7 @@ function MailIcon({ className }: { className?: string }) {
   );
 }
 
-function LockIcon({ className }: { className?: string }) {
+function MailCheckIcon({ className }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -336,8 +335,9 @@ function LockIcon({ className }: { className?: string }) {
       stroke="currentColor"
       strokeWidth={2}
     >
-      <rect x="5" y="11" width="14" height="9" rx="2" />
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+      <path d="M4 6h16v12H4z" />
+      <path d="M4 7l8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 13l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -352,11 +352,7 @@ function ShieldIcon({ className }: { className?: string }) {
       strokeWidth={2}
     >
       <path d="M12 3l7 3v6c0 4.1-2.8 7.7-7 9-4.2-1.3-7-4.9-7-9V6l7-3z" />
-      <path
-        d="M9.5 12.5l2 2 4-4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M9.5 12.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

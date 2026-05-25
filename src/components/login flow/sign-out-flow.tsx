@@ -4,26 +4,34 @@ import { useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-const defaultUser = {
-  name: "Jamie Dawson",
-  email: "jamie.dawson@university.edu",
-  avatarUrl: "/img/01.png",
-};
-
-type SignOutFlowProps = {
-  user?: {
-    name: string;
-    email: string;
-    avatarUrl?: string;
-  };
-};
+import { signOut } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
 
 type Step = "confirm" | "success";
 
-export default function SignOutFlow({ user = defaultUser }: SignOutFlowProps) {
+export default function SignOutFlow() {
   const [step, setStep] = useState<Step>("confirm");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const router = useRouter();
+  const { firebaseUser, userProfile } = useAuth();
+
+  const displayName = userProfile?.name ?? firebaseUser?.displayName ?? "User";
+  const displayEmail = userProfile?.email ?? firebaseUser?.email ?? "";
+
+  const handleSignOut = async () => {
+    setLoading(true);
+    setErrorMsg("");
+    try {
+      await signOut();
+      setStep("success");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Sign-out failed.";
+      setErrorMsg(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="relative min-h-screen bg-[#f5f7ff]">
@@ -32,9 +40,12 @@ export default function SignOutFlow({ user = defaultUser }: SignOutFlowProps) {
       <div className="relative z-10 flex min-h-screen items-center justify-center px-6 py-10">
         {step === "confirm" ? (
           <ConfirmCard
-            user={user}
+            name={displayName}
+            email={displayEmail}
+            loading={loading}
+            errorMsg={errorMsg}
             onCancel={() => router.back()}
-            onSignOut={() => setStep("success")}
+            onSignOut={handleSignOut}
           />
         ) : (
           <SuccessCard />
@@ -44,17 +55,25 @@ export default function SignOutFlow({ user = defaultUser }: SignOutFlowProps) {
   );
 }
 
+// ── Confirm Card ──────────────────────────────────────────────────────────────
+
 type ConfirmCardProps = {
-  user: {
-    name: string;
-    email: string;
-    avatarUrl?: string;
-  };
+  name: string;
+  email: string;
+  loading: boolean;
+  errorMsg: string;
   onCancel: () => void;
   onSignOut: () => void;
 };
 
-function ConfirmCard({ user, onCancel, onSignOut }: ConfirmCardProps) {
+function ConfirmCard({
+  name,
+  email,
+  loading,
+  errorMsg,
+  onCancel,
+  onSignOut,
+}: ConfirmCardProps) {
   return (
     <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-[0_24px_60px_-32px_rgba(20,24,64,0.45)]">
       <div className="flex items-start gap-3">
@@ -72,47 +91,48 @@ function ConfirmCard({ user, onCancel, onSignOut }: ConfirmCardProps) {
         You will need to log back in to access your skills and matches.
       </p>
 
+      {/* User info strip */}
       <div className="mt-4 flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-        <div className="h-10 w-10 overflow-hidden rounded-full bg-slate-200">
-          {user.avatarUrl ? (
-            <Image
-              src={user.avatarUrl}
-              alt={user.name}
-              width={40}
-              height={40}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <span className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-600">
-              {user.name.charAt(0)}
-            </span>
-          )}
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#e8eeff] text-sm font-semibold text-[#2b62e6]">
+          {name.charAt(0).toUpperCase()}
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-900">{user.name}</p>
-          <p className="text-xs text-slate-500">{user.email}</p>
+          <p className="text-sm font-semibold text-slate-900">{name}</p>
+          <p className="text-xs text-slate-500">{email}</p>
         </div>
       </div>
 
+      {errorMsg && (
+        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 border border-red-200">
+          {errorMsg}
+        </p>
+      )}
+
       <div className="mt-5 grid grid-cols-2 gap-3">
         <button
+          id="sign-out-cancel"
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+          disabled={loading}
+          className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:opacity-60"
         >
           Cancel
         </button>
         <button
+          id="sign-out-confirm"
           type="button"
           onClick={onSignOut}
-          className="rounded-lg bg-[#3855f3] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#2e47d8]"
+          disabled={loading}
+          className="rounded-lg bg-[#3855f3] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#2e47d8] disabled:opacity-60"
         >
-          Sign Out
+          {loading ? "Signing out…" : "Sign Out"}
         </button>
       </div>
     </div>
   );
 }
+
+// ── Success Card ──────────────────────────────────────────────────────────────
 
 function SuccessCard() {
   return (
@@ -140,9 +160,7 @@ function SuccessCard() {
               </p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-white px-4 py-3">
-              <p className="text-xs font-semibold text-slate-800">
-                Fast Reload
-              </p>
+              <p className="text-xs font-semibold text-slate-800">Fast Reload</p>
               <p className="mt-1 text-xs text-slate-500">
                 Pick up where you left off quickly.
               </p>
@@ -182,18 +200,9 @@ function SuccessCard() {
               Connect with us
             </span>
             <div className="flex gap-3">
-              <IconButton
-                label="Twitter"
-                icon={<TwitterIcon className="h-4 w-4" />}
-              />
-              <IconButton
-                label="LinkedIn"
-                icon={<LinkedInIcon className="h-4 w-4" />}
-              />
-              <IconButton
-                label="GitHub"
-                icon={<GitHubIcon className="h-4 w-4" />}
-              />
+              <IconButton label="Twitter" icon={<TwitterIcon className="h-4 w-4" />} />
+              <IconButton label="LinkedIn" icon={<LinkedInIcon className="h-4 w-4" />} />
+              <IconButton label="GitHub" icon={<GitHubIcon className="h-4 w-4" />} />
             </div>
           </div>
         </div>
@@ -201,6 +210,8 @@ function SuccessCard() {
     </div>
   );
 }
+
+// ── Small helpers ─────────────────────────────────────────────────────────────
 
 function IconButton({ label, icon }: { label: string; icon: ReactNode }) {
   return (
@@ -214,15 +225,11 @@ function IconButton({ label, icon }: { label: string; icon: ReactNode }) {
   );
 }
 
+// ── Icons ─────────────────────────────────────────────────────────────────────
+
 function ArrowIcon({ className }: { className?: string }) {
   return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <path d="M6 12h12" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M12 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -231,13 +238,7 @@ function ArrowIcon({ className }: { className?: string }) {
 
 function DoorIcon({ className }: { className?: string }) {
   return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <path d="M5 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5z" />
       <path d="M9 12h4" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M9 7h4" strokeLinecap="round" strokeLinejoin="round" />

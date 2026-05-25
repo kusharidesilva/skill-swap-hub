@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   aboutHref,
+  dashboardHref,
   helpHref,
   homeHref,
   profileHref as roleProfileHref,
@@ -47,6 +48,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
       case "provider":
         return [
           { name: "Home", href: roleHomeHref },
+          { name: "Dashboard", href: dashboardHref("provider") },
           { name: "Explore Skills", href: `${roleHomeHref}#explore-skills` },
           { name: "How It Works", href: `${roleHomeHref}#how-it-works` },
           { name: "About", href: roleAboutHref },
@@ -54,6 +56,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
       case "both":
         return [
           { name: "Home", href: roleHomeHref },
+          { name: "Dashboard", href: dashboardHref("both") },
           { name: "Explore Skills", href: `${roleHomeHref}#explore-skills` },
           { name: "How It Works", href: `${roleHomeHref}#how-it-works` },
           { name: "About", href: roleAboutHref },
@@ -61,10 +64,10 @@ export default function Navbar({ role: propRole }: NavbarProps) {
       case "buyer":
         return [
           { name: "Home", href: roleHomeHref },
+          { name: "Dashboard", href: dashboardHref("buyer") },
           { name: "Explore Skills", href: `${roleHomeHref}#explore-skills` },
           { name: "How It Works", href: `${roleHomeHref}#how-it-works` },
           { name: "About", href: roleAboutHref },
-          { name: "Become a Seller", href: "/become-a-seller-intro" },
         ];
       case "guest":
       default:
@@ -134,8 +137,8 @@ export default function Navbar({ role: propRole }: NavbarProps) {
     ? activeSection
     : pathname.startsWith("/about")
     ? "About"
-    // : pathname.startsWith("/dashboard")
-    // ? "Dashboard"
+    : pathname.startsWith("/dashboard")
+    ? "Dashboard"
     : "";
 
   return (
