@@ -168,8 +168,8 @@ function ProfileSettingsForm({
     <div className="flex w-full flex-col gap-8 pb-10">
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Profile Settings</h1>
-          <p className="mt-2 text-base text-slate-600">{description}</p>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">Profile Settings</h1>
+          <p className="mt-1 text-xs text-slate-500">{description}</p>
         </div>
         
         {saveStatus === "success" && (
@@ -185,24 +185,24 @@ function ProfileSettingsForm({
       </header>
 
       {/* Profile Header section */}
-      <section className="rounded-xl border border-slate-100 bg-white p-6 shadow-[0_14px_35px_rgba(15,23,42,0.06)] md:px-10 md:py-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-center">
-            <div className="relative h-20 w-20 shrink-0">
-              <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white shadow-md ring-1 ring-slate-200 bg-gradient-to-tr from-blue-500 to-[#2b62e6] text-2xl font-bold text-white">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="relative h-12 w-12 shrink-0">
+              <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2 border-white shadow-md ring-1 ring-slate-200 bg-gradient-to-tr from-blue-500 to-[#2b62e6] text-lg font-bold text-white">
                 {name.charAt(0).toUpperCase()}
               </div>
             </div>
 
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-xl font-semibold text-slate-900">{name}</h2>
-                <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-[#62ead8] px-4 py-1 text-sm font-semibold text-teal-800">
-                  <BadgeCheckIcon className="h-4 w-4" />
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900">{name}</h2>
+                <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-[#62ead8] px-2 py-0.5 text-[10px] font-bold text-teal-800">
+                  <BadgeCheckIcon className="h-3.5 w-3.5" />
                   Verified Student
                 </span>
               </div>
-              <p className="mt-2 text-base font-medium text-slate-500">
+              <p className="mt-1 text-xs font-semibold text-slate-500">
                 {degree} - {university}
               </p>
             </div>
@@ -212,69 +212,69 @@ function ProfileSettingsForm({
             type="button"
             onClick={handleSaveProfile}
             disabled={isSaving}
-            className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-md bg-[#0758d8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0648b4] disabled:opacity-60 sm:w-auto"
+            className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-2 rounded-md bg-[#0758d8] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#0648b4] disabled:opacity-60 sm:w-auto"
           >
-            <SaveIcon className="h-5 w-5" />
+            <SaveIcon className="h-4 w-4" />
             {isSaving ? "Saving..." : "Save Profile"}
           </button>
         </div>
       </section>
 
       {/* Main Settings Grid */}
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         {/* Left Column */}
-        <div className="grid gap-6">
-          <section className="rounded-xl border border-slate-100 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
-            <SectionTitle icon={<UserIcon className="h-5 w-5" />} title="Basic Information" />
+        <div className="grid gap-5">
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <SectionTitle icon={<UserIcon className="h-4 w-4" />} title="Basic Information" />
 
-            <div className="mt-6 grid gap-5">
-              <div className="grid gap-5 sm:grid-cols-2">
-                <label className="grid gap-2 text-sm font-medium text-slate-600">
+            <div className="mt-5 grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
                   Full Name
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="h-12 min-w-0 rounded-md border border-slate-300 px-4 text-base font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+                    className="h-9 min-w-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
                   />
                 </label>
                 
-                <label className="grid gap-2 text-sm font-medium text-slate-600">
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
                   Current Email (Verified)
                   <input
                     type="email"
                     value={userProfile.email}
                     disabled
-                    className="h-12 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-4 text-base font-medium text-slate-400 outline-none cursor-not-allowed"
+                    className="h-9 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-400 outline-none cursor-not-allowed"
                   />
                 </label>
 
-                <label className="grid gap-2 text-sm font-medium text-slate-600">
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
                   University
                   <input
                     type="text"
                     value={university}
                     onChange={(e) => setUniversity(e.target.value)}
-                    className="h-12 min-w-0 rounded-md border border-slate-300 px-4 text-base font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+                    className="h-9 min-w-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
                   />
                 </label>
 
-                <label className="grid gap-2 text-sm font-medium text-slate-600">
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
                   Degree Program
                   <input
                     type="text"
                     value={degree}
                     onChange={(e) => setDegree(e.target.value)}
-                    className="h-12 min-w-0 rounded-md border border-slate-300 px-4 text-base font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+                    className="h-9 min-w-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
                   />
                 </label>
 
-                <label className="grid gap-2 text-sm font-medium text-slate-600">
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
                   Year of Study
                   <select
                     value={yearOfStudy}
                     onChange={(e) => setYearOfStudy(e.target.value)}
-                    className="h-12 rounded-md border border-slate-300 bg-white px-4 text-base font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+                    className="h-9 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
                   >
                     <option>1st Year</option>
                     <option>2nd Year</option>
@@ -285,14 +285,14 @@ function ProfileSettingsForm({
               </div>
 
               {showOffered && (
-                <label className="grid gap-2 text-sm font-medium text-slate-600">
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
                   Bio / Expertise Statement
                   <textarea
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    rows={5}
+                    rows={3}
                     placeholder="Describe your skills, what courses you have completed, and what you can help other students learn."
-                    className="resize-none rounded-md border border-slate-300 px-4 py-3 text-base font-medium leading-6 text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+                    className="resize-none rounded-md border border-slate-300 px-3 py-2 text-xs font-medium leading-relaxed text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
                   />
                 </label>
               )}
@@ -300,10 +300,10 @@ function ProfileSettingsForm({
           </section>
 
           {showAvailability && (
-            <section className="rounded-xl border border-slate-100 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
-              <SectionTitle icon={<CalendarIcon className="h-5 w-5" />} title="Weekly Availability" />
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <SectionTitle icon={<CalendarIcon className="h-4 w-4" />} title="Weekly Availability" />
 
-              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {AVAILABILITY_OPTIONS.map((slot) => {
                   const isChecked = availability.includes(slot);
                   return (
@@ -311,18 +311,18 @@ function ProfileSettingsForm({
                       key={slot}
                       type="button"
                       onClick={() => toggleAvailability(slot)}
-                      className={`relative flex h-14 cursor-pointer items-center justify-center overflow-hidden rounded-xl border px-3 py-2 shadow-xs transition ${
+                      className={`relative flex h-10 cursor-pointer items-center justify-center overflow-hidden rounded-xl border px-3 py-1.5 shadow-xs transition ${
                         isChecked
                           ? "border-[#0758d8] bg-blue-50/50 text-[#0758d8]"
                           : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
                       }`}
                     >
-                      <span className={`absolute right-3 top-4 flex h-5 w-5 items-center justify-center rounded-md border text-white ${
+                      <span className={`absolute right-2 top-2.5 flex h-3.5 w-3.5 items-center justify-center rounded border text-white ${
                         isChecked ? "border-[#0758d8] bg-[#0758d8]" : "border-slate-300 bg-white"
                       }`}>
-                        {isChecked && <CheckIcon className="h-3.5 w-3.5" />}
+                        {isChecked && <CheckIcon className="h-2.5 w-2.5" />}
                       </span>
-                      <span className="text-sm font-bold tracking-wide">
+                      <span className="text-xs font-bold tracking-wide">
                         {slot}
                       </span>
                     </button>
@@ -336,11 +336,11 @@ function ProfileSettingsForm({
         </div>
 
         {/* Right Column */}
-        <div className="grid gap-6">
+        <div className="grid gap-5">
           {showOffered && (
-            <section className="h-fit rounded-xl border border-slate-100 border-l-4 border-l-emerald-600 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+            <section className="h-fit rounded-xl border border-slate-200 border-l-4 border-l-emerald-600 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-base font-semibold text-slate-800">Skills I Can Offer</h2>
+                <h2 className="text-xs font-semibold text-slate-800">Skills I Can Offer</h2>
               </div>
               
               <div className="mt-3 flex gap-2">
@@ -355,41 +355,41 @@ function ProfileSettingsForm({
                       addOfferedSkill(newOfferedSkill);
                     }
                   }}
-                  className="h-10 flex-1 rounded-md border border-slate-300 px-3 text-sm focus:border-[#0758d8] outline-none"
+                  className="h-8 flex-1 rounded-md border border-slate-300 px-3 text-xs focus:border-[#0758d8] outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => addOfferedSkill(newOfferedSkill)}
-                  className="rounded-md bg-[#0758d8] px-4 text-xs font-semibold text-white hover:bg-[#0648b4]"
+                  className="rounded-md bg-[#0758d8] px-3 text-[10px] font-bold text-white hover:bg-[#0648b4]"
                 >
                   Add
                 </button>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {offeredSkills.map((skill) => (
                   <button
                     key={skill}
                     type="button"
                     onClick={() => setOfferedSkills(offeredSkills.filter((s) => s !== skill))}
-                    className="inline-flex max-w-full items-center rounded-full bg-emerald-100 px-3 py-1.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-200 group"
+                    className="inline-flex max-w-full items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-200 group"
                     title="Click to remove"
                   >
-                    <span className="truncate">{skill} <span className="text-emerald-500/80 group-hover:text-emerald-700 ml-1">×</span></span>
+                    <span className="truncate">{skill} <span className="text-emerald-500/80 group-hover:text-emerald-700 ml-0.5">×</span></span>
                   </button>
                 ))}
               </div>
               
               {/* Quick suggestions */}
-              <div className="mt-3">
-                <p className="text-[10px] uppercase font-semibold text-slate-400">Suggestions:</p>
-                <div className="mt-1.5 flex flex-wrap gap-1">
+              <div className="mt-3 border-t border-slate-100 pt-2.5">
+                <p className="text-[9px] uppercase font-bold text-slate-400">Suggestions:</p>
+                <div className="mt-1 flex flex-wrap gap-1">
                   {ALL_SKILLS_SUGGESTIONS.filter((s) => !offeredSkills.includes(s)).map((s) => (
                     <button
                       key={s}
                       type="button"
                       onClick={() => addOfferedSkill(s)}
-                      className="rounded-full border border-dashed border-slate-300 px-2.5 py-0.5 text-[10px] text-slate-500 hover:border-[#0758d8] hover:text-[#0758d8]"
+                      className="rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[9px] text-slate-500 hover:border-[#0758d8] hover:text-[#0758d8]"
                     >
                       + {s}
                     </button>
@@ -400,9 +400,9 @@ function ProfileSettingsForm({
           )}
 
           {showNeeded && (
-            <section className="h-fit rounded-xl border border-slate-100 border-l-4 border-l-[#0758d8] bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+            <section className="h-fit rounded-xl border border-slate-200 border-l-4 border-l-[#0758d8] bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-base font-semibold text-slate-800">Skills I Need</h2>
+                <h2 className="text-xs font-semibold text-slate-800">Skills I Need</h2>
               </div>
 
               <div className="mt-3 flex gap-2">
@@ -417,27 +417,27 @@ function ProfileSettingsForm({
                       addNeededSkill(newNeededSkill);
                     }
                   }}
-                  className="h-10 flex-1 rounded-md border border-slate-300 px-3 text-sm focus:border-[#0758d8] outline-none"
+                  className="h-8 flex-1 rounded-md border border-slate-300 px-3 text-xs focus:border-[#0758d8] outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => addNeededSkill(newNeededSkill)}
-                  className="rounded-md bg-[#0758d8] px-4 text-xs font-semibold text-white hover:bg-[#0648b4]"
+                  className="rounded-md bg-[#0758d8] px-3 text-[10px] font-bold text-white hover:bg-[#0648b4]"
                 >
                   Add
                 </button>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {neededSkills.map((skill) => (
                   <button
                     key={skill}
                     type="button"
                     onClick={() => setNeededSkills(neededSkills.filter((s) => s !== skill))}
-                    className="inline-flex max-w-full items-center rounded-full bg-blue-100 px-3 py-1.5 text-sm font-semibold text-[#2f66e7] transition hover:bg-blue-200 group"
+                    className="inline-flex max-w-full items-center rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-[#2f66e7] transition hover:bg-blue-200 group"
                     title="Click to remove"
                   >
-                    <span className="truncate">{skill} <span className="text-blue-500/80 group-hover:text-blue-800 ml-1">×</span></span>
+                    <span className="truncate">{skill} <span className="text-blue-500/80 group-hover:text-blue-800 ml-0.5">×</span></span>
                   </button>
                 ))}
               </div>
@@ -455,27 +455,27 @@ function ProfileSettingsForm({
 
 function LoginSecurity() {
   return (
-    <section className="rounded-xl border border-slate-100 border-t-4 border-t-[#0758d8] bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
-      <SectionTitle icon={<LockIcon className="h-5 w-5" />} title="Login & Security" />
+    <section className="rounded-xl border border-slate-200 border-t-4 border-t-[#0758d8] bg-white p-5 shadow-sm">
+      <SectionTitle icon={<LockIcon className="h-4 w-4" />} title="Login & Security" />
 
-      <form className="mt-6 grid gap-5">
-        <label className="grid min-w-0 gap-2 text-sm font-medium text-slate-600">
+      <form className="mt-4 grid gap-4">
+        <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
           Current Password
           <input
             type="password"
             defaultValue="********"
             disabled
-            className="h-12 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-4 text-base font-medium text-slate-400 outline-none cursor-not-allowed"
+            className="h-9 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-400 outline-none cursor-not-allowed"
           />
         </label>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
           <Field label="New Password" type="password" />
           <Field label="Confirm New" type="password" />
         </div>
         <button
           type="button"
           disabled
-          className="h-11 rounded-md bg-slate-100 px-4 text-sm font-semibold text-slate-400 cursor-not-allowed"
+          className="h-9 rounded-md bg-slate-100 px-4 text-xs font-bold text-slate-400 cursor-not-allowed"
         >
           Update Password (Firebase Managed)
         </button>
@@ -486,10 +486,10 @@ function LoginSecurity() {
 
 function NotificationSettings() {
   return (
-    <section className="rounded-xl border border-slate-100 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
-      <SectionTitle icon={<BellIcon className="h-5 w-5" />} title="Notifications" />
+    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <SectionTitle icon={<BellIcon className="h-4 w-4" />} title="Notifications" />
 
-      <div className="mt-6 grid gap-5">
+      <div className="mt-4 grid gap-4">
         <ToggleRow
           title="Email Notifications"
           description="Weekly summaries and messages"
@@ -506,10 +506,10 @@ function NotificationSettings() {
 
 function PrivacySettings() {
   return (
-    <section className="rounded-xl border border-slate-100 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
-      <SectionTitle icon={<EyeIcon className="h-5 w-5" />} title="Privacy" />
+    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <SectionTitle icon={<EyeIcon className="h-4 w-4" />} title="Privacy" />
 
-      <div className="mt-6">
+      <div className="mt-4">
         <ToggleRow
           title="Profile Visibility"
           description="Allow non-members to view your profile"
@@ -518,8 +518,8 @@ function PrivacySettings() {
         />
       </div>
 
-      <div className="mt-5 flex gap-3 rounded-md border border-teal-100 bg-teal-50 px-4 py-4 text-sm font-medium leading-6 text-teal-700">
-        <InfoIcon className="mt-0.5 h-5 w-5 shrink-0" />
+      <div className="mt-4 flex gap-2.5 rounded-md border border-teal-100 bg-teal-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-teal-700">
+        <InfoIcon className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
           Making your profile public helps potential external mentors find you, but
           restricts personal contact details until a swap is accepted.
@@ -531,11 +531,11 @@ function PrivacySettings() {
 
 function DangerZone() {
   return (
-    <section className="rounded-xl border border-red-200 bg-red-50/50 p-6">
-      <div className="flex flex-col gap-4">
+    <section className="rounded-xl border border-red-200 bg-red-50/50 p-5">
+      <div className="flex flex-col gap-3">
         <div>
-          <h2 className="text-base font-semibold text-red-700">Danger Zone</h2>
-          <p className="mt-1 text-sm font-medium leading-6 text-slate-600">
+          <h2 className="text-xs font-bold text-red-700">Danger Zone</h2>
+          <p className="mt-1 text-[11px] font-semibold leading-relaxed text-slate-600">
             Permanently deactivate your account. This action is irreversible and all your
             data, including swap history, will be removed.
           </p>
@@ -543,7 +543,7 @@ function DangerZone() {
         <button
           type="button"
           disabled
-          className="h-11 w-full rounded-md bg-red-200 text-red-400 border border-red-200 cursor-not-allowed px-4 text-sm font-semibold"
+          className="h-9 w-full rounded-md bg-red-200 text-red-400 border border-red-200 cursor-not-allowed px-4 text-xs font-bold"
         >
           Deactivate Account
         </button>
@@ -562,12 +562,12 @@ function Field({
   defaultValue?: string;
 }) {
   return (
-    <label className="grid min-w-0 gap-2 text-sm font-medium text-slate-600">
+    <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
       {label}
       <input
         type={type}
         defaultValue={defaultValue}
-        className="h-12 min-w-0 rounded-md border border-slate-300 px-4 text-base font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+        className="h-9 min-w-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
       />
     </label>
   );
@@ -575,7 +575,7 @@ function Field({
 
 function SectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
   return (
-    <div className="flex items-center gap-2 text-base font-semibold text-slate-800">
+    <div className="flex items-center gap-1.5 text-sm font-bold text-slate-800">
       <span className="text-[#0758d8]">{icon}</span>
       {title}
     </div>
@@ -599,14 +599,14 @@ function ToggleRow({
   return (
     <label className="flex items-center justify-between gap-4">
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-slate-900">{title}</span>
-        <span className="mt-1 block text-sm font-medium text-slate-500">
+        <span className="block text-xs font-bold text-slate-900">{title}</span>
+        <span className="mt-0.5 block text-[11px] font-semibold text-slate-500">
           {description}
         </span>
       </span>
       <input type="checkbox" defaultChecked={checked} className="peer sr-only" />
       <span
-        className={`h-6 w-11 shrink-0 rounded-full bg-slate-300 p-1 transition after:block after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:after:translate-x-5 ${checkedColor}`}
+        className={`h-5 w-9 shrink-0 rounded-full bg-slate-300 p-0.5 transition after:block after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:after:translate-x-4 ${checkedColor}`}
       />
     </label>
   );

@@ -1,225 +1,260 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
 
 type Role = "buyer" | "provider" | "both";
 type ReviewsTab = "received" | "given";
 
-type RatingsPageContentProps = {
-  role: Role;
-};
+type RatingsPageContentProps = { role: Role };
 
-type ReviewItem = {
+interface ReviewItem {
   id: string;
-  name: string;
-  date: string;
+  partnerName: string;
+  partnerUniversity: string;
   skill: string;
-  text: string;
-  reply?: string | null;
-};
-
-const receivedReviews: ReviewItem[] = [
-  {
-    id: "r1",
-    name: "Alex Thompson",
-    date: "2 days ago",
-    skill: "React Development",
-    text: "Incredible mentor! They explained complex state management concepts in a way that finally clicked for me.",
-    reply: null,
-  },
-  {
-    id: "r2",
-    name: "Sarah Jenkins",
-    date: "Oct 12, 2023",
-    skill: "Academic Writing",
-    text: "Great help with my thesis structure. Very patient and provided detailed feedback on citation style.",
-    reply: "Thanks Sarah! Sorry again about the rescheduling, glad the feedback helped your thesis!",
-  },
-  {
-    id: "r3",
-    name: "Jordan Lee",
-    date: "Sep 28, 2023",
-    skill: "UI Design Basics",
-    text: "This swap was a game changer for my personal project. Super knowledgeable and easy to talk to.",
-    reply: null,
-  },
-];
-
-const givenReviews: ReviewItem[] = [
-  {
-    id: "g1",
-    name: "Malith Perera",
-    date: "1 day ago",
-    skill: "React Development",
-    text: "Very clear explanations and excellent session structure. Would definitely recommend.",
-  },
-  {
-    id: "g2",
-    name: "Nimali Silva",
-    date: "Oct 04, 2023",
-    skill: "Data Analysis",
-    text: "Great support with pandas and visualization. Super patient and practical guidance.",
-  },
-  {
-    id: "g3",
-    name: "Arjun Raman",
-    date: "Sep 11, 2023",
-    skill: "SQL Advanced Queries",
-    text: "Strong technical depth and well-prepared examples. Session was very useful.",
-  },
-];
+  rating: number;
+  comment: string;
+  isFromProvider?: boolean; // true if a provider left this review for the user (buyer)
+}
 
 export default function RatingsPageContent({ role }: RatingsPageContentProps) {
-  const roleDefaultTab: ReviewsTab = role === "buyer" ? "given" : "received";
-  const [tab, setTab] = useState<ReviewsTab>(roleDefaultTab);
-  const [filter, setFilter] = useState<"all" | "5" | "4">("all");
+  const { userProfile, loading } = useAuth();
+  const [received, setReceived]   = useState<ReviewItem[]>([]);
+  const [given, setGiven]         = useState<ReviewItem[]>([]);
+  const [fetching, setFetching]   = useState(true);
 
-  const canSeeReceived = role === "provider" || role === "both";
-  const canSeeGiven = role === "buyer" || role === "both";
+  // Both buyer and provider dashboards now show "received" as the default tab if they have reviews
+  const [tab, setTab] = useState<ReviewsTab>("received");
+  const [filterStars, setFilterStars] = useState<"all" | "5" | "4" | "3">("all");
 
-  const list = useMemo(() => {
-    const base = tab === "received" ? receivedReviews : givenReviews;
-    if (filter === "all") return base;
-    return filter === "5" ? base.slice(0, 2) : base.slice(1);
-  }, [tab, filter]);
+  useEffect(() => {
+    if (!userProfile) { setFetching(false); return; }
+
+    async function load() {
+      setFetching(true);
+      try {
+        const receivedList: ReviewItem[] = [];
+        const givenList: ReviewItem[] = [];
+
+        // 1. Load requests where this user was the PROVIDER
+        const asProviderSnap = await getDocs(
+          query(collection(db, "requests"),
+            where("providerId", "==", userProfile!.uid),
+            where("status", "==", "completed"))
+        );
+
+        asProviderSnap.forEach((d) => {
+          const r = d.data();
+          // Received review: Buyer left feedback for this provider
+          if (r.review && typeof r.review.rating === "number") {
+            receivedList.push({
+              id: `recv-prov-${d.id}`,
+              partnerName: r.buyerName || "Anonymous Buyer",
+              partnerUniversity: r.buyerUniversity || "Swap Partner",
+              skill: r.title || "Skill Swap",
+              rating: r.review.rating,
+              comment: r.review.comment || "",
+            });
+          }
+          // Given review: This provider left feedback for the buyer
+          if (r.providerReview && typeof r.providerReview.rating === "number") {
+            givenList.push({
+              id: `given-prov-${d.id}`,
+              partnerName: r.buyerName || "Anonymous Buyer",
+              partnerUniversity: r.buyerUniversity || "Swap Partner",
+              skill: r.title || "Skill Swap",
+              rating: r.providerReview.rating,
+              comment: r.providerReview.comment || "",
+            });
+          }
+        });
+
+        // 2. Load requests where this user was the BUYER
+        const asBuyerSnap = await getDocs(
+          query(collection(db, "requests"),
+            where("buyerId", "==", userProfile!.uid),
+            where("status", "==", "completed"))
+        );
+
+        asBuyerSnap.forEach((d) => {
+          const r = d.data();
+          // Received review: Provider left feedback for this buyer
+          if (r.providerReview && typeof r.providerReview.rating === "number") {
+            receivedList.push({
+              id: `recv-buyer-${d.id}`,
+              partnerName: r.providerName || "Anonymous Provider",
+              partnerUniversity: "Swap Partner",
+              skill: r.title || "Skill Swap",
+              rating: r.providerReview.rating,
+              comment: r.providerReview.comment || "",
+              isFromProvider: true,
+            });
+          }
+          // Given review: This buyer left feedback for the provider
+          if (r.review && typeof r.review.rating === "number") {
+            givenList.push({
+              id: `given-buyer-${d.id}`,
+              partnerName: r.providerName || "Anonymous Provider",
+              partnerUniversity: "Swap Partner",
+              skill: r.title || "Skill Swap",
+              rating: r.review.rating,
+              comment: r.review.comment || "",
+            });
+          }
+        });
+
+        setReceived(receivedList);
+        setGiven(givenList);
+      } catch (err) {
+        console.error("Error loading ratings:", err);
+      } finally {
+        setFetching(false);
+      }
+    }
+
+    load();
+  }, [userProfile]);
+
+  const activeList = tab === "received" ? received : given;
+  const filtered = useMemo(() => {
+    if (filterStars === "all") return activeList;
+    const n = Number(filterStars);
+    return activeList.filter((r) => r.rating === n);
+  }, [activeList, filterStars]);
+
+  // Stats (computed from reviews received by the user)
+  const avgRating = received.length
+    ? (received.reduce((s, r) => s + r.rating, 0) / received.length).toFixed(1)
+    : "–";
+  const totalReceived = received.length;
+  const dist = [5, 4, 3, 2, 1].map((s) => ({
+    star: s,
+    count: received.filter((r) => r.rating === s).length,
+    pct: received.length ? Math.round((received.filter((r) => r.rating === s).length / received.length) * 100) : 0,
+  }));
+
+  if (loading || fetching) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
-    <section className="space-y-6 pb-10">
+    <section className="space-y-5 pb-10">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900 md:text-[2.4rem]">Ratings &amp; Reviews</h1>
-        <p className="mt-2 text-base text-slate-600">
-          Manage your reputation and view feedback from your swap partners.
-        </p>
+        <h1 className="text-xl font-bold text-slate-900">Ratings &amp; Reviews</h1>
+        <p className="mt-1 text-xs text-slate-500">Manage your reputation and view feedback from your swap partners.</p>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <article className="rounded-xl border border-slate-300 bg-white p-5 shadow-sm">
-          <p className="text-center text-sm font-semibold uppercase tracking-widest text-slate-600">Global Rating</p>
-          <p className="mt-3 text-center text-[2.6rem] font-semibold leading-none text-[#1453c4]">4.8 / 5</p>
-          <p className="mt-3 text-center text-2xl text-amber-600">★★★★☆</p>
-        </article>
+      {/* Stats row - Hidden for pure buyers who do not have public listing stats */}
+      {role !== "buyer" && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Global Rating</p>
+            <p className="mt-2 text-3xl font-bold text-[#1453c4]">{avgRating}<span className="text-base text-slate-400"> / 5</span></p>
+            <p className="mt-1 text-amber-500">
+              {avgRating !== "–" 
+                ? "★".repeat(Math.round(Number(avgRating) || 0)) + "☆".repeat(5 - Math.round(Number(avgRating) || 0)) 
+                : "☆☆☆☆☆"}
+            </p>
+          </article>
 
-        <article className="rounded-xl border border-slate-300 bg-white p-5 shadow-sm">
-          <p className="text-lg font-semibold text-slate-700">Review Summary</p>
-          <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_120px] md:items-center">
-            <div className="space-y-2">
-              <BarRow label="5" width="85%" pct="85%" />
-              <BarRow label="4" width="10%" pct="10%" />
-              <BarRow label="3" width="5%" pct="5%" />
+          <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-bold text-slate-700">Review Summary</p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-[minmax(0,1fr)_80px] sm:items-center">
+              <div className="space-y-1.5">
+                {dist.map(({ star, pct }) => (
+                  <div key={star} className="grid grid-cols-[14px_minmax(0,1fr)_28px] items-center gap-1.5 text-xs text-slate-600">
+                    <span>{star}</span>
+                    <div className="h-1.5 rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-[#1453c4]" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-right">{pct}%</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-l border-slate-200 pl-3 text-center">
+                <p className="text-2xl font-bold text-slate-900">{totalReceived}</p>
+                <p className="text-xs text-slate-500">Reviews</p>
+              </div>
             </div>
-            <div className="border-l border-slate-200 pl-4 text-center">
-              <p className="text-[1.9rem] font-semibold text-slate-900">124</p>
-              <p className="text-sm text-slate-600">Total Reviews</p>
-            </div>
-          </div>
-        </article>
-      </div>
-
-      <div className="flex items-center gap-8 border-b border-slate-200">
-        {canSeeReceived ? (
-          <button
-            onClick={() => setTab("received")}
-            className={`border-b-2 pb-3 text-base font-semibold ${
-              tab === "received" ? "border-[#1453c4] text-[#1453c4]" : "border-transparent text-slate-600"
-            }`}
-          >
-            Reviews Received
-          </button>
-        ) : null}
-        {canSeeGiven ? (
-          <button
-            onClick={() => setTab("given")}
-            className={`border-b-2 pb-3 text-base font-semibold ${
-              tab === "given" ? "border-[#1453c4] text-[#1453c4]" : "border-transparent text-slate-600"
-            }`}
-          >
-            Reviews Given
-          </button>
-        ) : null}
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-base text-slate-700">Filter by:</span>
-          <FilterPill active={filter === "all"} label="All Ratings" onClick={() => setFilter("all")} />
-          <FilterPill active={filter === "5"} label="5 Stars" onClick={() => setFilter("5")} />
-          <FilterPill active={filter === "4"} label="4 Stars" onClick={() => setFilter("4")} />
+          </article>
         </div>
-        <button className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-          Newest First
+      )}
+
+      {/* Tabs */}
+      <div className="flex items-center gap-5 border-b border-slate-200">
+        <button
+          onClick={() => setTab("received")}
+          className={`border-b-2 pb-2.5 text-sm font-semibold ${tab === "received" ? "border-[#1453c4] text-[#1453c4]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+        >
+          Reviews Received {received.length > 0 && <span className="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px]">{received.length}</span>}
+        </button>
+        <button
+          onClick={() => setTab("given")}
+          className={`border-b-2 pb-2.5 text-sm font-semibold ${tab === "given" ? "border-[#1453c4] text-[#1453c4]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+        >
+          Reviews Given {given.length > 0 && <span className="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px]">{given.length}</span>}
         </button>
       </div>
 
-      <div className="space-y-4">
-        {list.map((review) => (
-          <article key={review.id} className="rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <div className="h-12 w-12 rounded-full bg-slate-200" />
-                <div>
-                  <p className="text-[1.35rem] font-semibold text-slate-900">{review.name}</p>
-                  <p className="text-sm text-amber-600">★★★★★ <span className="text-slate-600">{review.date}</span></p>
-                </div>
-              </div>
-              <span className="rounded-full bg-teal-100 px-3 py-1 text-sm font-semibold text-teal-700">{review.skill}</span>
-            </div>
-
-            <p className="mt-3 text-base leading-7 text-slate-700">&quot;{review.text}&quot;</p>
-
-            {review.reply ? (
-              <div className="mt-3 rounded-lg border-l-4 border-[#1453c4] bg-[#f4f5ff] p-3">
-                <p className="text-sm font-semibold text-[#1453c4]">Your Response</p>
-                <p className="mt-1 text-base italic text-slate-700">&quot;{review.reply}&quot;</p>
-              </div>
-            ) : null}
-
-            <div className="mt-3 flex items-center gap-4 border-t border-slate-200 pt-3 text-sm font-semibold text-slate-600">
-              <button>Reply</button>
-              <button>Report</button>
-            </div>
-          </article>
+      {/* Filter pills */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-slate-500">Filter:</span>
+        {(["all", "5", "4", "3"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setFilterStars(v)}
+            className={`rounded-full px-3 py-1 text-xs font-bold ${filterStars === v ? "bg-[#1453c4] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+          >
+            {v === "all" ? "All" : `${v} ★`}
+          </button>
         ))}
       </div>
 
-      <div className="flex items-center justify-center gap-4">
-        <button className="h-9 w-9 rounded-lg border border-slate-300 bg-white text-slate-700">{"<"}</button>
-        <button className="h-10 w-10 rounded-lg bg-[#1453c4] text-white">1</button>
-        <button className="text-slate-700">2</button>
-        <button className="text-slate-700">3</button>
-        <span className="text-slate-500">...</span>
-        <button className="text-slate-700">12</button>
-        <button className="h-9 w-9 rounded-lg border border-slate-300 bg-white text-slate-700">{">"}</button>
-      </div>
-
-      <div className="hidden">
-        <Link href="/ratings">ratings</Link>
+      {/* Review list */}
+      <div className="space-y-3">
+        {filtered.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm text-slate-400">
+            No reviews found.
+          </div>
+        ) : (
+          filtered.map((review) => (
+            <article key={review.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-[#2f66e7]">
+                    {review.partnerName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-slate-900">{review.partnerName}</p>
+                      {review.isFromProvider && (
+                        <span className="rounded-full bg-blue-50 border border-blue-100 px-2 py-0.25 text-[9px] font-extrabold text-blue-700">
+                          Provider Feedback
+                        </span>
+                      )}
+                    </div>
+                    {review.partnerUniversity && (
+                      <p className="text-[11px] text-slate-400">{review.partnerUniversity}</p>
+                    )}
+                    <p className="mt-0.5 text-amber-500 text-xs">
+                      {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-teal-100 px-2.5 py-0.5 text-[10px] font-bold text-teal-700 shrink-0">{review.skill}</span>
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-slate-700">&ldquo;{review.comment}&rdquo;</p>
+            </article>
+          ))
+        )}
       </div>
     </section>
-  );
-}
-
-function BarRow({ label, width, pct }: { label: string; width: string; pct: string }) {
-  return (
-    <div className="grid grid-cols-[18px_minmax(0,1fr)_34px] items-center gap-2 text-sm text-slate-700">
-      <span>{label}</span>
-      <div className="h-2 rounded-full bg-slate-200">
-        <div className="h-full rounded-full bg-[#1453c4]" style={{ width }} />
-      </div>
-      <span>{pct}</span>
-    </div>
-  );
-}
-
-function FilterPill({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-full px-4 py-1.5 text-xs font-semibold ${
-        active ? "bg-[#1453c4] text-white" : "bg-slate-200 text-slate-700"
-      }`}
-    >
-      {label}
-    </button>
   );
 }

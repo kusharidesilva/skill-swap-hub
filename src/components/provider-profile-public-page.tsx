@@ -1,6 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-
+import { useState, useEffect } from "react";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
 
 type ProviderProfilePublicPageProps = {
@@ -9,6 +13,56 @@ type ProviderProfilePublicPageProps = {
   activeTab: "gigs" | "reviews";
 };
 
+interface GigData {
+  id: string;
+  title: string;
+  rating: string;
+  reviews: number;
+  category: string;
+  points: number;
+  image: string;
+}
+
+interface ReviewData {
+  id: string;
+  initials: string;
+  avatarTone: string;
+  name: string;
+  meta: string;
+  quote: string;
+  rating: number;
+}
+
+interface PublicProviderProfile {
+  name: string;
+  degree: string;
+  university: string;
+  rating: string;
+  reviewsCount: number;
+  image: string;
+  verified: boolean;
+  topRated: boolean;
+  trustScore: string;
+  totalSwaps: string;
+  avgRating: string;
+  avgResponse: string;
+  gigs: GigData[];
+  reviews: ReviewData[];
+}
+
+interface FirebaseRequestDoc {
+  id: string;
+  buyerName?: string;
+  title?: string;
+  status?: string;
+  createdAt?: { toDate?: () => Date } | Date | null;
+  review?: {
+    rating: number;
+    comment: string;
+  };
+}
+
+// Fallback/Mock data for unregistered/demo providers
 const providersData: Record<string, {
   name: string;
   degree: string;
@@ -22,15 +76,7 @@ const providersData: Record<string, {
   totalSwaps: string;
   avgRating: string;
   avgResponse: string;
-  gigs: Array<{
-    id: string;
-    title: string;
-    rating: string;
-    reviews: number;
-    category: string;
-    points: number;
-    image: string;
-  }>;
+  gigs: GigData[];
 }> = {
   "sarah-jenkins": {
     name: "Sarah Jenkins",
@@ -145,7 +191,7 @@ const providersData: Record<string, {
   }
 };
 
-const allReviews = [
+const allReviewsMock: ReviewData[] = [
   {
     id: "r1",
     initials: "KP",
@@ -154,6 +200,7 @@ const allReviews = [
     meta: "2 days ago • Swap: Creative Book Cover",
     quote:
       "Amara is incredibly talented! She took my vague ideas and turned them into a stunning book cover that perfectly matches the tone of my thesis. Highly recommend her for any design work.",
+    rating: 5,
   },
   {
     id: "r2",
@@ -163,24 +210,7 @@ const allReviews = [
     meta: "1 week ago • Swap: 3D Arch Viz",
     quote:
       "Excellent communication and the technical quality of the 3D renders was beyond my expectations. She is a real pro at the University of Moratuwa.",
-  },
-  {
-    id: "r3",
-    initials: "KP",
-    avatarTone: "bg-[#2f66e7] text-white",
-    name: "Kasun Perera",
-    meta: "2 days ago • Swap: Creative Book Cover",
-    quote:
-      "Amara is incredibly talented! She took my vague ideas and turned them into a stunning book cover that perfectly matches the tone of my thesis. Highly recommend her for any design work.",
-  },
-  {
-    id: "r4",
-    initials: "NR",
-    avatarTone: "bg-teal-300 text-teal-900",
-    name: "Nimani Ratnayake",
-    meta: "1 week ago • Swap: 3D Arch Viz",
-    quote:
-      "Excellent communication and the technical quality of the 3D renders was beyond my expectations. She is a real pro at the University of Moratuwa.",
+    rating: 5,
   },
 ];
 
@@ -189,9 +219,154 @@ export default function ProviderProfilePublicPage({
   role,
   activeTab,
 }: ProviderProfilePublicPageProps) {
-  const profile = providersData[providerId] || providersData["alex-rivera"];
-  const firstName = profile.name.split(" ")[0];
+  const [profile, setProfile] = useState<PublicProviderProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    async function loadProviderProfile() {
+      try {
+        // 1. Fetch user document
+        const userDoc = await getDoc(doc(db, "users", providerId));
+        
+        // 2. Fetch requests for this provider (to compute actual avg rating, total swaps, trust score, and reviews list)
+        const q = query(
+          collection(db, "requests"),
+          where("providerId", "==", providerId)
+        );
+        const qSnap = await getDocs(q);
+        const reqs: FirebaseRequestDoc[] = [];
+        qSnap.forEach((docSnap) => {
+          reqs.push({ id: docSnap.id, ...docSnap.data() } as FirebaseRequestDoc);
+        });
+
+        if (userDoc.exists()) {
+          const u = userDoc.data();
+          const completedRequests = reqs.filter((r) => r.status === "completed");
+          const totalSwaps = completedRequests.length;
+          
+          // Calculate dynamic average rating
+          const ratings = completedRequests
+            .filter((r) => r.review && typeof r.review.rating === "number")
+            .map((r) => r.review!.rating);
+          const avgRating = ratings.length > 0 
+            ? parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1))
+            : 5.0;
+
+          // Calculate dynamic trust score
+          const totalRequests = reqs.length;
+          const totalRejected = reqs.filter((r) => r.status === "rejected").length;
+          const trustScore = totalRequests === 0 
+            ? "99%" 
+            : `${Math.min(100, Math.max(80, Math.round(((totalRequests - totalRejected) / totalRequests) * 100)))}%`;
+
+          // Generate offered gigs based on the skills stored in providerProfile
+          const skills: string[] = u.providerProfile?.skills || [];
+          const gigs: GigData[] = skills.map((skill: string, index: number) => {
+            let image = "/img/package%201.jpg";
+            if (index % 3 === 1) image = "/img/package%202.jpg";
+            if (index % 3 === 2) image = "/img/package%203.jpg";
+            return {
+              id: `gig-${index}`,
+              title: `Collaboration: ${skill}`,
+              rating: avgRating.toFixed(1),
+              reviews: completedRequests.length,
+              category: skill,
+              points: 30 + (index * 5),
+              image,
+            };
+          });
+
+          // Generate dynamic reviews list from completed requests reviews
+          const reviews: ReviewData[] = completedRequests
+            .filter((r) => r.review && typeof r.review.rating === "number")
+            .map((r) => {
+              const rating = r.review!.rating;
+              const comment = r.review!.comment || "Outstanding swap session!";
+              const buyerName = r.buyerName || "Anonymous Student";
+              const initials = buyerName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || "US";
+              
+              let dateStr = "Recently";
+              if (r.createdAt) {
+                const rawDate = r.createdAt as { toDate?: () => Date } | Date | string | number;
+                let d: Date;
+                if (rawDate && typeof (rawDate as { toDate?: () => Date }).toDate === "function") {
+                  d = (rawDate as { toDate: () => Date }).toDate();
+                } else {
+                  d = new Date(rawDate as Date | string | number);
+                }
+                dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+              }
+
+              return {
+                id: r.id,
+                initials,
+                avatarTone: "bg-[#2f66e7] text-white",
+                name: buyerName,
+                meta: `${dateStr} • Swap: ${r.title}`,
+                quote: comment,
+                rating,
+              };
+            });
+
+          setProfile({
+            name: u.name || "Anonymous Member",
+            degree: u.degree || "Undergraduate",
+            university: u.university || "Sri Lankan University",
+            rating: avgRating.toFixed(1),
+            reviewsCount: completedRequests.length,
+            image: "", // empty so it renders initials fallback
+            verified: true,
+            topRated: avgRating >= 4.8 && completedRequests.length >= 2,
+            trustScore,
+            totalSwaps: String(totalSwaps),
+            avgRating: avgRating.toFixed(1),
+            avgResponse: "1h",
+            gigs,
+            reviews,
+          });
+        } else {
+          // Fallback to mock data if it matches a hardcoded provider ID
+          const mock = providersData[providerId] || providersData["alex-rivera"];
+          setProfile({
+            ...mock,
+            reviews: allReviewsMock,
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching provider profile from db:", err);
+        const mock = providersData[providerId] || providersData["alex-rivera"];
+        setProfile({
+          ...mock,
+          reviews: allReviewsMock,
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProviderProfile();
+  }, [providerId]);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
+          <p className="text-sm text-slate-500">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-sm text-slate-500">Provider profile not found.</p>
+      </div>
+    );
+  }
+
+  const firstName = profile.name.split(" ")[0];
   const messageHref = role ? scopedHref("/chats", role) : "/get-started";
   const favoriteHref = role ? scopedHref("/favorites", role) : "/get-started";
   const reportHref = role
@@ -204,20 +379,32 @@ export default function ProviderProfilePublicPage({
   const gigsHref = `${baseProfileHref}${role ? "&" : "?"}tab=gigs`;
   const reviewsHref = `${baseProfileHref}${role ? "&" : "?"}tab=reviews`;
 
+  // Render rating stars string dynamically
+  const starsString = () => {
+    const num = Math.round(parseFloat(profile.avgRating) || 5);
+    return "★".repeat(num) + "☆".repeat(Math.max(0, 5 - num));
+  };
+
   return (
     <div className="flex w-full flex-col gap-6 pb-10">
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="grid gap-5 md:grid-cols-[152px_minmax(0,1fr)]">
-          <div className="relative h-[152px] w-[152px] overflow-hidden rounded-xl">
-            <Image
-              src={profile.image}
-              alt={profile.name}
-              fill
-              className="object-cover"
-              sizes="152px"
-              priority
-            />
-          </div>
+          {profile.image && profile.image.startsWith("/") ? (
+            <div className="relative h-[152px] w-[152px] overflow-hidden rounded-xl">
+              <Image
+                src={profile.image}
+                alt={profile.name}
+                fill
+                className="object-cover"
+                sizes="152px"
+                priority
+              />
+            </div>
+          ) : (
+            <div className="flex h-[152px] w-[152px] shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-4xl font-bold text-white shadow-md">
+              {profile.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
+            </div>
+          )}
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -263,9 +450,9 @@ export default function ProviderProfilePublicPage({
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Trust Score" value={profile.trustScore} sub=" " accent />
+        <MetricCard title="Trust Score" value={profile.trustScore} sub="Completion Rate" accent />
         <MetricCard title="Total Swaps" value={profile.totalSwaps} sub="Completed" />
-        <MetricCard title="Avg. Rating" value={profile.avgRating} sub="★★★★★" teal />
+        <MetricCard title="Avg. Rating" value={profile.avgRating} sub={starsString()} teal />
         <MetricCard title="Avg. Response" value={profile.avgResponse} sub="Highly Responsive" />
       </section>
 
@@ -279,7 +466,7 @@ export default function ProviderProfilePublicPage({
                 : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
-            Offered Gigs
+            Offered Gigs ({profile.gigs.length})
           </Link>
           <Link
             href={reviewsHref}
@@ -289,57 +476,70 @@ export default function ProviderProfilePublicPage({
                 : "border-transparent text-slate-600 hover:text-slate-800"
             }`}
           >
-            Reviews ({profile.reviewsCount})
+            Reviews ({profile.reviews.length})
           </Link>
         </div>
 
         {activeTab === "gigs" ? (
-          <div className="mt-5 grid gap-4 lg:grid-cols-3">
-            {profile.gigs.map((gig) => (
-              <article
-                key={gig.id}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-              >
-                <div className="relative h-40 w-full">
-                  <Image
-                    src={gig.image}
-                    alt={gig.title}
-                    fill
-                    className="object-cover"
-                    sizes="(min-width: 1024px) 30vw, 100vw"
-                  />
-                </div>
-                <div className="p-4">
-                  <h3 className="text-xl font-semibold text-slate-900">{gig.title}</h3>
-                  <p className="mt-1 text-base font-semibold text-slate-700">
-                    ★ {gig.rating}{" "}
-                    <span className="font-normal text-slate-500">({gig.reviews})</span>
-                  </p>
-                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-                    <span className="rounded-md bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">
-                      {gig.category}
-                    </span>
-                    <span className="text-lg font-semibold text-[#1453c4]">
-                      {gig.points} Points
-                    </span>
+          profile.gigs.length > 0 ? (
+            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              {profile.gigs.map((gig: GigData) => (
+                <article
+                  key={gig.id}
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                >
+                  <div className="relative h-40 w-full">
+                    <Image
+                      src={gig.image}
+                      alt={gig.title}
+                      fill
+                      className="object-cover"
+                      sizes="(min-width: 1024px) 30vw, 100vw"
+                    />
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                  <div className="p-4">
+                    <h3 className="text-xl font-semibold text-slate-900">{gig.title}</h3>
+                    <p className="mt-1 text-base font-semibold text-slate-700">
+                      ★ {gig.rating}{" "}
+                      <span className="font-normal text-slate-500">({gig.reviews} reviews)</span>
+                    </p>
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                      <span className="rounded-md bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">
+                        {gig.category}
+                      </span>
+                      <span className="text-lg font-semibold text-[#1453c4]">
+                        {gig.points} Points
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
+              No offered gigs or services listed yet.
+            </div>
+          )
         ) : (
           <div className="mt-5 space-y-4">
             <h2 className="text-xl font-semibold text-[#1453c4]">Recent Feedback</h2>
-            {allReviews.map((review) => (
-              <FeedbackCard
-                key={review.id}
-                initials={review.initials}
-                avatarTone={review.avatarTone}
-                name={review.name}
-                meta={review.meta}
-                quote={review.quote}
-              />
-            ))}
+            {profile.reviews.length > 0 ? (
+              profile.reviews.map((review: ReviewData) => (
+                <FeedbackCard
+                  key={review.id}
+                  initials={review.initials}
+                  avatarTone={review.avatarTone}
+                  name={review.name}
+                  meta={review.meta}
+                  quote={review.quote}
+                  rating={review.rating}
+                />
+              ))
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
+                No reviews received yet.
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -376,12 +576,14 @@ function FeedbackCard({
   name,
   meta,
   quote,
+  rating = 5,
 }: {
   initials: string;
   avatarTone: string;
   name: string;
   meta: string;
   quote: string;
+  rating?: number;
 }) {
   return (
     <article className="rounded-2xl border border-slate-200 bg-[#f7f8ff] p-5 shadow-sm">
@@ -397,7 +599,7 @@ function FeedbackCard({
             <p className="text-sm text-slate-500">{meta}</p>
           </div>
         </div>
-        <p className="text-lg text-teal-700">★★★★★</p>
+        <p className="text-lg text-teal-700">{"★".repeat(rating)}</p>
       </div>
       <p className="mt-3 text-lg leading-8 text-slate-700">{quote}</p>
     </article>

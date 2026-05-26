@@ -10,6 +10,7 @@ type IconProps = SVGProps<SVGSVGElement> & { className?: string };
 type NavItem = {
   label: string;
   href: string;
+  section?: "default" | "provide" | "find" | "community" | "footer";
   icon: ComponentType<IconProps>;
 };
 
@@ -113,36 +114,36 @@ function InboxIcon(props: IconProps) {
 
 const navConfig: Record<Role, NavItem[]> = {
   buyer: [
-    { label: "Dashboard", href: "/dashboard/buyer", icon: DashboardIcon },
-    { label: "Profile", href: "/profile/buyer", icon: UserCircleIcon },
-    { label: "Settings", href: "/profile-settings/buyer", icon: SettingsIcon },
-    { label: "Request", href: scopedHref("/request-service", "buyer"), icon: PlusCircleIcon },
-    { label: "Find", href: scopedHref("/find-services", "buyer"), icon: SearchUserIcon },
-    { label: "Chat", href: scopedHref("/chats", "buyer"), icon: ChatIcon },
-    { label: "Ratings", href: scopedHref("/ratings", "buyer"), icon: StarBadgeIcon },
-    { label: "Sign Out", href: "/sign-out", icon: SignOutIcon },
+    { label: "Dashboard", href: "/dashboard/buyer", section: "default", icon: DashboardIcon },
+    { label: "Profile", href: "/profile/buyer", section: "default", icon: UserCircleIcon },
+    { label: "Settings", href: "/profile-settings/buyer", section: "default", icon: SettingsIcon },
+    { label: "Request", href: scopedHref("/request-service", "buyer"), section: "find", icon: PlusCircleIcon },
+    { label: "Find", href: scopedHref("/find-services", "buyer"), section: "find", icon: SearchUserIcon },
+    { label: "Chat", href: scopedHref("/chats", "buyer"), section: "community", icon: ChatIcon },
+    { label: "Ratings", href: scopedHref("/ratings", "buyer"), section: "community", icon: StarBadgeIcon },
+    { label: "Sign Out", href: "/sign-out", section: "footer", icon: SignOutIcon },
   ],
   provider: [
-    { label: "Dashboard", href: "/dashboard/provider", icon: DashboardIcon },
-    { label: "Profile", href: "/profile/provider", icon: UserCircleIcon },
-    { label: "Settings", href: "/profile-settings/provider", icon: SettingsIcon },
-    { label: "My Gigs", href: "/my-gigs/provider", icon: BriefcaseIcon },
-    { label: "Requests", href: "/incoming-requests/provider", icon: InboxIcon },
-    { label: "Chat", href: scopedHref("/chats", "provider"), icon: ChatIcon },
-    { label: "Ratings", href: scopedHref("/ratings", "provider"), icon: StarBadgeIcon },
-    { label: "Sign Out", href: "/sign-out", icon: SignOutIcon },
+    { label: "Dashboard", href: "/dashboard/provider", section: "default", icon: DashboardIcon },
+    { label: "Profile", href: "/profile/provider", section: "default", icon: UserCircleIcon },
+    { label: "Settings", href: "/profile-settings/provider", section: "default", icon: SettingsIcon },
+    { label: "My Gigs", href: "/my-gigs/provider", section: "provide", icon: BriefcaseIcon },
+    { label: "Requests", href: "/incoming-requests/provider", section: "provide", icon: InboxIcon },
+    { label: "Chat", href: scopedHref("/chats", "provider"), section: "community", icon: ChatIcon },
+    { label: "Ratings", href: scopedHref("/ratings", "provider"), section: "community", icon: StarBadgeIcon },
+    { label: "Sign Out", href: "/sign-out", section: "footer", icon: SignOutIcon },
   ],
   both: [
-    { label: "Dashboard", href: "/dashboard/both", icon: DashboardIcon },
-    { label: "Profile", href: "/profile/both", icon: UserCircleIcon },
-    { label: "Settings", href: "/profile-settings/both", icon: SettingsIcon },
-    { label: "My Gigs", href: "/my-gigs/both", icon: BriefcaseIcon },
-    { label: "Requests", href: "/incoming-requests/both", icon: InboxIcon },
-    { label: "Request", href: scopedHref("/request-service", "both"), icon: PlusCircleIcon },
-    { label: "Find", href: scopedHref("/find-services", "both"), icon: SearchUserIcon },
-    { label: "Chat", href: scopedHref("/chats", "both"), icon: ChatIcon },
-    { label: "Ratings", href: scopedHref("/ratings", "both"), icon: StarBadgeIcon },
-    { label: "Sign Out", href: "/sign-out", icon: SignOutIcon },
+    { label: "Dashboard", href: "/dashboard/both", section: "default", icon: DashboardIcon },
+    { label: "Profile", href: "/profile/both", section: "default", icon: UserCircleIcon },
+    { label: "Settings", href: "/profile-settings/both", section: "default", icon: SettingsIcon },
+    { label: "My Gigs", href: "/my-gigs/both", section: "provide", icon: BriefcaseIcon },
+    { label: "Requests", href: "/incoming-requests/both", section: "provide", icon: InboxIcon },
+    { label: "Request", href: scopedHref("/request-service", "both"), section: "find", icon: PlusCircleIcon },
+    { label: "Find", href: scopedHref("/find-services", "both"), section: "find", icon: SearchUserIcon },
+    { label: "Chat", href: scopedHref("/chats", "both"), section: "community", icon: ChatIcon },
+    { label: "Ratings", href: scopedHref("/ratings", "both"), section: "community", icon: StarBadgeIcon },
+    { label: "Sign Out", href: "/sign-out", section: "footer", icon: SignOutIcon },
   ],
 };
 
@@ -150,37 +151,85 @@ export default function MobileNav({ role }: { role: Role }) {
   const pathname = usePathname();
   const items = navConfig[role];
 
+  // Helper to render an individual navigation link
+  const renderItem = (item: NavItem) => {
+    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+    const isSignOut = item.label === "Sign Out";
+    const Icon = item.icon;
+
+    return (
+      <Link
+        key={item.label}
+        href={item.href}
+        aria-current={isActive ? "page" : undefined}
+        className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer ${
+          isActive
+            ? "bg-[#2f66e7]/10 text-[#2f66e7] shadow-xs ring-1 ring-[#2f66e7]/15"
+            : isSignOut
+              ? "text-rose-600 hover:bg-rose-50"
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+        }`}
+      >
+        <Icon className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isActive ? "scale-105" : ""}`} />
+        <span className="leading-none whitespace-nowrap">{item.label}</span>
+      </Link>
+    );
+  };
+
+  // Grouped mobile nav bar ONLY for "both" role dashboard to match desktop SideNav groups
+  if (role === "both") {
+    const defaultItems = items.filter((item) => item.section === "default");
+    const provideItems = items.filter((item) => item.section === "provide");
+    const findItems = items.filter((item) => item.section === "find");
+    const communityItems = items.filter((item) => item.section === "community");
+    const footerItems = items.filter((item) => item.section === "footer");
+
+    return (
+      <nav
+        className="flex items-center gap-4 overflow-x-auto px-4 py-3.5 bg-white/80 backdrop-blur-md scrollbar-none"
+        aria-label="Mobile navigation"
+      >
+        {/* General/Default group */}
+        <div className="flex items-center gap-1.5 bg-slate-100/70 border border-slate-200/50 rounded-2xl p-1 shrink-0">
+          {defaultItems.map(renderItem)}
+        </div>
+
+        {/* Provide Skills group */}
+        <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-2xl p-1 shrink-0">
+          <span className="text-[9px] uppercase font-extrabold text-emerald-700 pl-2 pr-0.5 shrink-0 select-none">
+            Provide:
+          </span>
+          {provideItems.map(renderItem)}
+        </div>
+
+        {/* Find Skills group */}
+        <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-2xl p-1 shrink-0">
+          <span className="text-[9px] uppercase font-extrabold text-blue-700 pl-2 pr-0.5 shrink-0 select-none">
+            Find:
+          </span>
+          {findItems.map(renderItem)}
+        </div>
+
+        {/* Community group */}
+        <div className="flex items-center gap-1.5 bg-slate-100/70 border border-slate-200/50 rounded-2xl p-1 shrink-0">
+          {communityItems.map(renderItem)}
+        </div>
+
+        {/* Footer actions (e.g. Sign Out) */}
+        <div className="flex items-center gap-1.5 bg-rose-50/40 border border-rose-100/50 rounded-2xl p-1 shrink-0">
+          {footerItems.map(renderItem)}
+        </div>
+      </nav>
+    );
+  }
+
+  // Flat mobile nav bar for single-role dashboards (pure buyer / pure provider)
   return (
     <nav
       className="flex items-center gap-2 overflow-x-auto px-4 py-3 bg-white/80 backdrop-blur-md scrollbar-none"
       aria-label="Mobile navigation"
     >
-      {items.map((item) => {
-        const isActive =
-          pathname === item.href || pathname.startsWith(`${item.href}/`);
-        const isSignOut = item.label === "Sign Out";
-        const Icon = item.icon;
-
-        return (
-          <Link
-            key={item.label}
-            href={item.href}
-            aria-current={isActive ? "page" : undefined}
-            className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 cursor-pointer ${
-              isActive
-                ? "bg-[#2f66e7]/10 text-[#2f66e7] shadow-sm ring-1 ring-[#2f66e7]/15"
-                : isSignOut
-                  ? "text-red-600 hover:bg-red-50"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-            }`}
-          >
-            <Icon className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isActive ? "scale-105" : ""}`} />
-            <span className="leading-none whitespace-nowrap">
-              {item.label}
-            </span>
-          </Link>
-        );
-      })}
+      {items.map(renderItem)}
     </nav>
   );
 }

@@ -11,10 +11,15 @@ import { type UserProfile } from "@/lib/auth";
 
 const skillCategories = [
   "Programming",
-  "Design",
-  "Writing",
-  "Business",
-  "Data Science",
+  "UX Design",
+  "Graphic Design",
+  "Mathematics",
+  "Photography",
+  "Video Editing",
+  "Data Analysis",
+  "Web Development",
+  "Content Writing",
+  "Music",
 ];
 
 const levelOptions = ["Beginner", "Intermediate", "Advanced"];
@@ -37,6 +42,10 @@ interface RequestData {
   budget: string;
   revisionNotes?: string;
   review?: {
+    rating: number;
+    comment: string;
+  };
+  providerReview?: {
     rating: number;
     comment: string;
   };
@@ -110,8 +119,8 @@ export default function RequestServiceContent({
   return (
     <div className="flex w-full flex-col gap-8 pb-10">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Request a Service</h1>
-        <p className="mt-2 text-base text-slate-600">
+        <h1 className="text-xl font-bold tracking-tight text-slate-900">Request a Service</h1>
+        <p className="mt-1 text-xs text-slate-500">
           Describe clearly what help you need so the system can match you or notify the provider.
         </p>
         {providerIdParam && (
@@ -213,8 +222,8 @@ function RequestForm({
   };
 
   return (
-    <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.04)] md:p-8">
-      <form onSubmit={handleSubmit} className="grid gap-6">
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <form onSubmit={handleSubmit} className="grid gap-4">
         {feedback && (
           <div
             className={`rounded-lg px-4 py-3 text-sm font-semibold border ${
@@ -228,9 +237,9 @@ function RequestForm({
         )}
 
         {/* Skill Needed and Category */}
-        <div className="grid gap-5 md:grid-cols-2">
-          <label className="grid min-w-0 gap-2">
-            <span className="text-sm font-semibold text-slate-700">Skill Needed</span>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-semibold text-slate-600">Skill Needed</span>
             <input
               type="text"
               placeholder="e.g., Python Data Analysis"
@@ -240,8 +249,8 @@ function RequestForm({
             />
           </label>
 
-          <label className="grid min-w-0 gap-2">
-            <span className="text-sm font-semibold text-slate-700">Skill Category</span>
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-semibold text-slate-600">Skill Category</span>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
@@ -257,21 +266,21 @@ function RequestForm({
           </label>
         </div>
 
-        <label className="grid min-w-0 gap-2">
-          <span className="text-sm font-semibold text-slate-700">Description</span>
+        <label className="grid min-w-0 gap-1.5">
+          <span className="text-xs font-semibold text-slate-600">Description</span>
           <textarea
-            rows={5}
+            rows={4}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Detail the specific tasks, project scope, or areas you need help with..."
-            className="w-full resize-none rounded-lg border border-slate-300 bg-[#f7f8ff] px-4 py-3 text-base leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+            className="w-full resize-none rounded-lg border border-slate-300 bg-[#f7f8ff] px-3 py-2 text-sm leading-relaxed text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
           />
         </label>
 
         {/* Required Level and Service Type */}
-        <div className="grid gap-6 md:grid-cols-2">
-          <label className="grid min-w-0 gap-2">
-            <span className="text-sm font-semibold text-slate-700">Required Level</span>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-semibold text-slate-600">Required Level</span>
             <select
               value={level}
               onChange={(e) => setLevel(e.target.value)}
@@ -286,15 +295,15 @@ function RequestForm({
             </select>
           </label>
 
-          <label className="grid min-w-0 gap-2">
-            <span className="text-sm font-semibold text-slate-700">Service Type</span>
-            <div className="flex max-w-[280px] flex-wrap items-center gap-2 pt-0.5">
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-semibold text-slate-600">Service Type</span>
+            <div className="flex max-w-[280px] flex-wrap items-center gap-1.5 pt-1">
               {["Free Help", "Skill Exchange", "Paid"].map((type) => (
                 <button
                   type="button"
                   key={type}
                   onClick={() => setServiceType(type)}
-                  className={`inline-flex h-8 items-center justify-center rounded-full border px-3 text-xs font-semibold leading-none transition ${
+                  className={`inline-flex h-7 items-center justify-center rounded-full border px-2.5 text-[10px] font-bold leading-none transition ${
                     serviceType === type
                       ? "border-[#2f66e7] bg-[#2f66e7] text-white"
                       : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
@@ -309,8 +318,8 @@ function RequestForm({
 
         {/* Preferred Date/ Time, University, and Budget */}
         <div className="grid items-end gap-3 md:grid-cols-3">
-          <label className="grid min-w-0 gap-2">
-            <span className="text-sm font-semibold text-slate-700">Preferred Date/ Time</span>
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-semibold text-slate-600">Preferred Date/ Time</span>
             <input
               type="text"
               placeholder="e.g., Weekends, Evenings"
@@ -320,8 +329,8 @@ function RequestForm({
             />
           </label>
 
-          <label className="grid min-w-0 gap-2">
-            <span className="text-sm font-semibold text-slate-700">Preferred University</span>
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-semibold text-slate-600">Preferred University</span>
             <input
               type="text"
               placeholder="e.g., State Uni"
@@ -331,8 +340,8 @@ function RequestForm({
             />
           </label>
 
-          <label className="grid min-w-0 gap-2">
-            <span className="text-sm font-semibold text-slate-700">Budget (Optional)</span>
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-semibold text-slate-600">Budget (Optional)</span>
             <input
               type="text"
               placeholder="e.g., Free Swap"
@@ -344,12 +353,12 @@ function RequestForm({
         </div>
 
         {/* Submit Button */}
-        <div className="border-t border-slate-200 pt-6">
+        <div className="border-t border-slate-200 pt-4">
           <div className="flex justify-end">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#2f66e7] px-8 text-base font-semibold text-white shadow-sm transition hover:bg-[#2557cf] disabled:opacity-60 sm:w-auto sm:min-w-56"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#2f66e7] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2557cf] disabled:opacity-60 sm:w-auto sm:min-w-44"
             >
               {isSubmitting ? "Submitting..." : "Submit Request"}
               <SendIcon className="h-4 w-4" />
@@ -374,6 +383,10 @@ function RecentRequestsPanel({ buyerId, role }: { buyerId: string; role: Role })
   const [activeRevisionId, setActiveRevisionId] = useState<string | null>(null);
   const [revisionText, setRevisionText] = useState("");
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 3;
+
   // Real-time listener on requests submitted by this buyer
   useEffect(() => {
     const q = query(
@@ -390,6 +403,15 @@ function RecentRequestsPanel({ buyerId, role }: { buyerId: string; role: Role })
       docs.sort((a, b) => b.id.localeCompare(a.id));
       setRequests(docs);
       setLoading(false);
+      
+      // Reset to page 1 if current page would be empty after updates
+      const maxPages = Math.ceil(docs.length / ITEMS_PER_PAGE);
+      setCurrentPage((currentVal) => {
+        if (currentVal > maxPages && maxPages > 0) {
+          return 1;
+        }
+        return currentVal;
+      });
     }, (err) => {
       console.error("Error loading recent requests:", err);
       setLoading(false);
@@ -397,6 +419,11 @@ function RecentRequestsPanel({ buyerId, role }: { buyerId: string; role: Role })
 
     return () => unsubscribe();
   }, [buyerId]);
+
+  // Compute pages and slice requests
+  const totalPages = Math.ceil(requests.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const displayedRequests = requests.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   // Handle accepting work & adding review
   const handleAcceptComplete = async (reqId: string) => {
@@ -468,8 +495,8 @@ function RecentRequestsPanel({ buyerId, role }: { buyerId: string; role: Role })
       <h2 className="text-2xl font-semibold text-slate-900">Recent Requests</h2>
 
       <div className="mt-4 grid gap-4 max-h-[700px] overflow-y-auto pr-1">
-        {requests.length > 0 ? (
-          requests.map((item) => {
+        {displayedRequests.length > 0 ? (
+          displayedRequests.map((item) => {
             const badge = getStatusBadge(item.status);
             return (
               <article
@@ -598,14 +625,30 @@ function RecentRequestsPanel({ buyerId, role }: { buyerId: string; role: Role })
                   </div>
                 )}
 
-                {/* Completed Details */}
-                {item.status === "completed" && item.review && (
-                  <div className="mt-3 rounded-lg bg-emerald-50/50 border border-emerald-100 p-2.5 text-xs text-emerald-800">
-                    <span className="font-bold block">✓ Swapped & Reviewed:</span>
-                    <span className="text-amber-600 font-bold">{"★".repeat(item.review.rating)}</span>
-                    <p className="italic mt-0.5">&ldquo;{item.review.comment}&rdquo;</p>
-                  </div>
-                )}
+                 {/* Completed Details */}
+                 {item.status === "completed" && (
+                   <div className="mt-3 space-y-2">
+                     {item.review && (
+                       <div className="rounded-lg bg-emerald-50/50 border border-emerald-100 p-2.5 text-xs text-emerald-800">
+                         <span className="font-bold block">✓ Your Review of Provider:</span>
+                         <span className="text-amber-600 font-bold">{"★".repeat(item.review.rating)}{"☆".repeat(5 - item.review.rating)}</span>
+                         <p className="italic mt-0.5">&ldquo;{item.review.comment}&rdquo;</p>
+                       </div>
+                     )}
+                     
+                     {item.providerReview ? (
+                       <div className="rounded-lg bg-blue-50/60 border border-blue-100 p-2.5 text-xs text-blue-800">
+                         <span className="font-bold block">★ {"Provider's Review of You"}:</span>
+                         <span className="text-blue-500 font-bold">{"★".repeat(item.providerReview.rating)}{"☆".repeat(5 - item.providerReview.rating)}</span>
+                         <p className="italic mt-0.5">&ldquo;{item.providerReview.comment}&rdquo;</p>
+                       </div>
+                     ) : (
+                       <div className="rounded-lg bg-slate-50 border border-slate-200/60 p-2.5 text-xs text-slate-500 italic">
+                         {"Awaiting Provider's feedback on your performance."}
+                       </div>
+                     )}
+                   </div>
+                 )}
 
                 {item.status === "working" && (
                   <div className="mt-4 border-t border-slate-100 pt-3">
@@ -627,12 +670,62 @@ function RecentRequestsPanel({ buyerId, role }: { buyerId: string; role: Role })
           </div>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-3">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed select-none"
+          >
+            ← Prev
+          </button>
+          
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: totalPages }).map((_, idx) => {
+              const pageNum = idx + 1;
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-extrabold transition-all duration-150 ${
+                    currentPage === pageNum
+                      ? "bg-[#2f66e7] text-white shadow-xs"
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-800 border border-transparent hover:border-slate-200"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed select-none"
+          >
+            Next →
+          </button>
+        </div>
+      )}
+
+      {requests.length > 3 && (
+        <div className="mt-3">
+          <Link
+            href={role === "buyer" ? "/request-service/all" : `/request-service/${role}/all`}
+            className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-xs font-bold text-[#2f66e7] shadow-sm hover:bg-slate-50 transition-colors"
+          >
+            View All Requests ({requests.length}) →
+          </Link>
+        </div>
+      )}
     </aside>
   );
 }
 
 const fieldClassName =
-  "h-12 w-full rounded-lg border border-slate-300 bg-[#f7f8ff] px-4 text-base text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100";
+  "h-10 w-full rounded-lg border border-slate-300 bg-[#f7f8ff] px-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100";
 
 function ChatIcon({ className }: { className?: string }) {
   return (

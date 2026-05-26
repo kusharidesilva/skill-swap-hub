@@ -9,7 +9,7 @@ import { scopedHref, type Role } from "@/lib/role-routes";
 type NavItem = {
   label: string;
   href: string;
-  section?: "default" | "find" | "community" | "footer";
+  section?: "default" | "provide" | "find" | "community" | "footer";
   icon: (props: { className?: string }) => ReactElement;
 };
 
@@ -74,13 +74,13 @@ const navConfig: Record<Role, NavItem[]> = {
     {
       label: "My Gigs",
       href: scopedHref("/my-gigs", "provider"),
-      section: "find",
+      section: "provide",
       icon: BriefcaseIcon,
     },
     {
       label: "Incoming Requests",
       href: scopedHref("/incoming-requests", "provider"),
-      section: "find",
+      section: "provide",
       icon: InboxIcon,
     },
     {
@@ -116,11 +116,11 @@ const navConfig: Record<Role, NavItem[]> = {
       href: "/profile-settings/both",
       icon: SettingsIcon,
     },
-    { label: "My Gigs", href: scopedHref("/my-gigs", "both"), section: "find", icon: BriefcaseIcon },
+    { label: "My Gigs", href: scopedHref("/my-gigs", "both"), section: "provide", icon: BriefcaseIcon },
     {
       label: "Incoming Requests",
       href: scopedHref("/incoming-requests", "both"),
-      section: "find",
+      section: "provide",
       icon: InboxIcon,
     },
     {
@@ -175,32 +175,52 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
 
   const links = navConfig[role];
 
-  const defaultItems = links.filter(
-    (item) => !item.section || item.section === "default",
-  );
-  const findItems = links.filter((item) => item.section === "find");
+  const defaultItems = links.filter((item) => !item.section || item.section === "default");
+  const provideItems = links.filter((item) => item.section === "provide");
+  const findItems    = links.filter((item) => item.section === "find");
   const communityItems = links.filter((item) => item.section === "community");
-  const footerItems = links.filter((item) => item.section === "footer");
+  const footerItems  = links.filter((item) => item.section === "footer");
+
+  // "Provide Skills" / "Find Skills" section labels only appear in the "both" dashboard.
+  // For single-role dashboards the items are merged into the default list (no heading).
+  const effectiveDefaultItems  = role === "both" ? defaultItems : [...defaultItems, ...provideItems, ...findItems];
+  const effectiveProvideItems  = role === "both" ? provideItems : [];
+  const effectiveFindItems     = role === "both" ? findItems    : [];
 
   return (
     <aside className="sticky top-24 h-fit w-64 rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-sm">
       <nav className="flex flex-col text-sm font-semibold">
         <div className="flex flex-col gap-1">
-          {defaultItems.map((link) => (
+          {effectiveDefaultItems.map((link) => (
             <SideNavLink key={link.label} link={link} pathname={pathname} />
           ))}
         </div>
 
-        <div className="mt-4">
-          <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-            Find Skills
-          </p>
-          <div className="mt-2 flex flex-col gap-1">
-            {findItems.map((link) => (
-              <SideNavLink key={link.label} link={link} pathname={pathname} />
-            ))}
+        {effectiveProvideItems.length > 0 && (
+          <div className="mt-4">
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Provide Skills
+            </p>
+            <div className="mt-2 flex flex-col gap-1">
+              {effectiveProvideItems.map((link) => (
+                <SideNavLink key={link.label} link={link} pathname={pathname} />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {effectiveFindItems.length > 0 && (
+          <div className="mt-4">
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Find Skills
+            </p>
+            <div className="mt-2 flex flex-col gap-1">
+              {effectiveFindItems.map((link) => (
+                <SideNavLink key={link.label} link={link} pathname={pathname} />
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-4">
           <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
