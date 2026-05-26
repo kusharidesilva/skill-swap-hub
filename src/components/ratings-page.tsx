@@ -86,7 +86,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
             receivedList.push({
               id: `recv-buyer-${d.id}`,
               partnerName: r.providerName || "Anonymous Provider",
-              partnerUniversity: "Swap Partner",
+              partnerUniversity: r.providerUniversity || "Swap Partner",
               skill: r.title || "Skill Swap",
               rating: r.providerReview.rating,
               comment: r.providerReview.comment || "",
@@ -98,7 +98,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
             givenList.push({
               id: `given-buyer-${d.id}`,
               partnerName: r.providerName || "Anonymous Provider",
-              partnerUniversity: "Swap Partner",
+              partnerUniversity: r.providerUniversity || "Swap Partner",
               skill: r.title || "Skill Swap",
               rating: r.review.rating,
               comment: r.review.comment || "",

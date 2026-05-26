@@ -181,11 +181,9 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
   const communityItems = links.filter((item) => item.section === "community");
   const footerItems  = links.filter((item) => item.section === "footer");
 
-  // "Provide Skills" / "Find Skills" section labels only appear in the "both" dashboard.
-  // For single-role dashboards the items are merged into the default list (no heading).
-  const effectiveDefaultItems  = role === "both" ? defaultItems : [...defaultItems, ...provideItems, ...findItems];
-  const effectiveProvideItems  = role === "both" ? provideItems : [];
-  const effectiveFindItems     = role === "both" ? findItems    : [];
+  const effectiveDefaultItems  = defaultItems;
+  const effectiveProvideItems  = provideItems;
+  const effectiveFindItems     = findItems;
 
   return (
     <aside className="sticky top-24 h-fit w-64 rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-sm">

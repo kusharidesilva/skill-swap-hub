@@ -316,11 +316,7 @@ function ChatHeader({
             label="View Profile"
             href={peerProfileHref}
           />
-          <HeaderActionButton
-            icon={<StarIcon className="h-4 w-4" />}
-            label="Submit Review"
-            href={`${scopedHref("/submit-review", role)}?peer=${peerParam}`}
-          />
+
           <HeaderActionButton
             icon={<FlagIcon className="h-4 w-4" />}
             label="Report Issue"

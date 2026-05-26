@@ -21,7 +21,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
   const [buyerCompletedRequests, setBuyerCompletedRequests] = useState(0);
   const [providerIncomingRequests, setProviderIncomingRequests] = useState(0);
   const [providerActiveJobs, setProviderActiveJobs] = useState(0);
-  const [providerAvgRating, setProviderAvgRating] = useState(5.0);
+  const [providerAvgRating, setProviderAvgRating] = useState(0.0);
   const [providerReviewCount, setProviderReviewCount] = useState(0);
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
         if (reviewsCount > 0) {
           setProviderAvgRating(parseFloat((totalStars / reviewsCount).toFixed(1)));
         } else {
-          setProviderAvgRating(5.0);
+          setProviderAvgRating(0.0);
         }
       } catch (err) {
         console.error("Error fetching dashboard statistics:", err);
@@ -159,7 +159,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">Average Rating</p>
                   <p className="mt-2 text-3xl font-bold text-emerald-600">
-                    {providerAvgRating.toFixed(1)} <span className="text-sm text-slate-400">({providerReviewCount} reviews)</span>
+                    {providerReviewCount > 0 ? providerAvgRating.toFixed(1) : "–"} <span className="text-sm text-slate-400">({providerReviewCount} reviews)</span>
                   </p>
                 </div>
               </>
@@ -178,7 +178,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">Average Swap Rating</p>
                   <p className="mt-2 text-3xl font-bold text-amber-500">
-                    {providerAvgRating.toFixed(1)} <span className="text-sm text-slate-400">({providerReviewCount})</span>
+                    {providerReviewCount > 0 ? providerAvgRating.toFixed(1) : "–"} <span className="text-sm text-slate-400">({providerReviewCount})</span>
                   </p>
                 </div>
               </>
@@ -252,7 +252,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                 </div>
                 <div className="flex items-center justify-between text-xs sm:text-sm pt-2 border-t border-slate-50">
                   <span className="text-slate-600 font-medium">Ratings & Feedback</span>
-                  <span className="font-bold text-[#1caa88]">{providerAvgRating.toFixed(1)} ★ ({providerReviewCount} reviews)</span>
+                  <span className="font-bold text-[#1caa88]">{providerReviewCount > 0 ? providerAvgRating.toFixed(1) : "–"} ★ ({providerReviewCount} reviews)</span>
                 </div>
               </div>
               <div className="mt-5">

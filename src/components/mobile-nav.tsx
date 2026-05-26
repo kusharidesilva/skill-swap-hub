@@ -176,60 +176,57 @@ export default function MobileNav({ role }: { role: Role }) {
     );
   };
 
-  // Grouped mobile nav bar ONLY for "both" role dashboard to match desktop SideNav groups
-  if (role === "both") {
-    const defaultItems = items.filter((item) => item.section === "default");
-    const provideItems = items.filter((item) => item.section === "provide");
-    const findItems = items.filter((item) => item.section === "find");
-    const communityItems = items.filter((item) => item.section === "community");
-    const footerItems = items.filter((item) => item.section === "footer");
+  const defaultItems = items.filter((item) => item.section === "default" || !item.section);
+  const provideItems = items.filter((item) => item.section === "provide");
+  const findItems = items.filter((item) => item.section === "find");
+  const communityItems = items.filter((item) => item.section === "community");
+  const footerItems = items.filter((item) => item.section === "footer");
 
-    return (
-      <nav
-        className="flex items-center gap-4 overflow-x-auto px-4 py-3.5 bg-white/80 backdrop-blur-md scrollbar-none"
-        aria-label="Mobile navigation"
-      >
-        {/* General/Default group */}
+  return (
+    <nav
+      className="flex items-center gap-4 overflow-x-auto px-4 py-3.5 bg-white/80 backdrop-blur-md scrollbar-none"
+      aria-label="Mobile navigation"
+    >
+      {/* General/Default group */}
+      {defaultItems.length > 0 && (
         <div className="flex items-center gap-1.5 bg-slate-100/70 border border-slate-200/50 rounded-2xl p-1 shrink-0">
           {defaultItems.map(renderItem)}
         </div>
+      )}
 
-        {/* Provide Skills group */}
+      {/* Provide Skills group */}
+      {provideItems.length > 0 && (
         <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-2xl p-1 shrink-0">
           <span className="text-[9px] uppercase font-extrabold text-emerald-700 pl-2 pr-0.5 shrink-0 select-none">
             Provide:
           </span>
           {provideItems.map(renderItem)}
         </div>
+      )}
 
-        {/* Find Skills group */}
+      {/* Find Skills group */}
+      {findItems.length > 0 && (
         <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-2xl p-1 shrink-0">
           <span className="text-[9px] uppercase font-extrabold text-blue-700 pl-2 pr-0.5 shrink-0 select-none">
             Find:
           </span>
           {findItems.map(renderItem)}
         </div>
+      )}
 
-        {/* Community group */}
+      {/* Community group */}
+      {communityItems.length > 0 && (
         <div className="flex items-center gap-1.5 bg-slate-100/70 border border-slate-200/50 rounded-2xl p-1 shrink-0">
           {communityItems.map(renderItem)}
         </div>
+      )}
 
-        {/* Footer actions (e.g. Sign Out) */}
+      {/* Footer actions (e.g. Sign Out) */}
+      {footerItems.length > 0 && (
         <div className="flex items-center gap-1.5 bg-rose-50/40 border border-rose-100/50 rounded-2xl p-1 shrink-0">
           {footerItems.map(renderItem)}
         </div>
-      </nav>
-    );
-  }
-
-  // Flat mobile nav bar for single-role dashboards (pure buyer / pure provider)
-  return (
-    <nav
-      className="flex items-center gap-2 overflow-x-auto px-4 py-3 bg-white/80 backdrop-blur-md scrollbar-none"
-      aria-label="Mobile navigation"
-    >
-      {items.map(renderItem)}
+      )}
     </nav>
   );
 }

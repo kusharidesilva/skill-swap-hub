@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
 import { scopedHref, type Role } from "@/lib/role-routes";
 
 type RequestCardData = {
@@ -19,53 +22,7 @@ type RequestCardData = {
 
 type FilterKey = "All Requests" | "Pending" | "Matched" | "Completed" | "Declined";
 
-const requests: RequestCardData[] = [
-  {
-    id: "advanced-react",
-    title: "Advanced React Patterns",
-    subject: "Computer Science",
-    status: "Matched",
-    statusTone: "teal",
-    iconTone: "teal",
-    meta: ["Submitted: Oct 12, 2023", "Matched with: Alex Rivera"],
-    primaryLabel: "View Details",
-    secondaryLabel: "Manage",
-  },
-  {
-    id: "uiux-principles",
-    title: "UI/UX Design Principles",
-    subject: "Creative Arts",
-    status: "Pending",
-    statusTone: "slate",
-    iconTone: "amber",
-    meta: ["Submitted: Oct 15, 2023", "Awaiting responses (3)"],
-    primaryLabel: "View Details",
-    secondaryLabel: "Manage",
-  },
-  {
-    id: "discrete-maths",
-    title: "Discrete Mathematics",
-    subject: "Mathematics",
-    status: "Completed",
-    statusTone: "teal",
-    iconTone: "blue",
-    meta: ["Completed on: Oct 05, 2023", "Rated: 5.0/5.0"],
-    primaryLabel: "View Review",
-    secondaryLabel: "Summary",
-  },
-  {
-    id: "spanish-conversation",
-    title: "Spanish Conversation",
-    subject: "Languages",
-    status: "Declined",
-    statusTone: "red",
-    iconTone: "red",
-    meta: ["Submitted: Sept 28, 2023", "No matches found in your area."],
-    primaryLabel: "Re-request",
-    secondaryLabel: "Close",
-    isAlert: true,
-  },
-];
+
 
 const tips = [
   {
@@ -92,7 +49,95 @@ type AllRequestServicePageProps = {
 export default function AllRequestServicePage({
   role = "buyer",
 }: AllRequestServicePageProps) {
+  const { userProfile } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("All Requests");
+  const [requests, setRequests] = useState<RequestCardData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userProfile) {
+      setLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, "requests"),
+      where("buyerId", "==", userProfile.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const docs: RequestCardData[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        
+        let statusTone: "teal" | "slate" | "red" = "slate";
+        let iconTone: "teal" | "amber" | "blue" | "red" = "blue";
+        let displayStatus = "Pending";
+        let meta: [string, string] = ["", ""];
+        let primaryLabel = "View Details";
+        let secondaryLabel = "Manage";
+        let isAlert = false;
+
+        const dateStr = data.createdAt ? new Date(data.createdAt.toMillis()).toLocaleDateString() : "Just now";
+
+        if (data.status === "pending") {
+          statusTone = "slate";
+          iconTone = "amber";
+          displayStatus = "Pending";
+          meta = [`Submitted: ${dateStr}`, "Awaiting provider response"];
+        } else if (data.status === "working" || data.status === "revision" || data.status === "done") {
+          statusTone = "teal";
+          iconTone = "teal";
+          displayStatus = "Matched";
+          meta = [`Started: ${dateStr}`, `Matched with: ${data.providerName || "Provider"}`];
+        } else if (data.status === "completed") {
+          statusTone = "teal";
+          iconTone = "blue";
+          displayStatus = "Completed";
+          const ratingStr = data.review?.rating ? `${data.review.rating}.0/5.0` : "No rating";
+          meta = [`Completed: ${dateStr}`, `Rated: ${ratingStr}`];
+          primaryLabel = "View Review";
+          secondaryLabel = "Summary";
+        } else if (data.status === "rejected") {
+          statusTone = "red";
+          iconTone = "red";
+          displayStatus = "Declined";
+          meta = [`Submitted: ${dateStr}`, "Provider declined."];
+          primaryLabel = "Re-request";
+          secondaryLabel = "Close";
+          isAlert = true;
+        }
+
+        docs.push({
+          id: docSnap.id,
+          title: data.title || "Untitled Request",
+          subject: data.category || "General",
+          status: displayStatus,
+          statusTone,
+          iconTone,
+          meta,
+          primaryLabel,
+          secondaryLabel,
+          isAlert,
+        });
+      });
+      setRequests(docs.reverse()); // latest first
+      setLoading(false);
+    }, (err) => {
+      console.error("Error fetching requests:", err);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [userProfile]);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
+      </div>
+    );
+  }
 
   const filters: Array<{ label: FilterKey; count: number }> = [
     { label: "All Requests", count: requests.length },

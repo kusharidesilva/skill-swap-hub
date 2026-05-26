@@ -54,7 +54,7 @@ export default function IncomingRequestsPageContent({
 
     const q = query(
       collection(db, "requests"),
-      where("providerId", "in", [userProfile.uid, "general"])
+      where("providerId", "==", userProfile.uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
