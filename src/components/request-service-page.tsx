@@ -840,16 +840,6 @@ function RecentRequestsPanel({
         </div>
       )}
 
-      {requests.length > RECENT_REQUEST_LIMIT && (
-        <div className="mt-3">
-          <Link
-            href={allRequestsHref}
-            className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-xs font-bold text-[#2f66e7] shadow-sm hover:bg-slate-50 transition-colors"
-          >
-            View All Requests ({requests.length}) →
-          </Link>
-        </div>
-      )}
     </aside>
   );
 }

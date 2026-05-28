@@ -1,70 +1,105 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
+
 import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import type { UserProfile } from "@/lib/auth";
 
-interface ProviderCardData {
+type GigCardData = {
   id: string;
-  name: string;
-  degree: string;
+  providerId: string;
+  skillIndex: number;
+  providerName: string;
+  providerDegree: string;
   university: string;
-  rating: number;
-  reviews: number;
-  topSkills: string[];
+  title: string;
+  category: string;
   summary: string;
   availability: string | string[];
+  rating: number;
+  reviews: number;
   match: number;
-  avatar: string;
-  accent: string;
-}
-
-const mockProviderCards: ProviderCardData[] = [
-  {
-    id: "sarah-jenkins",
-    name: "Sarah Jenkins",
-    degree: "BSc Computer Science",
-    university: "Univ of Colombo",
-    rating: 4.9,
-    reviews: 42,
-    topSkills: ["React (Expert)", "Node.js (Advanced)"],
-    summary: "Full-stack developer with a passion for building scalable web applications and...",
-    availability: "Weekends",
-    match: 92,
-    avatar: "SJ",
-    accent: "teal",
-  },
-  {
-    id: "michael-chen",
-    name: "Michael Chen",
-    degree: "BA Graphic Design",
-    university: "Univ of Moratuwa",
-    rating: 4.7,
-    reviews: 28,
-    topSkills: ["Figma (Expert)", "UI Design (Int.)"],
-    summary: "UI/UX design student passionate about creating intuitive and accessible digital...",
-    availability: "Evenings",
-    match: 86,
-    avatar: "MC",
-    accent: "blue",
-  },
-];
+  image: string;
+  points: number;
+  tags: string[];
+};
 
 const ALL_SKILLS = [
-  "Programming", "UX Design", "Graphic Design", "Mathematics",
-  "Photography", "Video Editing", "Data Analysis", "Web Development",
-  "Content Writing", "Music",
+  "Programming",
+  "UX Design",
+  "Graphic Design",
+  "Mathematics",
+  "Photography",
+  "Video Editing",
+  "Data Analysis",
+  "Web Development",
+  "Content Writing",
+  "Music",
 ];
 
 const filterConfig = [
   { label: "Category", options: ["All Categories", ...ALL_SKILLS] },
-  { label: "University", options: ["Any University", "Univ of Colombo", "Univ of Moratuwa", "SLIIT", "NSBM"] },
+  {
+    label: "University",
+    options: ["Any University", "Univ of Colombo", "Univ of Moratuwa", "SLIIT", "NSBM"],
+  },
   { label: "Rating", options: ["Any Rating", "4.5+", "4.0+"] },
   { label: "Availability", options: ["Any Time", "Weekends", "Evenings", "Weekdays"] },
   { label: "Sort By", options: ["Match Score", "Highest Rated", "Most Reviews"] },
+];
+
+const gigImages = [
+  "/img/package%201.jpg",
+  "/img/package%202.jpg",
+  "/img/package%203.jpg",
+  "/img/package%204.jpg",
+  "/img/favorites/web-development.jpg",
+  "/img/favorites/ui-ux-design.jpg",
+  "/img/favorites/data-science.jpg",
+  "/img/favorites/mathematics.jpg",
+];
+
+const mockGigCards: GigCardData[] = [
+  {
+    id: "gig-react-dashboard",
+    providerId: "sarah-jenkins",
+    skillIndex: 0,
+    providerName: "Sarah Jenkins",
+    providerDegree: "BSc Computer Science",
+    university: "Univ of Colombo",
+    title: "I will build a clean React dashboard for your project",
+    category: "Web Development",
+    summary: "Frontend help for layouts, components, data tables, and responsive screens.",
+    availability: "Weekends",
+    rating: 4.9,
+    reviews: 42,
+    match: 92,
+    image: "/img/favorites/web-development.jpg",
+    points: 30,
+    tags: ["React", "Next.js", "Tailwind"],
+  },
+  {
+    id: "gig-figma-prototype",
+    providerId: "michael-chen",
+    skillIndex: 0,
+    providerName: "Michael Chen",
+    providerDegree: "BA Graphic Design",
+    university: "Univ of Moratuwa",
+    title: "I will design a Figma prototype for your app idea",
+    category: "UX Design",
+    summary: "Wireframes, clickable prototypes, and visual polish for student products.",
+    availability: "Evenings",
+    rating: 4.7,
+    reviews: 28,
+    match: 86,
+    image: "/img/favorites/ui-ux-design.jpg",
+    points: 25,
+    tags: ["Figma", "UI Design", "Prototype"],
+  },
 ];
 
 type FindServicesPageContentProps = {
@@ -72,330 +107,172 @@ type FindServicesPageContentProps = {
 };
 
 export default function FindServicesPageContent({ role }: FindServicesPageContentProps) {
-  const [providers, setProviders] = useState<ProviderCardData[]>([]);
+  const [gigs, setGigs] = useState<GigCardData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [universityFilter, setUniversityFilter] = useState("Any University");
   const [ratingFilter, setRatingFilter] = useState("Any Rating");
   const [availabilityFilter, setAvailabilityFilter] = useState("Any Time");
   const [sortBy, setSortBy] = useState("Match Score");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    async function fetchProviders() {
+    async function fetchGigs() {
       try {
         const usersRef = collection(db, "users");
-        const q = query(usersRef, where("role", "in", ["provider", "both"]));
-        const querySnapshot = await getDocs(q);
-        
-        // Fetch completed requests to compute dynamic aggregate star ratings and review counts
+        const usersQuery = query(usersRef, where("role", "in", ["provider", "both"]));
+        const usersSnapshot = await getDocs(usersQuery);
         const requestsSnapshot = await getDocs(
-          query(collection(db, "requests"), where("status", "==", "completed"))
+          query(collection(db, "requests"), where("status", "==", "completed")),
         );
-        
+
         const ratingsMap: Record<string, { totalStars: number; count: number }> = {};
         requestsSnapshot.forEach((reqDoc) => {
           const req = reqDoc.data();
-          const pId = req.providerId;
-          if (pId && req.review && typeof req.review.rating === "number") {
-            if (!ratingsMap[pId]) {
-              ratingsMap[pId] = { totalStars: 0, count: 0 };
-            }
-            ratingsMap[pId].totalStars += req.review.rating;
-            ratingsMap[pId].count += 1;
+          const providerId = req.providerId;
+          if (providerId && req.review && typeof req.review.rating === "number") {
+            ratingsMap[providerId] ??= { totalStars: 0, count: 0 };
+            ratingsMap[providerId].totalStars += req.review.rating;
+            ratingsMap[providerId].count += 1;
           }
         });
-        
-        const dbProviders: ProviderCardData[] = [];
+
+        const dbGigs: GigCardData[] = [];
         let index = 0;
-        
-        querySnapshot.forEach((docSnap) => {
-          const u = docSnap.data() as UserProfile;
-          if (u.providerProfile) {
-            const rData = ratingsMap[u.uid];
-            const avgRating = rData ? parseFloat((rData.totalStars / rData.count).toFixed(1)) : 5.0;
-            const reviewCount = rData ? rData.count : 0;
 
-            dbProviders.push({
-              id: u.uid,
-              name: u.name || "Anonymous Member",
-              degree: u.degree || "Undergraduate",
-              university: u.university || "Sri Lankan University",
-              rating: avgRating,
-              reviews: reviewCount,
-              topSkills: u.providerProfile.skills || [],
-              summary: u.providerProfile.bio || "Student partner ready to collaborate and exchange skills.",
-              availability: u.providerProfile.availability || "Flexible",
+        usersSnapshot.forEach((docSnap) => {
+          const user = docSnap.data() as UserProfile;
+          const profile = user.providerProfile;
+          if (!profile) return;
+
+          const skills = profile.skills?.length ? profile.skills : ["Student Support"];
+          const ratingData = ratingsMap[user.uid];
+          const rating = ratingData
+            ? Number((ratingData.totalStars / ratingData.count).toFixed(1))
+            : 5.0;
+
+          skills.forEach((skill, skillIndex) => {
+            const category = inferCategory(skill);
+            dbGigs.push({
+              id: `${user.uid}-${slugify(skill)}-${skillIndex}`,
+              providerId: user.uid,
+              skillIndex,
+              providerName: user.name || "Anonymous Member",
+              providerDegree: user.degree || "Undergraduate",
+              university: user.university || "Sri Lankan University",
+              title: `I will help you with ${skill}`,
+              category,
+              summary:
+                profile.bio ||
+                `Practical ${skill} support from a verified student skill swap provider.`,
+              availability: profile.availability || "Flexible",
+              rating,
+              reviews: ratingData?.count || 0,
               match: 95,
-              avatar: u.name ? u.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "US",
-              accent: index % 2 === 0 ? "teal" : "blue",
+              image: gigImages[index % gigImages.length],
+              points: 20 + (skillIndex % 3) * 5,
+              tags: skills.slice(0, 3),
             });
-            index++;
-          }
+            index += 1;
+          });
         });
 
-        // Use real providers if registered; otherwise fall back to mock data
-        setProviders(dbProviders.length > 0 ? dbProviders : mockProviderCards);
+        setGigs(dbGigs.length > 0 ? dbGigs : mockGigCards);
       } catch (err) {
-        console.error("Error fetching providers:", err);
-        setProviders(mockProviderCards); // Fallback on error
+        console.error("Error fetching gigs:", err);
+        setGigs(mockGigCards);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchProviders();
+    fetchGigs();
   }, []);
 
-  const getRequestHref = (providerId: string) =>
-    role ? `${scopedHref("/request-service", role)}?providerId=${providerId}` : "/get-started";
-  const chatHref = role ? scopedHref("/chats", role) : "/get-started";
-  const profileHref = (providerId: string) =>
-    role
-      ? `/provider-profile/${providerId}?role=${role}`
-      : `/provider-profile/${providerId}`;
+  const updateFilters = (update: () => void) => {
+    update();
+    setCurrentPage(1);
+  };
 
-  // Filtering Logic
-  const filteredProviders = providers
-    .filter((p) => {
-      // 1. Search Query
-      const queryLower = searchQuery.toLowerCase();
-      const matchesQuery =
-        p.name.toLowerCase().includes(queryLower) ||
-        p.topSkills.some((s) => s.toLowerCase().includes(queryLower)) ||
-        p.degree.toLowerCase().includes(queryLower) ||
-        p.university.toLowerCase().includes(queryLower);
+  const filteredGigs = useMemo(() => {
+    return gigs
+      .filter((gig) => {
+        const queryLower = searchQuery.toLowerCase();
+        const matchesQuery =
+          gig.title.toLowerCase().includes(queryLower) ||
+          gig.providerName.toLowerCase().includes(queryLower) ||
+          gig.tags.some((tag) => tag.toLowerCase().includes(queryLower)) ||
+          gig.category.toLowerCase().includes(queryLower) ||
+          gig.university.toLowerCase().includes(queryLower);
 
-      if (!matchesQuery) return false;
+        if (!matchesQuery) return false;
 
-      // 2. Category Filter
-      if (categoryFilter !== "All Categories") {
-        const catLower = categoryFilter.toLowerCase();
-        let matchesCat = false;
-        
-        // Direct case-insensitive comparison first (e.g. if the category name is inside their skills)
-        const directMatch = p.topSkills.some(
-          (s) => s.toLowerCase().includes(catLower) || catLower.includes(s.toLowerCase())
-        );
+        if (categoryFilter !== "All Categories" && gig.category !== categoryFilter) {
+          return false;
+        }
 
-        if (directMatch) {
-          matchesCat = true;
-        } else {
-          if (catLower === "programming") {
-            const keywords = ["program", "python", "java", "c++", "code", "dev", "c#", "javascript", "typescript", "golang", "ruby", "rust", "software"];
-            matchesCat = p.topSkills.some((s) => keywords.some((k) => s.toLowerCase().includes(k)));
-          } else if (catLower === "ux design") {
-            const keywords = ["ux", "ui", "user experience", "user interface", "figma", "wireframe", "prototype", "interaction"];
-            matchesCat = p.topSkills.some((s) => keywords.some((k) => s.toLowerCase().includes(k)));
-          } else if (catLower === "graphic design") {
-            const keywords = ["graphic", "design", "illustrator", "photoshop", "indesign", "logo", "branding", "vector", "poster", "art", "drawing"];
-            matchesCat = p.topSkills.some((s) => keywords.some((k) => s.toLowerCase().includes(k)));
-          } else if (catLower === "web development") {
-            const keywords = ["web", "development", "developer", "frontend", "backend", "fullstack", "react", "next", "node", "html", "css", "wordpress", "javascript", "typescript"];
-            matchesCat = p.topSkills.some((s) => keywords.some((k) => s.toLowerCase().includes(k)));
-          } else if (catLower === "content writing") {
-            const keywords = ["writing", "write", "content", "essay", "copywriting", "proofread", "edit", "report", "paper", "blog"];
-            matchesCat = p.topSkills.some((s) => keywords.some((k) => s.toLowerCase().includes(k)));
-          } else if (catLower === "business") {
-            const keywords = ["business", "marketing", "sales", "finance", "accounting", "management", "consulting", "strategy", "economics", "startup"];
-            matchesCat = p.topSkills.some((s) => keywords.some((k) => s.toLowerCase().includes(k)));
-          } else if (catLower === "data analysis") {
-            const keywords = ["data", "analysis", "analytics", "statistics", "excel", "sql", "tableau", "power bi", "pandas"];
-            matchesCat = p.topSkills.some((s) => keywords.some((k) => s.toLowerCase().includes(k)));
-          } else if (catLower === "music") {
-            const keywords = ["music", "guitar", "piano", "sing", "instrument", "audio", "song", "band", "vocal"];
-            matchesCat = p.topSkills.some((s) => keywords.some((k) => s.toLowerCase().includes(k)));
-          } else if (catLower === "mathematics") {
-            const keywords = ["math", "calculus", "algebra", "geometry", "trigonometry", "arithmetic", "statistics"];
-            matchesCat = p.topSkills.some((s) => keywords.some((k) => s.toLowerCase().includes(k)));
-          } else if (catLower === "photography") {
-            const keywords = ["photography", "photo", "camera", "lens", "shoot", "lightroom"];
-            matchesCat = p.topSkills.some((s) => keywords.some((k) => s.toLowerCase().includes(k)));
-          } else if (catLower === "video editing") {
-            const keywords = ["video", "edit", "premiere", "after effects", "cut", "film", "youtube"];
-            matchesCat = p.topSkills.some((s) => keywords.some((k) => s.toLowerCase().includes(k)));
+        if (universityFilter !== "Any University") {
+          const university = gig.university.toLowerCase();
+          const filter = universityFilter.toLowerCase();
+          if (!university.includes(filter) && !filter.includes(university)) return false;
+        }
+
+        if (ratingFilter !== "Any Rating") {
+          const minRating = ratingFilter.includes("4.5") ? 4.5 : 4.0;
+          if (gig.rating < minRating) return false;
+        }
+
+        if (availabilityFilter !== "Any Time") {
+          const availability = Array.isArray(gig.availability) ? gig.availability : [gig.availability];
+          if (!availability.some((item) => item.toLowerCase().includes(availabilityFilter.toLowerCase()))) {
+            return false;
           }
         }
-        
-        if (!matchesCat) return false;
-      }
 
-      // 3. University Filter
-      if (universityFilter !== "Any University") {
-        const matchesUniv =
-          p.university.toLowerCase().includes(universityFilter.toLowerCase()) ||
-          universityFilter.toLowerCase().includes(p.university.toLowerCase());
-        if (!matchesUniv) return false;
-      }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === "Highest Rated") return b.rating - a.rating;
+        if (sortBy === "Most Reviews") return b.reviews - a.reviews;
+        return b.match - a.match;
+      });
+  }, [availabilityFilter, categoryFilter, gigs, ratingFilter, searchQuery, sortBy, universityFilter]);
 
-      // 4. Rating Filter
-      if (ratingFilter !== "Any Rating") {
-        const minRating = ratingFilter.includes("4.5") ? 4.5 : 4.0;
-        if (p.rating < minRating) return false;
-      }
-
-      // 5. Availability Filter
-      if (availabilityFilter !== "Any Time") {
-        const filterVal = availabilityFilter.toLowerCase();
-        const availList = Array.isArray(p.availability) ? p.availability : [p.availability];
-        const matchesAvail = availList.some((s) => s.toLowerCase().includes(filterVal));
-        if (!matchesAvail) return false;
-      }
-
-      return true;
-    })
-    .sort((a, b) => {
-      // Sorting Logic
-      if (sortBy === "Highest Rated") {
-        return b.rating - a.rating;
-      }
-      if (sortBy === "Most Reviews") {
-        return b.reviews - a.reviews;
-      }
-      return b.match - a.match; // Default Match Score
-    });
-
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
   const cardsPerPage = 4;
+  const totalPages = Math.ceil(filteredGigs.length / cardsPerPage);
+  const currentGigs = filteredGigs.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage);
 
-  // Reset pagination when filters or search query changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, categoryFilter, universityFilter, ratingFilter, availabilityFilter, sortBy]);
-
-  const totalPages = Math.ceil(filteredProviders.length / cardsPerPage);
-  const indexOfLastCard = currentPage * cardsPerPage;
-  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
-  const currentProviders = filteredProviders.slice(indexOfFirstCard, indexOfLastCard);
+  const requestHref = (providerId: string) =>
+    role ? `${scopedHref("/request-service", role)}?providerId=${providerId}` : "/get-started";
+  const previewHref = (gig: GigCardData) =>
+    role
+      ? `/gig-preview/${role}?source=find&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=${gig.skillIndex}`
+      : "/get-started";
 
   return (
-    <div className="flex w-full flex-col lg:flex-row gap-8 pb-10">
-      {/* Left Column: Compact Cards List & Pagination */}
-      <div className="flex-1 min-w-0 order-2 lg:order-1">
+    <div className="flex w-full flex-col gap-8 pb-10 lg:flex-row">
+      <div className="min-w-0 flex-1 order-2 lg:order-1">
         {loading ? (
-          <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col items-center gap-4">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
-              <p className="text-sm text-slate-500">Loading providers...</p>
-            </div>
-          </div>
+          <LoadingCard />
         ) : (
           <div className="space-y-6">
             <section className="grid gap-4 md:grid-cols-2">
-              {currentProviders.length > 0 ? (
-                currentProviders.map((provider) => {
-                  const displayAvail = Array.isArray(provider.availability)
-                    ? provider.availability.join(", ")
-                    : provider.availability;
-
-                  return (
-                    <article
-                      key={provider.id}
-                      className="rounded-xl border border-slate-200 bg-[#fbfbff] p-4 shadow-[0_4px_12px_rgba(15,23,42,0.03)] flex flex-col justify-between hover:shadow-md transition-shadow"
-                    >
-                      <div>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-start gap-3">
-                            <div
-                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white ${
-                                provider.accent === "teal" ? "bg-teal-500" : "bg-[#4a74e8]"
-                              }`}
-                            >
-                              {provider.avatar}
-                            </div>
-
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1">
-                                <h2 className="text-base font-semibold text-slate-900 truncate max-w-[110px] sm:max-w-none">{provider.name}</h2>
-                                <VerifiedIcon className="h-3.5 w-3.5 shrink-0 text-teal-700" />
-                              </div>
-                              <p className="text-xs text-slate-600 truncate">{provider.degree}</p>
-                              <p className="text-xs text-slate-500 truncate">{provider.university}</p>
-                            </div>
-                          </div>
-
-                          <div className="shrink-0 text-right">
-                            <div className="flex items-center justify-end gap-0.5 text-slate-900">
-                              <StarIcon className="h-3.5 w-3.5 text-[#9bb6ff]" />
-                              <span className="text-base font-bold">{provider.rating.toFixed(1)}</span>
-                            </div>
-                            <p className="text-[10px] text-slate-500">({provider.reviews} reviews)</p>
-                          </div>
-                        </div>
-
-                        <div className="mt-3">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                            Top Skills
-                          </p>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {provider.topSkills.length > 0 ? (
-                              provider.topSkills.slice(0, 3).map((skill) => (
-                                <span
-                                  key={skill}
-                                  className="rounded-full bg-[#dff2f4] px-2.5 py-0.5 text-xs font-medium text-teal-800"
-                                >
-                                  {skill}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-[10px] text-slate-400">No skills listed</span>
-                            )}
-                            {provider.topSkills.length > 3 && (
-                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
-                                +{provider.topSkills.length - 3} more
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <p className="mt-3 text-xs leading-relaxed text-slate-600 line-clamp-2">
-                          {provider.summary}
-                        </p>
-                      </div>
-
-                      <div className="mt-4 border-t border-slate-200 pt-3">
-                        <div className="flex items-center justify-between text-[11px] text-slate-500">
-                          <div className="flex items-center gap-1">
-                            <CalendarIcon className="h-3.5 w-3.5" />
-                            <span className="truncate max-w-[120px]">{displayAvail}</span>
-                          </div>
-                          <p className="shrink-0">
-                            Match: <span className="font-semibold text-teal-700">{provider.match}%</span>
-                          </p>
-                        </div>
-
-                        <div className="mt-3 grid grid-cols-[1fr_1.1fr_36px] gap-1.5">
-                          <Link
-                            href={profileHref(provider.id)}
-                            className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 text-center"
-                          >
-                            Profile
-                          </Link>
-                          <Link
-                            href={getRequestHref(provider.id)}
-                            className="inline-flex h-9 items-center justify-center rounded-lg bg-[#2f66e7] px-2 text-xs font-semibold text-white transition hover:bg-[#2557cf] text-center"
-                          >
-                            Request
-                          </Link>
-                          <Link
-                            href={chatHref}
-                            aria-label="Open chat"
-                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50"
-                          >
-                            <ChatIcon className="h-4 w-4" />
-                          </Link>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })
+              {currentGigs.length > 0 ? (
+                currentGigs.map((gig) => (
+                  <GigCard
+                    key={gig.id}
+                    gig={gig}
+                    requestHref={requestHref(gig.providerId)}
+                    previewHref={previewHref(gig)}
+                  />
+                ))
               ) : (
                 <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-xs">
-                  <p className="text-sm text-slate-500">No providers match your search filters.</p>
+                  <p className="text-sm text-slate-500">No gigs match your search filters.</p>
                   <button
+                    type="button"
                     onClick={() => {
                       setSearchQuery("");
                       setCategoryFilter("All Categories");
@@ -411,114 +288,264 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
               )}
             </section>
 
-            {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-1.5 pt-4">
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white"
-                >
-                  ‹
-                </button>
-                {Array.from({ length: totalPages }).map((_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold transition ${
-                        currentPage === pageNum
-                          ? "bg-[#2f66e7] text-white"
-                          : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white"
-                >
-                  ›
-                </button>
-              </div>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                setCurrentPage={setCurrentPage}
+              />
             )}
           </div>
         )}
       </div>
 
-      {/* Right Column: Search & Filters Sidebar - like side nav vertically stacked */}
-      <aside className="w-full lg:w-72 shrink-0 order-1 lg:order-2">
-        <div className="sticky top-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_26px_rgba(15,23,42,0.03)] space-y-5">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">Find Providers</h1>
-            <p className="mt-1 text-xs text-slate-500 leading-normal">
-              Discover students offering the skills you need.
-            </p>
-          </div>
-
-          {/* Search Input */}
-          <div className="relative">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by skill or name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-[#f7f8ff] pl-9 pr-3 text-xs text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
-            />
-          </div>
-
-          {/* Filters Stacked */}
-          <div className="space-y-4 pt-1 border-t border-slate-100">
-            {filterConfig.map((filter) => {
-              const selectValue =
-                filter.label === "Category"
-                  ? categoryFilter
-                  : filter.label === "University"
-                  ? universityFilter
-                  : filter.label === "Rating"
-                  ? ratingFilter
-                  : filter.label === "Availability"
-                  ? availabilityFilter
-                  : sortBy;
-
-              const selectHandler = (val: string) => {
-                if (filter.label === "Category") setCategoryFilter(val);
-                else if (filter.label === "University") setUniversityFilter(val);
-                else if (filter.label === "Rating") setRatingFilter(val);
-                else if (filter.label === "Availability") setAvailabilityFilter(val);
-                else setSortBy(val);
-              };
-
-              return (
-                <div key={filter.label} className="flex flex-col gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    {filter.label}
-                  </span>
-                  <select
-                    title={filter.label}
-                    value={selectValue}
-                    onChange={(e) => selectHandler(e.target.value)}
-                    className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-xs text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
-                  >
-                    {filter.options.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </aside>
+      <FiltersSidebar
+        searchQuery={searchQuery}
+        setSearchQuery={(value) => updateFilters(() => setSearchQuery(value))}
+        categoryFilter={categoryFilter}
+        setCategoryFilter={(value) => updateFilters(() => setCategoryFilter(value))}
+        universityFilter={universityFilter}
+        setUniversityFilter={(value) => updateFilters(() => setUniversityFilter(value))}
+        ratingFilter={ratingFilter}
+        setRatingFilter={(value) => updateFilters(() => setRatingFilter(value))}
+        availabilityFilter={availabilityFilter}
+        setAvailabilityFilter={(value) => updateFilters(() => setAvailabilityFilter(value))}
+        sortBy={sortBy}
+        setSortBy={(value) => updateFilters(() => setSortBy(value))}
+      />
     </div>
   );
+}
+
+function GigCard({
+  gig,
+  requestHref,
+  previewHref,
+}: {
+  gig: GigCardData;
+  requestHref: string;
+  previewHref: string;
+}) {
+  const availability = Array.isArray(gig.availability) ? gig.availability.join(", ") : gig.availability;
+
+  return (
+    <article className="flex min-h-[350px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
+      <div className="relative h-32 bg-slate-100">
+        <Image src={gig.image} alt={gig.title} fill className="object-cover" sizes="(min-width: 1024px) 320px, 100vw" />
+        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-[#1453c4] shadow-sm">
+          {gig.category}
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col p-4">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="line-clamp-2 text-base font-semibold leading-6 text-slate-900">{gig.title}</h2>
+          <div className="shrink-0 text-right">
+            <p className="text-sm font-bold text-slate-900">★ {gig.rating.toFixed(1)}</p>
+            <p className="text-[10px] text-slate-500">({gig.reviews} reviews)</p>
+          </div>
+        </div>
+
+        <p className="mt-2 text-xs font-semibold text-slate-600">{gig.providerName}</p>
+        <p className="text-xs text-slate-500">{gig.university}</p>
+
+        <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-600">{gig.summary}</p>
+
+        <div className="mt-3 flex flex-wrap gap-1">
+          {gig.tags.slice(0, 3).map((tag) => (
+            <span key={tag} className="rounded-full bg-[#dff2f4] px-2.5 py-0.5 text-xs font-medium text-teal-800">
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-auto border-t border-slate-200 pt-3">
+          <div className="flex items-center justify-between text-[11px] text-slate-500">
+            <span className="truncate">{availability}</span>
+            <span className="font-semibold text-teal-700">Match: {gig.match}%</span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Link
+              href={previewHref}
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              View Gig
+            </Link>
+            <Link
+              href={requestHref}
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-[#2f66e7] px-2 text-xs font-semibold text-white transition hover:bg-[#2557cf]"
+            >
+              Request
+            </Link>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function FiltersSidebar(props: {
+  searchQuery: string;
+  setSearchQuery: (value: string) => void;
+  categoryFilter: string;
+  setCategoryFilter: (value: string) => void;
+  universityFilter: string;
+  setUniversityFilter: (value: string) => void;
+  ratingFilter: string;
+  setRatingFilter: (value: string) => void;
+  availabilityFilter: string;
+  setAvailabilityFilter: (value: string) => void;
+  sortBy: string;
+  setSortBy: (value: string) => void;
+}) {
+  return (
+    <aside className="w-full shrink-0 order-1 lg:order-2 lg:w-72">
+      <div className="sticky top-24 space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_26px_rgba(15,23,42,0.03)]">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Find Gig Profiles</h1>
+          <p className="mt-1 text-xs leading-normal text-slate-500">
+            Discover student gigs that match the skill you need.
+          </p>
+        </div>
+
+        <div className="relative">
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by skill or gig..."
+            value={props.searchQuery}
+            onChange={(e) => props.setSearchQuery(e.target.value)}
+            className="h-10 w-full rounded-lg border border-slate-300 bg-[#f7f8ff] pl-9 pr-3 text-xs text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+          />
+        </div>
+
+        <div className="space-y-4 border-t border-slate-100 pt-1">
+          {filterConfig.map((filter) => {
+            const selectValue =
+              filter.label === "Category"
+                ? props.categoryFilter
+                : filter.label === "University"
+                  ? props.universityFilter
+                  : filter.label === "Rating"
+                    ? props.ratingFilter
+                    : filter.label === "Availability"
+                      ? props.availabilityFilter
+                      : props.sortBy;
+
+            const selectHandler = (value: string) => {
+              if (filter.label === "Category") props.setCategoryFilter(value);
+              else if (filter.label === "University") props.setUniversityFilter(value);
+              else if (filter.label === "Rating") props.setRatingFilter(value);
+              else if (filter.label === "Availability") props.setAvailabilityFilter(value);
+              else props.setSortBy(value);
+            };
+
+            return (
+              <div key={filter.label} className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {filter.label}
+                </span>
+                <select
+                  title={filter.label}
+                  value={selectValue}
+                  onChange={(e) => selectHandler(e.target.value)}
+                  className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-xs text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+                >
+                  {filter.options.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function Pagination({
+  currentPage,
+  totalPages,
+  setCurrentPage,
+}: {
+  currentPage: number;
+  totalPages: number;
+  setCurrentPage: (updater: (prev: number) => number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-center gap-1.5 pt-4">
+      <button
+        type="button"
+        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+        disabled={currentPage === 1}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+      >
+        &lsaquo;
+      </button>
+      {Array.from({ length: totalPages }).map((_, index) => {
+        const pageNum = index + 1;
+        return (
+          <button
+            type="button"
+            key={pageNum}
+            onClick={() => setCurrentPage(() => pageNum)}
+            className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold transition ${
+              currentPage === pageNum
+                ? "bg-[#2f66e7] text-white"
+                : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            {pageNum}
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+        disabled={currentPage === totalPages}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+      >
+        &rsaquo;
+      </button>
+    </div>
+  );
+}
+
+function LoadingCard() {
+  return (
+    <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
+        <p className="text-sm text-slate-500">Loading gig profiles...</p>
+      </div>
+    </div>
+  );
+}
+
+function inferCategory(skill: string) {
+  const value = skill.toLowerCase();
+  if (["ux", "ui", "figma", "prototype"].some((term) => value.includes(term))) return "UX Design";
+  if (["graphic", "logo", "poster", "illustrator", "photoshop"].some((term) => value.includes(term))) {
+    return "Graphic Design";
+  }
+  if (["math", "calculus", "algebra", "statistics"].some((term) => value.includes(term))) return "Mathematics";
+  if (["photo", "camera", "lightroom"].some((term) => value.includes(term))) return "Photography";
+  if (["video", "premiere", "film"].some((term) => value.includes(term))) return "Video Editing";
+  if (["data", "sql", "excel", "analytics"].some((term) => value.includes(term))) return "Data Analysis";
+  if (["web", "react", "next", "html", "css", "node"].some((term) => value.includes(term))) return "Web Development";
+  if (["write", "content", "essay", "copy"].some((term) => value.includes(term))) return "Content Writing";
+  if (["music", "guitar", "piano", "audio"].some((term) => value.includes(term))) return "Music";
+  return "Programming";
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function SearchIcon({ className }: { className?: string }) {
@@ -526,42 +553,6 @@ function SearchIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <circle cx="11" cy="11" r="7" />
       <path d="M20 20l-3-3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function VerifiedIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2.5l2.1 2.2 3-.2.7 2.9 2.7 1.3-1 2.8 1 2.8-2.7 1.3-.7 2.9-3-.2-2.1 2.2-2.1-2.2-3 .2-.7-2.9-2.7-1.3 1-2.8-1-2.8 2.7-1.3.7-2.9 3 .2L12 2.5z" />
-      <path d="M9.2 12.3l1.9 1.9 3.9-4" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-// Replaced StarIcon definition to avoid explicit any / compile warning issues
-function StarIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 3l2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.8-5.4 2.8 1-6-4.3-4.2 6-.9L12 3z" />
-    </svg>
-  );
-}
-
-function CalendarIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <rect x="4" y="5" width="16" height="15" rx="2" />
-      <path d="M8 3v4M16 3v4M4 10h16" />
-    </svg>
-  );
-}
-
-function ChatIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M4 5h16v11H7l-3 3z" />
-      <path d="M8 9h8M8 13h5" strokeLinecap="round" />
     </svg>
   );
 }
