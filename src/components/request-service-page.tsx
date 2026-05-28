@@ -434,9 +434,7 @@ function RecentRequestsPanel({
   const [activeRevisionId, setActiveRevisionId] = useState<string | null>(null);
   const [revisionText, setRevisionText] = useState("");
 
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 3;
+  const RECENT_REQUEST_LIMIT = 1;
 
   // Real-time listener on requests submitted by this buyer
   useEffect(() => {
@@ -456,15 +454,6 @@ function RecentRequestsPanel({
         docs.sort((a, b) => b.id.localeCompare(a.id));
         setRequests(docs);
         setLoading(false);
-
-        // Reset to page 1 if current page would be empty after updates
-        const maxPages = Math.ceil(docs.length / ITEMS_PER_PAGE);
-        setCurrentPage((currentVal) => {
-          if (currentVal > maxPages && maxPages > 0) {
-            return 1;
-          }
-          return currentVal;
-        });
       },
       (err) => {
         console.error("Error loading recent requests:", err);
@@ -475,13 +464,18 @@ function RecentRequestsPanel({
     return () => unsubscribe();
   }, [buyerId]);
 
-  // Compute pages and slice requests
-  const totalPages = Math.ceil(requests.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const displayedRequests = requests.slice(
-    startIndex,
-    startIndex + ITEMS_PER_PAGE,
+  const activeRecentRequests = requests.filter(
+    (request) =>
+      request.status !== "completed" || !Boolean(request.providerReview),
   );
+  const displayedRequests = activeRecentRequests.slice(0, RECENT_REQUEST_LIMIT);
+  const currentPage = 1;
+  const setCurrentPage = (update: number | ((prev: number) => number)) => {
+    if (typeof update === "function") {
+      update(currentPage);
+    }
+  };
+  const totalPages = 1;
   const allRequestsHref =
     role === "buyer" ? "/request-service/all" : `/request-service/${role}/all`;
 
@@ -798,7 +792,9 @@ function RecentRequestsPanel({
           })
         ) : (
           <div className="rounded-xl border border-slate-200 border-dashed bg-slate-50/40 p-8 text-center text-sm text-slate-500">
-            You have not submitted any swap requests yet.
+            {requests.length > 0
+              ? "Your active request is complete. Older requests are available in My Requests."
+              : "You have not submitted any swap requests yet."}
           </div>
         )}
       </div>
@@ -844,7 +840,7 @@ function RecentRequestsPanel({
         </div>
       )}
 
-      {requests.length > 3 && (
+      {requests.length > RECENT_REQUEST_LIMIT && (
         <div className="mt-3">
           <Link
             href={allRequestsHref}

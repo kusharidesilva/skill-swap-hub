@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { scopedHref, type Role } from "@/lib/role-routes";
@@ -11,6 +19,8 @@ type RequestCardData = {
   id: string;
   title: string;
   subject: string;
+  providerName: string;
+  rawStatus: string;
   status: string;
   statusTone: "teal" | "slate" | "red";
   iconTone: "teal" | "amber" | "blue" | "red";
@@ -18,6 +28,15 @@ type RequestCardData = {
   primaryLabel: string;
   secondaryLabel: string;
   isAlert?: boolean;
+  revisionNotes?: string;
+  review?: {
+    rating: number;
+    comment: string;
+  };
+  providerReview?: {
+    rating: number;
+    comment: string;
+  };
 };
 
 type FilterKey =
@@ -90,21 +109,29 @@ export default function AllRequestServicePage({
 
           if (
             data.status === "pending" ||
+            data.status === "done" ||
             data.status === "review_pending" ||
             (data.status === "completed" && !data.providerReview)
           ) {
             statusTone = "slate";
             iconTone = "amber";
             displayStatus = "Pending";
-            meta =
-              data.status === "review_pending" || data.status === "completed"
-                ? [`Reviewed: ${dateStr}`, "Awaiting provider review"]
-                : [`Submitted: ${dateStr}`, "Awaiting provider response"];
-          } else if (
-            data.status === "working" ||
-            data.status === "revision" ||
-            data.status === "done"
-          ) {
+            if (data.status === "done") {
+              meta = [
+                `Updated: ${dateStr}`,
+                "Provider finished. Review required",
+              ];
+              primaryLabel = "Review Work";
+              secondaryLabel = "Pending";
+            } else if (
+              data.status === "review_pending" ||
+              data.status === "completed"
+            ) {
+              meta = [`Reviewed: ${dateStr}`, "Awaiting provider review"];
+            } else {
+              meta = [`Submitted: ${dateStr}`, "Awaiting provider response"];
+            }
+          } else if (data.status === "working" || data.status === "revision") {
             statusTone = "teal";
             iconTone = "teal";
             displayStatus = "Matched";
@@ -136,6 +163,8 @@ export default function AllRequestServicePage({
             id: docSnap.id,
             title: data.title || "Untitled Request",
             subject: data.category || "General",
+            providerName: data.providerName || "Provider",
+            rawStatus: data.status || "pending",
             status: displayStatus,
             statusTone,
             iconTone,
@@ -143,6 +172,9 @@ export default function AllRequestServicePage({
             primaryLabel,
             secondaryLabel,
             isAlert,
+            revisionNotes: data.revisionNotes,
+            review: data.review,
+            providerReview: data.providerReview,
           });
         });
         setRequestState({ uid: userProfile.uid, requests: docs.reverse() }); // latest first
@@ -238,7 +270,7 @@ export default function AllRequestServicePage({
 
       <section className="grid gap-6 xl:grid-cols-3">
         {visibleRequests.map((request) => (
-          <RequestCard key={request.id} request={request} />
+          <RequestCard key={request.id} request={request} role={role} />
         ))}
       </section>
 
@@ -271,7 +303,20 @@ export default function AllRequestServicePage({
   );
 }
 
-function RequestCard({ request }: { request: RequestCardData }) {
+function RequestCard({
+  request,
+  role,
+}: {
+  request: RequestCardData;
+  role: Role;
+}) {
+  const [activeReview, setActiveReview] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [activeRevision, setActiveRevision] = useState(false);
+  const [revisionText, setRevisionText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
   const statusClassName =
     request.statusTone === "teal"
       ? "bg-[#ccfaf1] text-teal-800"
@@ -287,6 +332,58 @@ function RequestCard({ request }: { request: RequestCardData }) {
         : request.iconTone === "blue"
           ? "bg-blue-50 text-[#2f66e7]"
           : "bg-red-50 text-red-600";
+
+  const chatHref = scopedHref("/chats", role);
+  const providerInitial = request.providerName.charAt(0).toUpperCase();
+  const canOpenChat =
+    request.rawStatus === "working" ||
+    request.rawStatus === "revision" ||
+    request.rawStatus === "done";
+  const needsBuyerReview = request.rawStatus === "done";
+  const isWaitingProviderReview =
+    request.rawStatus === "review_pending" ||
+    (request.rawStatus === "completed" &&
+      Boolean(request.review) &&
+      !request.providerReview);
+
+  const handleAcceptComplete = async () => {
+    setSubmitting(true);
+    try {
+      await updateDoc(doc(db, "requests", request.id), {
+        status: "review_pending",
+        updatedAt: serverTimestamp(),
+        review: {
+          rating: reviewRating,
+          comment: reviewComment.trim() || "Outstanding swap session!",
+        },
+      });
+      setActiveReview(false);
+      setReviewComment("");
+      setReviewRating(5);
+    } catch (err) {
+      console.error("Error completing request:", err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRequestRevision = async () => {
+    if (!revisionText.trim()) return;
+    setSubmitting(true);
+    try {
+      await updateDoc(doc(db, "requests", request.id), {
+        status: "revision",
+        revisionNotes: revisionText.trim(),
+        updatedAt: serverTimestamp(),
+      });
+      setActiveRevision(false);
+      setRevisionText("");
+    } catch (err) {
+      console.error("Error requesting revision:", err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
@@ -309,6 +406,20 @@ function RequestCard({ request }: { request: RequestCardData }) {
       <p className="mt-1 text-sm font-medium text-teal-700">
         {request.subject}
       </p>
+
+      <div className="mt-4 flex items-center gap-3 rounded-xl bg-slate-50 p-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-sm font-bold text-white">
+          {providerInitial}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-xs font-semibold text-slate-500">
+            Provider
+          </p>
+          <p className="truncate text-sm font-bold text-slate-900">
+            {request.providerName}
+          </p>
+        </div>
+      </div>
 
       <div className="mt-5 grid gap-3 text-sm text-slate-600">
         <MetaRow
@@ -333,21 +444,185 @@ function RequestCard({ request }: { request: RequestCardData }) {
         />
       </div>
 
-      <div className="mt-6 border-t border-slate-200 pt-6">
-        <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            className="text-base font-medium text-[#0f4cbf] transition hover:text-[#0c3f9d]"
-          >
-            {request.primaryLabel}
-          </button>
-          <button
-            type="button"
-            className="inline-flex h-10 min-w-20 items-center justify-center rounded-lg bg-[#e3e4f2] px-4 text-sm font-medium text-slate-700 transition hover:bg-[#d5d8ea]"
-          >
-            {request.secondaryLabel}
-          </button>
+      {request.rawStatus === "revision" && request.revisionNotes && (
+        <div className="mt-4 rounded-lg border border-rose-100 bg-rose-50 p-3 text-xs text-rose-700">
+          <span className="block font-bold">Your revision note:</span>
+          <p className="mt-1 leading-5">
+            &ldquo;{request.revisionNotes}&rdquo;
+          </p>
         </div>
+      )}
+
+      {request.review && (
+        <div className="mt-4 rounded-lg border border-emerald-100 bg-emerald-50/60 p-3 text-xs text-emerald-800">
+          <span className="block font-bold">Your review:</span>
+          <span className="font-bold text-amber-600">
+            {"★".repeat(request.review.rating)}
+            {"☆".repeat(5 - request.review.rating)}
+          </span>
+          <p className="mt-1 italic">&ldquo;{request.review.comment}&rdquo;</p>
+        </div>
+      )}
+
+      {request.providerReview && (
+        <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-800">
+          <span className="block font-bold">Provider reply:</span>
+          <span className="font-bold text-blue-500">
+            {"★".repeat(request.providerReview.rating)}
+            {"☆".repeat(5 - request.providerReview.rating)}
+          </span>
+          <p className="mt-1 italic">
+            &ldquo;{request.providerReview.comment}&rdquo;
+          </p>
+        </div>
+      )}
+
+      <div className="mt-6 border-t border-slate-200 pt-6">
+        {needsBuyerReview ? (
+          <div className="grid gap-3">
+            <p className="text-xs font-semibold text-slate-500">
+              Provider finished. Check the work and complete the request.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveReview(true);
+                  setActiveRevision(false);
+                }}
+                className="inline-flex h-10 items-center justify-center rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white transition hover:bg-emerald-700"
+              >
+                Accept & Review
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveRevision(true);
+                  setActiveReview(false);
+                }}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-red-300 px-3 text-xs font-bold text-red-700 transition hover:bg-red-50"
+              >
+                Has Errors / Revise
+              </button>
+            </div>
+          </div>
+        ) : isWaitingProviderReview ? (
+          <div className="grid gap-3 rounded-xl border border-amber-200 bg-amber-50/50 p-3">
+            <p className="text-xs font-bold text-amber-800">
+              Waiting for provider reply
+            </p>
+            <p className="text-xs leading-5 text-slate-600">
+              Your review was sent. This request will move to Completed after
+              the provider reviews you back.
+            </p>
+            <Link
+              href={chatHref}
+              className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-amber-300 bg-white px-4 text-xs font-bold text-amber-800 transition hover:bg-amber-50"
+            >
+              Open Session Chat
+            </Link>
+          </div>
+        ) : canOpenChat ? (
+          <Link
+            href={chatHref}
+            className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#2f66e7] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2557cf]"
+          >
+            Open Session Chat
+          </Link>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              className="text-base font-medium text-[#0f4cbf] transition hover:text-[#0c3f9d]"
+            >
+              {request.primaryLabel}
+            </button>
+            <button
+              type="button"
+              className="inline-flex h-10 min-w-20 items-center justify-center rounded-lg bg-[#e3e4f2] px-4 text-sm font-medium text-slate-700 transition hover:bg-[#d5d8ea]"
+            >
+              {request.secondaryLabel}
+            </button>
+          </div>
+        )}
+
+        {activeReview && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/40 p-3">
+            <p className="text-xs font-bold text-slate-800">
+              Rate provider session
+            </p>
+            <div className="mt-2 flex gap-1.5">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  type="button"
+                  key={star}
+                  onClick={() => setReviewRating(star)}
+                  className={`text-2xl leading-none ${
+                    reviewRating >= star ? "text-amber-500" : "text-slate-300"
+                  }`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+            <textarea
+              rows={3}
+              value={reviewComment}
+              onChange={(event) => setReviewComment(event.target.value)}
+              placeholder="Share your review..."
+              className="mt-3 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-[#2f66e7] focus:ring-2 focus:ring-blue-100"
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveReview(false)}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAcceptComplete}
+                disabled={submitting}
+                className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {submitting ? "Saving..." : "Submit & Complete"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeRevision && (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50/40 p-3">
+            <p className="text-xs font-bold text-slate-800">
+              Describe the changes needed
+            </p>
+            <textarea
+              rows={3}
+              value={revisionText}
+              onChange={(event) => setRevisionText(event.target.value)}
+              placeholder="List what needs to be fixed..."
+              className="mt-3 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-[#2f66e7] focus:ring-2 focus:ring-blue-100"
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveRevision(false)}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRequestRevision}
+                disabled={submitting || !revisionText.trim()}
+                className="rounded-lg bg-red-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {submitting ? "Sending..." : "Send to Provider"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </article>
   );
