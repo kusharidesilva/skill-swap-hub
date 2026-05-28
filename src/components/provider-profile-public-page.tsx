@@ -386,61 +386,61 @@ export default function ProviderProfilePublicPage({
   };
 
   return (
-    <div className="flex w-full flex-col gap-6 pb-10">
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-5 md:grid-cols-[152px_minmax(0,1fr)]">
+    <div className="flex w-full flex-col gap-4 pb-6">
+      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="grid gap-4 sm:grid-cols-[96px_minmax(0,1fr)]">
           {profile.image && profile.image.startsWith("/") ? (
-            <div className="relative h-[152px] w-[152px] overflow-hidden rounded-xl">
+            <div className="relative h-20 w-20 overflow-hidden rounded-lg sm:h-24 sm:w-24">
               <Image
                 src={profile.image}
                 alt={profile.name}
                 fill
                 className="object-cover"
-                sizes="152px"
+                sizes="96px"
                 priority
               />
             </div>
           ) : (
-            <div className="flex h-[152px] w-[152px] shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-4xl font-bold text-white shadow-md">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-xl font-bold text-white shadow-md sm:h-24 sm:w-24 sm:text-2xl">
               {profile.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
             </div>
           )}
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold leading-none text-[#1453c4] md:text-[2.2rem]">
+              <h1 className="break-words text-xl font-bold leading-tight text-[#1453c4] sm:text-2xl">
                 {profile.name}
               </h1>
               {profile.verified && (
-                <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-[#1453c4]">
+                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-[#1453c4]">
                   Verified Student
                 </span>
               )}
               {profile.topRated && (
-                <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-700">
+                <span className="rounded-full bg-teal-100 px-2.5 py-1 text-[11px] font-semibold text-teal-700">
                   Top Rated
                 </span>
               )}
             </div>
-            <p className="mt-2 text-xl text-slate-700 md:text-[1.85rem]">{profile.university}</p>
-            <p className="mt-1 text-sm text-slate-500 font-semibold">{profile.degree}</p>
+            <p className="mt-1 break-words text-sm font-semibold text-slate-700 sm:text-base">{profile.university}</p>
+            <p className="mt-0.5 break-words text-xs font-semibold text-slate-500">{profile.degree}</p>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <Link
                 href={messageHref}
-                className="inline-flex h-11 items-center justify-center rounded-lg bg-[#1453c4] px-5 text-sm font-semibold text-white transition hover:bg-[#0f43a1]"
+                className="inline-flex h-8 items-center justify-center rounded-md bg-[#1453c4] px-3 text-xs font-semibold text-white transition hover:bg-[#0f43a1]"
               >
                 Message {firstName}
               </Link>
               <Link
                 href={favoriteHref}
-                className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="inline-flex h-8 items-center justify-center rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Save to Favorites
               </Link>
               <Link
                 href={reportHref}
-                className="inline-flex h-11 items-center justify-center rounded-lg px-2 text-sm font-semibold text-red-600 transition hover:text-red-700"
+                className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-red-600 transition hover:text-red-700"
               >
                 Report Profile
               </Link>
@@ -449,7 +449,7 @@ export default function ProviderProfilePublicPage({
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Trust Score" value={profile.trustScore} sub="Completion Rate" accent />
         <MetricCard title="Total Swaps" value={profile.totalSwaps} sub="Completed" />
         <MetricCard title="Avg. Rating" value={profile.avgRating} sub={starsString()} teal />
@@ -457,10 +457,10 @@ export default function ProviderProfilePublicPage({
       </section>
 
       <section>
-        <div className="flex items-center gap-8 border-b border-slate-200">
+        <div className="flex items-center gap-6 border-b border-slate-200">
           <Link
             href={gigsHref}
-            className={`border-b-2 pb-3 text-lg font-semibold transition ${
+            className={`border-b-2 pb-2.5 text-sm font-semibold transition ${
               activeTab === "gigs"
                 ? "border-[#1453c4] text-[#1453c4]"
                 : "border-transparent text-slate-600 hover:text-slate-800"
@@ -470,7 +470,7 @@ export default function ProviderProfilePublicPage({
           </Link>
           <Link
             href={reviewsHref}
-            className={`border-b-2 pb-3 text-lg font-semibold transition ${
+            className={`border-b-2 pb-2.5 text-sm font-semibold transition ${
               activeTab === "reviews"
                 ? "border-[#1453c4] text-[#1453c4]"
                 : "border-transparent text-slate-600 hover:text-slate-800"
@@ -482,13 +482,13 @@ export default function ProviderProfilePublicPage({
 
         {activeTab === "gigs" ? (
           profile.gigs.length > 0 ? (
-            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {profile.gigs.map((gig: GigData) => (
                 <article
                   key={gig.id}
-                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                  className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
                 >
-                  <div className="relative h-40 w-full">
+                  <div className="relative h-28 w-full">
                     <Image
                       src={gig.image}
                       alt={gig.title}
@@ -497,17 +497,17 @@ export default function ProviderProfilePublicPage({
                       sizes="(min-width: 1024px) 30vw, 100vw"
                     />
                   </div>
-                  <div className="p-4">
-                    <h3 className="text-xl font-semibold text-slate-900">{gig.title}</h3>
-                    <p className="mt-1 text-base font-semibold text-slate-700">
+                  <div className="p-3">
+                    <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-slate-900">{gig.title}</h3>
+                    <p className="mt-1 text-xs font-semibold text-slate-700">
                       ★ {gig.rating}{" "}
                       <span className="font-normal text-slate-500">({gig.reviews} reviews)</span>
                     </p>
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-                      <span className="rounded-md bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">
+                    <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+                      <span className="truncate rounded-md bg-teal-50 px-2 py-1 text-[11px] font-semibold text-teal-700">
                         {gig.category}
                       </span>
-                      <span className="text-lg font-semibold text-[#1453c4]">
+                      <span className="shrink-0 text-xs font-semibold text-[#1453c4]">
                         {gig.points} Points
                       </span>
                     </div>
@@ -516,13 +516,13 @@ export default function ProviderProfilePublicPage({
               ))}
             </div>
           ) : (
-            <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
+            <div className="mt-5 rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
               No offered gigs or services listed yet.
             </div>
           )
         ) : (
           <div className="mt-5 space-y-4">
-            <h2 className="text-xl font-semibold text-[#1453c4]">Recent Feedback</h2>
+            <h2 className="text-lg font-semibold text-[#1453c4]">Recent Feedback</h2>
             {profile.reviews.length > 0 ? (
               profile.reviews.map((review: ReviewData) => (
                 <FeedbackCard
@@ -536,7 +536,7 @@ export default function ProviderProfilePublicPage({
                 />
               ))
             ) : (
-              <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
+              <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
                 No reviews received yet.
               </div>
             )}
@@ -561,11 +561,11 @@ function MetricCard({
   teal?: boolean;
 }) {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{title}</p>
-      <p className="mt-2 text-[3.2rem] font-semibold leading-none text-slate-900">{value}</p>
-      <p className={`mt-2 text-xl ${teal ? "text-teal-700" : "text-slate-600"}`}>{sub}</p>
-      {accent ? <div className="mx-auto mt-4 h-1.5 w-full rounded-full bg-teal-700" /> : null}
+    <article className="rounded-lg border border-slate-200 bg-white p-3 text-center shadow-sm">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{title}</p>
+      <p className="mt-1.5 text-2xl font-bold leading-none text-slate-900 md:text-3xl">{value}</p>
+      <p className={`mt-1.5 text-xs font-medium ${teal ? "text-teal-700" : "text-slate-600"}`}>{sub}</p>
+      {accent ? <div className="mx-auto mt-2.5 h-1 w-full rounded-full bg-teal-700" /> : null}
     </article>
   );
 }
@@ -586,22 +586,22 @@ function FeedbackCard({
   rating?: number;
 }) {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-[#f7f8ff] p-5 shadow-sm">
+    <article className="rounded-lg border border-slate-200 bg-[#f7f8ff] p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <span
-            className={`flex h-10 w-10 items-center justify-center rounded-full text-base font-semibold ${avatarTone}`}
+            className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${avatarTone}`}
           >
             {initials}
           </span>
           <div>
-            <p className="text-xl font-semibold text-slate-900">{name}</p>
-            <p className="text-sm text-slate-500">{meta}</p>
+            <p className="text-sm font-semibold text-slate-900">{name}</p>
+            <p className="break-words text-xs text-slate-500">{meta}</p>
           </div>
         </div>
         <p className="text-lg text-teal-700">{"★".repeat(rating)}</p>
       </div>
-      <p className="mt-3 text-lg leading-8 text-slate-700">{quote}</p>
+      <p className="mt-2 break-words text-xs leading-5 text-slate-700">{quote}</p>
     </article>
   );
 }
