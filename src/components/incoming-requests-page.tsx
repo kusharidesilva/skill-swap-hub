@@ -10,6 +10,7 @@ import {
   doc,
   updateDoc,
   serverTimestamp,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -56,34 +57,71 @@ export default function IncomingRequestsPageContent({
   const [requests, setRequests] = useState<RequestData[]>([]);
   const [fetching, setFetching] = useState(true);
 
-  // Real-time subscription to requests targeted at this provider
+  // Real-time subscription to requests targeted at this provider OR general requests
   useEffect(() => {
     if (!userProfile) return;
 
-    const q = query(
+    // Query 1: Requests specifically for this provider
+    const specificProviderQuery = query(
       collection(db, "requests"),
       where("providerId", "==", userProfile.uid),
     );
 
-    const unsubscribe = onSnapshot(
-      q,
+    // Query 2: General/unassigned requests (providerId == "general")
+    const generalRequestsQuery = query(
+      collection(db, "requests"),
+      where("providerId", "==", "general"),
+    );
+
+    const mergedRequests: Map<string, RequestData> = new Map();
+
+    // Subscribe to specific provider requests
+    const unsubscribeSpecific = onSnapshot(
+      specificProviderQuery,
       (snapshot) => {
-        const docs: RequestData[] = [];
         snapshot.forEach((docSnap) => {
-          docs.push({ id: docSnap.id, ...docSnap.data() } as RequestData);
+          mergedRequests.set(
+            docSnap.id,
+            { id: docSnap.id, ...docSnap.data() } as RequestData,
+          );
         });
-        // Sort client-side
-        docs.sort((a, b) => b.id.localeCompare(a.id));
-        setRequests(docs);
-        setFetching(false);
+        updateMergedRequests();
       },
       (err) => {
-        console.error("Error subscribing to incoming requests:", err);
+        console.error("Error subscribing to specific requests:", err);
         setFetching(false);
       },
     );
 
-    return () => unsubscribe();
+    // Subscribe to general requests
+    const unsubscribeGeneral = onSnapshot(
+      generalRequestsQuery,
+      (snapshot) => {
+        snapshot.forEach((docSnap) => {
+          mergedRequests.set(
+            docSnap.id,
+            { id: docSnap.id, ...docSnap.data() } as RequestData,
+          );
+        });
+        updateMergedRequests();
+      },
+      (err) => {
+        console.error("Error subscribing to general requests:", err);
+        setFetching(false);
+      },
+    );
+
+    const updateMergedRequests = () => {
+      const docs = Array.from(mergedRequests.values());
+      docs.sort((a, b) => b.id.localeCompare(a.id));
+      setRequests(docs);
+      setFetching(false);
+    };
+
+    return () => {
+      unsubscribeSpecific();
+      unsubscribeGeneral();
+    };
   }, [userProfile]);
 
   const tabHref = (tab: IncomingRequestsTab) => `?tab=${tab}`;
