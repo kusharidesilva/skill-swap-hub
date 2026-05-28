@@ -39,6 +39,11 @@ export interface UserProfile {
     availability: string[];
     bio: string;
   };
+  settings?: {
+    emailNotifications: boolean;
+    pushNotifications: boolean;
+    profileVisibility: boolean;
+  };
 }
 
 // ─── Register Buyer ───────────────────────────────────────────────────────────
@@ -54,7 +59,7 @@ export async function registerBuyer(data: {
   const credential = await createUserWithEmailAndPassword(
     auth,
     data.email,
-    data.password
+    data.password,
   );
 
   const user = credential.user;
@@ -87,7 +92,7 @@ export async function registerBuyer(data: {
 export async function checkBuyerHistory(uid: string): Promise<boolean> {
   const requestsQuery = query(
     collection(db, "requests"),
-    where("buyerId", "==", uid)
+    where("buyerId", "==", uid),
   );
   const requestsSnap = await getDocs(requestsQuery);
   return !requestsSnap.empty;
@@ -95,7 +100,10 @@ export async function checkBuyerHistory(uid: string): Promise<boolean> {
 
 // ─── Login with Smart Redirect ────────────────────────────────────────────────
 
-export async function loginUser(email: string, password: string): Promise<{
+export async function loginUser(
+  email: string,
+  password: string,
+): Promise<{
   user: User;
   redirectPath: string;
 }> {
@@ -134,7 +142,7 @@ export async function upgradeToProvider(
     proficiency: string;
     availability: string[];
     bio: string;
-  }
+  },
 ): Promise<string> {
   const userRef = doc(db, "users", uid);
   const userDoc = await getDoc(userRef);

@@ -1,7 +1,7 @@
-"use client"; 
+"use client";
 
-import { usePathname } from "next/navigation"; 
-import { useState, useEffect } from "react"; 
+import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -16,13 +16,13 @@ import {
   type SiteRole,
 } from "@/lib/role-routes";
 
-type IconProps = { className?: string }; 
+type IconProps = { className?: string };
 
-interface NavbarProps { 
+interface NavbarProps {
   role?: SiteRole;
-} 
+}
 
-export default function Navbar({ role: propRole }: NavbarProps) { 
+export default function Navbar({ role: propRole }: NavbarProps) {
   const pathname = usePathname();
   const [activeSection, setActiveSection] = useState("Home");
 
@@ -34,7 +34,10 @@ export default function Navbar({ role: propRole }: NavbarProps) {
       role = "both";
     } else if (pathSegments.includes("provider")) {
       role = "provider";
-    } else if (pathSegments.includes("buyer") || pathSegments.includes("logged-in")) {
+    } else if (
+      pathSegments.includes("buyer") ||
+      pathSegments.includes("logged-in")
+    ) {
       role = "buyer";
     }
   }
@@ -90,7 +93,8 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   const isFavoritesPage =
     pathname === favoritesHref || pathname.startsWith(`${favoritesHref}/`);
   const isNotificationsPage =
-    pathname === notificationsHref || pathname.startsWith(`${notificationsHref}/`);
+    pathname === notificationsHref ||
+    pathname.startsWith(`${notificationsHref}/`);
 
   // Scroll spy active section effect
   useEffect(() => {
@@ -136,184 +140,66 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   const currentActiveSection = isHomePage
     ? activeSection
     : pathname.startsWith("/about")
-    ? "About"
-    : pathname.startsWith("/dashboard")
-    ? "Dashboard"
-    : "";
+      ? "About"
+      : pathname.startsWith("/dashboard")
+        ? "Dashboard"
+        : "";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
-      <input
-        id="nav-toggle"
-        type="checkbox"
-        className="peer sr-only"
-        aria-label="Toggle navigation menu"
-        aria-controls="mobile-nav"
-      />
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-10 py-5">
-        <Link href={homeLinkHref} className="flex items-center gap-3">
-          <Image
-            src="/img/Skill%20Swap%20Hub%20Logo%20icon-no%20bg.svg"
-            alt="Skill Swap Hub"
-            width={44}
-            height={44}
-            className="h-11 w-11"
-            priority
-          />
-        </Link>
+    <>
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
+        <input
+          id="nav-toggle"
+          type="checkbox"
+          className="peer sr-only"
+          aria-label="Toggle navigation menu"
+          aria-controls="mobile-nav"
+        />
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-10 py-5">
+          <Link href={homeLinkHref} className="flex items-center gap-3">
+            <Image
+              src="/img/Skill%20Swap%20Hub%20Logo%20icon-no%20bg.svg"
+              alt="Skill Swap Hub"
+              width={44}
+              height={44}
+              className="h-11 w-11"
+              priority
+            />
+          </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
-          {navLinks.map((link) => {
-            const isActive = currentActiveSection === link.name;
-            return (
-              <Link
-                key={link.name}
-                href={link.href}
-                className={`transition-colors font-semibold ${
-                  isActive
-                    ? "text-[#2b62e6]"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                {link.name}
-              </Link>
-            );
-          })}
-        </nav>
+          {/* Desktop Navigation */}
+          <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
+            {navLinks.map((link) => {
+              const isActive = currentActiveSection === link.name;
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className={`transition-colors font-semibold ${
+                    isActive
+                      ? "text-[#2b62e6]"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
+          </nav>
 
-        {/* Desktop Actions */}
-        <div className="hidden items-center gap-4 md:flex">
-          {role === "guest" ? (
-            <>
-              <Link
-                href="/login"
-                className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
-              >
-                Login
-              </Link>
-              <Link
-                href="/get-started"
-                className="rounded-full bg-[#0f4cbf] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0d3fa1]"
-              >
-                Get Started
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                href={notificationsHref}
-                aria-label="Notifications"
-                className={`rounded-full p-2 transition hover:bg-slate-100 ${
-                  isNotificationsPage
-                    ? "text-[#0758d8]"
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                <BellIcon className="h-5 w-5" />
-              </Link>
-              <Link
-                href={favoritesHref}
-                aria-label="Favorites"
-                className={`rounded-full p-2 transition hover:bg-slate-100 ${
-                  isFavoritesPage
-                    ? "text-[#0758d8]"
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                <HeartIcon className="h-5 w-5" />
-              </Link>
-              <details className="relative">
-                <summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:text-slate-900">
-                  <UserIcon className="h-5 w-5" />
-                </summary>
-                <div className="absolute right-0 mt-3 w-48 rounded-xl border border-slate-200 bg-white p-2 text-sm text-slate-600 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
-                  <Link
-                    href={profileHref}
-                    className="block rounded-lg px-3 py-2 hover:bg-slate-100"
-                  >
-                    Profile
-                  </Link>
-                  <Link
-                    href={settingsHref}
-                    className="block rounded-lg px-3 py-2 hover:bg-slate-100"
-                  >
-                    Settings
-                  </Link>
-                  <Link
-                    href={helpHref(accountRole)}
-                    className="block rounded-lg px-3 py-2 hover:bg-slate-100"
-                  >
-                    Help & Support
-                  </Link>
-                  <Link
-                    href="/sign-out"
-                    className="block rounded-lg px-3 py-2 text-red-500 hover:bg-red-50"
-                  >
-                    Sign Out
-                  </Link>
-                </div>
-              </details>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Hamburger Toggle Label (Mobile) */}
-      <label
-        htmlFor="nav-toggle"
-        className="absolute right-6 top-5 inline-flex items-center rounded-md p-2 text-slate-700 transition-colors hover:text-slate-900 md:hidden cursor-pointer"
-      >
-        <svg
-          className="h-6 w-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 6h16M4 12h16M4 18h16"
-          />
-        </svg>
-      </label>
-
-      {/* Mobile Menu */}
-      <div className="max-h-0 overflow-hidden border-b border-slate-200 bg-white/95 opacity-0 transition-[max-height,opacity] duration-300 ease-out peer-checked:max-h-96 peer-checked:opacity-100 md:hidden">
-        <nav
-          id="mobile-nav"
-          className="flex flex-col gap-4 px-6 pb-6 pt-4 text-sm font-medium"
-        >
-          {navLinks.map((link) => {
-            const isActive = currentActiveSection === link.name;
-            return (
-              <Link
-                key={link.name}
-                href={link.href}
-                className={`transition-colors font-semibold ${
-                  isActive
-                    ? "text-[#2b62e6]"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                {link.name}
-              </Link>
-            );
-          })}
-
-          <div className="mt-2 flex flex-col gap-3">
+          {/* Desktop Actions */}
+          <div className="hidden items-center gap-4 md:flex">
             {role === "guest" ? (
               <>
                 <Link
                   href="/login"
-                  className="text-slate-600 hover:text-slate-900"
+                  className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
                 >
                   Login
                 </Link>
                 <Link
                   href="/get-started"
-                  className="rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
+                  className="rounded-full bg-[#0f4cbf] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0d3fa1]"
                 >
                   Get Started
                 </Link>
@@ -322,46 +208,167 @@ export default function Navbar({ role: propRole }: NavbarProps) {
               <>
                 <Link
                   href={notificationsHref}
-                  className="text-slate-600 hover:text-slate-900"
+                  aria-label="Notifications"
+                  className={`rounded-full p-2 transition hover:bg-slate-100 ${
+                    isNotificationsPage
+                      ? "text-[#0758d8]"
+                      : "text-slate-500 hover:text-slate-900"
+                  }`}
                 >
-                  Notifications
+                  <BellIcon className="h-5 w-5" />
                 </Link>
                 <Link
                   href={favoritesHref}
-                  className="text-slate-600 hover:text-slate-900"
+                  aria-label="Favorites"
+                  className={`rounded-full p-2 transition hover:bg-slate-100 ${
+                    isFavoritesPage
+                      ? "text-[#0758d8]"
+                      : "text-slate-500 hover:text-slate-900"
+                  }`}
                 >
-                  Favorites
+                  <HeartIcon className="h-5 w-5" />
                 </Link>
-                <Link
-                  href={profileHref}
-                  className="rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
-                >
-                  Profile
-                </Link>
-                <Link
-                  href={settingsHref}
-                  className="text-slate-600 hover:text-slate-900"
-                >
-                  Settings
-                </Link>
-                <Link
-                  href={helpHref(accountRole)}
-                  className="text-slate-600 hover:text-slate-900"
-                >
-                  Help & Support
-                </Link>
-                <Link
-                  href="/sign-out"
-                  className="text-slate-600 hover:text-red-500"
-                >
-                  Sign Out
-                </Link>
+                <details className="relative">
+                  <summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:text-slate-900">
+                    <UserIcon className="h-5 w-5" />
+                  </summary>
+                  <div className="absolute right-0 mt-3 w-48 rounded-xl border border-slate-200 bg-white p-2 text-sm text-slate-600 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+                    <Link
+                      href={profileHref}
+                      className="block rounded-lg px-3 py-2 hover:bg-slate-100"
+                    >
+                      Profile
+                    </Link>
+                    <Link
+                      href={settingsHref}
+                      className="block rounded-lg px-3 py-2 hover:bg-slate-100"
+                    >
+                      Settings
+                    </Link>
+                    <Link
+                      href={helpHref(accountRole)}
+                      className="block rounded-lg px-3 py-2 hover:bg-slate-100"
+                    >
+                      Help & Support
+                    </Link>
+                    <Link
+                      href="/sign-out"
+                      className="block rounded-lg px-3 py-2 text-red-500 hover:bg-red-50"
+                    >
+                      Sign Out
+                    </Link>
+                  </div>
+                </details>
               </>
             )}
           </div>
-        </nav>
-      </div>
-    </header>
+        </div>
+
+        {/* Hamburger Toggle Label (Mobile) */}
+        <label
+          htmlFor="nav-toggle"
+          className="absolute right-6 top-5 inline-flex items-center rounded-md p-2 text-slate-700 transition-colors hover:text-slate-900 md:hidden cursor-pointer"
+        >
+          <svg
+            className="h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        </label>
+
+        {/* Mobile Menu */}
+        <div className="max-h-0 overflow-hidden border-b border-slate-200 bg-white/95 opacity-0 transition-[max-height,opacity] duration-300 ease-out peer-checked:max-h-96 peer-checked:opacity-100 md:hidden">
+          <nav
+            id="mobile-nav"
+            className="flex flex-col gap-4 px-6 pb-6 pt-4 text-sm font-medium"
+          >
+            {navLinks.map((link) => {
+              const isActive = currentActiveSection === link.name;
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className={`transition-colors font-semibold ${
+                    isActive
+                      ? "text-[#2b62e6]"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
+
+            <div className="mt-2 flex flex-col gap-3">
+              {role === "guest" ? (
+                <>
+                  <Link
+                    href="/login"
+                    className="text-slate-600 hover:text-slate-900"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/get-started"
+                    className="rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
+                  >
+                    Get Started
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href={notificationsHref}
+                    className="text-slate-600 hover:text-slate-900"
+                  >
+                    Notifications
+                  </Link>
+                  <Link
+                    href={favoritesHref}
+                    className="text-slate-600 hover:text-slate-900"
+                  >
+                    Favorites
+                  </Link>
+                  <Link
+                    href={profileHref}
+                    className="rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
+                  >
+                    Profile
+                  </Link>
+                  <Link
+                    href={settingsHref}
+                    className="text-slate-600 hover:text-slate-900"
+                  >
+                    Settings
+                  </Link>
+                  <Link
+                    href={helpHref(accountRole)}
+                    className="text-slate-600 hover:text-slate-900"
+                  >
+                    Help & Support
+                  </Link>
+                  <Link
+                    href="/sign-out"
+                    className="text-slate-600 hover:text-red-500"
+                  >
+                    Sign Out
+                  </Link>
+                </>
+              )}
+            </div>
+          </nav>
+        </div>
+      </header>
+      <div className="h-[85px] shrink-0" aria-hidden="true" />
+    </>
   );
 }
 

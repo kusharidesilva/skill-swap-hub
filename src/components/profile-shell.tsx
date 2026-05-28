@@ -17,9 +17,10 @@ export default function ProfileShell({ role, children }: ProfileShellProps) {
       <Navbar role={role} />
 
       {/* Mobile / tablet horizontal nav — hidden on xl+ */}
-      <div className="xl:hidden sticky top-[84px] z-30 border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm">
+      <div className="fixed inset-x-0 top-[85px] z-40 border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm xl:hidden">
         <MobileNav role={role} />
       </div>
+      <div className="h-[61px] shrink-0 xl:hidden" aria-hidden="true" />
 
       <div className="mx-auto flex w-full max-w-6xl flex-col xl:flex-row gap-8 px-6 pt-6 xl:pt-10 pb-8">
         {/* Desktop sidebar — hidden below xl */}

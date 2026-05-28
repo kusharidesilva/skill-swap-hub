@@ -4,6 +4,11 @@ import { useState, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+} from "firebase/auth";
 import type { UserProfile } from "@/lib/auth";
 
 export type Role = "buyer" | "provider" | "both";
@@ -39,7 +44,9 @@ export default function ProfileSettings({ role }: { role: Role }) {
   if (!userProfile) {
     return (
       <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">Please sign in to manage settings.</p>
+        <p className="text-sm text-slate-500">
+          Please sign in to manage settings.
+        </p>
       </div>
     );
   }
@@ -71,29 +78,48 @@ function ProfileSettingsForm({
     role === "both"
       ? "Manage your profile details, skills offered/requested, availability, and dashboard security options."
       : role === "buyer"
-      ? "Manage your profile details, skills requested, and dashboard security options."
-      : "Manage your profile details, skills offered, availability, and dashboard security options.";
+        ? "Manage your profile details, skills requested, and dashboard security options."
+        : "Manage your profile details, skills offered, availability, and dashboard security options.";
 
   // Basic Information States
   const [name, setName] = useState(userProfile.name || "");
   const [university, setUniversity] = useState(userProfile.university || "");
   const [degree, setDegree] = useState(userProfile.degree || "");
-  const [yearOfStudy, setYearOfStudy] = useState(userProfile.yearOfStudy || "1st Year");
+  const [yearOfStudy, setYearOfStudy] = useState(
+    userProfile.yearOfStudy || "1st Year",
+  );
   const [bio, setBio] = useState(userProfile.providerProfile?.bio || "");
 
   // Skills States
-  const [offeredSkills, setOfferedSkills] = useState<string[]>(userProfile.providerProfile?.skills || []);
-  const [neededSkills, setNeededSkills] = useState<string[]>(userProfile.neededSkills || [
-    "Data Analysis",
-    "Tableau",
-    "Public Speaking",
-    "Econometrics",
-  ]);
+  const [offeredSkills, setOfferedSkills] = useState<string[]>(
+    userProfile.providerProfile?.skills || [],
+  );
+  const [neededSkills, setNeededSkills] = useState<string[]>(
+    userProfile.neededSkills || [
+      "Data Analysis",
+      "Tableau",
+      "Public Speaking",
+      "Econometrics",
+    ],
+  );
   const [newOfferedSkill, setNewOfferedSkill] = useState("");
   const [newNeededSkill, setNewNeededSkill] = useState("");
 
   // Availability State
-  const [availability, setAvailability] = useState<string[]>(userProfile.providerProfile?.availability || []);
+  const [availability, setAvailability] = useState<string[]>(
+    userProfile.providerProfile?.availability || [],
+  );
+
+  // Account settings state
+  const [emailNotifications, setEmailNotifications] = useState(
+    userProfile.settings?.emailNotifications ?? true,
+  );
+  const [pushNotifications, setPushNotifications] = useState(
+    userProfile.settings?.pushNotifications ?? false,
+  );
+  const [profileVisibility, setProfileVisibility] = useState(
+    userProfile.settings?.profileVisibility ?? true,
+  );
 
   // UX Feedback States
   const [isSaving, setIsSaving] = useState(false);
@@ -108,13 +134,18 @@ function ProfileSettingsForm({
 
     try {
       const userRef = doc(db, "users", userProfile.uid);
-      
+
       const updates: Record<string, unknown> = {
         name,
         university,
         degree,
         yearOfStudy,
         neededSkills,
+        settings: {
+          emailNotifications,
+          pushNotifications,
+          profileVisibility,
+        },
       };
 
       // If user is a provider or has dual role, update provider details
@@ -133,7 +164,9 @@ function ProfileSettingsForm({
       setTimeout(() => setSaveStatus(""), 3000);
     } catch (err: unknown) {
       setSaveStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Failed to update profile.");
+      setErrorMessage(
+        err instanceof Error ? err.message : "Failed to update profile.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -168,10 +201,12 @@ function ProfileSettingsForm({
     <div className="flex w-full flex-col gap-8 pb-10">
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Profile Settings</h1>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            Profile Settings
+          </h1>
           <p className="mt-1 text-xs text-slate-500">{description}</p>
         </div>
-        
+
         {saveStatus === "success" && (
           <div className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 border border-emerald-200 shadow-sm transition animate-fade-in">
             ✓ Profile saved successfully!
@@ -225,7 +260,10 @@ function ProfileSettingsForm({
         {/* Left Column */}
         <div className="grid gap-5">
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <SectionTitle icon={<UserIcon className="h-4 w-4" />} title="Basic Information" />
+            <SectionTitle
+              icon={<UserIcon className="h-4 w-4" />}
+              title="Basic Information"
+            />
 
             <div className="mt-5 grid gap-4">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -238,7 +276,7 @@ function ProfileSettingsForm({
                     className="h-9 min-w-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
                   />
                 </label>
-                
+
                 <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
                   Current Email (Verified)
                   <input
@@ -301,7 +339,10 @@ function ProfileSettingsForm({
 
           {showAvailability && (
             <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <SectionTitle icon={<CalendarIcon className="h-4 w-4" />} title="Weekly Availability" />
+              <SectionTitle
+                icon={<CalendarIcon className="h-4 w-4" />}
+                title="Weekly Availability"
+              />
 
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {AVAILABILITY_OPTIONS.map((slot) => {
@@ -317,9 +358,13 @@ function ProfileSettingsForm({
                           : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
                       }`}
                     >
-                      <span className={`absolute right-2 top-2.5 flex h-3.5 w-3.5 items-center justify-center rounded border text-white ${
-                        isChecked ? "border-[#0758d8] bg-[#0758d8]" : "border-slate-300 bg-white"
-                      }`}>
+                      <span
+                        className={`absolute right-2 top-2.5 flex h-3.5 w-3.5 items-center justify-center rounded border text-white ${
+                          isChecked
+                            ? "border-[#0758d8] bg-[#0758d8]"
+                            : "border-slate-300 bg-white"
+                        }`}
+                      >
                         {isChecked && <CheckIcon className="h-2.5 w-2.5" />}
                       </span>
                       <span className="text-xs font-bold tracking-wide">
@@ -340,9 +385,11 @@ function ProfileSettingsForm({
           {showOffered && (
             <section className="h-fit rounded-xl border border-slate-200 border-l-4 border-l-emerald-600 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xs font-semibold text-slate-800">Skills I Can Offer</h2>
+                <h2 className="text-xs font-semibold text-slate-800">
+                  Skills I Can Offer
+                </h2>
               </div>
-              
+
               <div className="mt-3 flex gap-2">
                 <input
                   type="text"
@@ -371,20 +418,31 @@ function ProfileSettingsForm({
                   <button
                     key={skill}
                     type="button"
-                    onClick={() => setOfferedSkills(offeredSkills.filter((s) => s !== skill))}
+                    onClick={() =>
+                      setOfferedSkills(offeredSkills.filter((s) => s !== skill))
+                    }
                     className="inline-flex max-w-full items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-200 group"
                     title="Click to remove"
                   >
-                    <span className="truncate">{skill} <span className="text-emerald-500/80 group-hover:text-emerald-700 ml-0.5">×</span></span>
+                    <span className="truncate">
+                      {skill}{" "}
+                      <span className="text-emerald-500/80 group-hover:text-emerald-700 ml-0.5">
+                        ×
+                      </span>
+                    </span>
                   </button>
                 ))}
               </div>
-              
+
               {/* Quick suggestions */}
               <div className="mt-3 border-t border-slate-100 pt-2.5">
-                <p className="text-[9px] uppercase font-bold text-slate-400">Suggestions:</p>
+                <p className="text-[9px] uppercase font-bold text-slate-400">
+                  Suggestions:
+                </p>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {ALL_SKILLS_SUGGESTIONS.filter((s) => !offeredSkills.includes(s)).map((s) => (
+                  {ALL_SKILLS_SUGGESTIONS.filter(
+                    (s) => !offeredSkills.includes(s),
+                  ).map((s) => (
                     <button
                       key={s}
                       type="button"
@@ -402,7 +460,9 @@ function ProfileSettingsForm({
           {showNeeded && (
             <section className="h-fit rounded-xl border border-slate-200 border-l-4 border-l-[#0758d8] bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xs font-semibold text-slate-800">Skills I Need</h2>
+                <h2 className="text-xs font-semibold text-slate-800">
+                  Skills I Need
+                </h2>
               </div>
 
               <div className="mt-3 flex gap-2">
@@ -433,19 +493,34 @@ function ProfileSettingsForm({
                   <button
                     key={skill}
                     type="button"
-                    onClick={() => setNeededSkills(neededSkills.filter((s) => s !== skill))}
+                    onClick={() =>
+                      setNeededSkills(neededSkills.filter((s) => s !== skill))
+                    }
                     className="inline-flex max-w-full items-center rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-[#2f66e7] transition hover:bg-blue-200 group"
                     title="Click to remove"
                   >
-                    <span className="truncate">{skill} <span className="text-blue-500/80 group-hover:text-blue-800 ml-0.5">×</span></span>
+                    <span className="truncate">
+                      {skill}{" "}
+                      <span className="text-blue-500/80 group-hover:text-blue-800 ml-0.5">
+                        ×
+                      </span>
+                    </span>
                   </button>
                 ))}
               </div>
             </section>
           )}
 
-          <NotificationSettings />
-          <PrivacySettings />
+          <NotificationSettings
+            emailNotifications={emailNotifications}
+            pushNotifications={pushNotifications}
+            onEmailNotificationsChange={setEmailNotifications}
+            onPushNotificationsChange={setPushNotifications}
+          />
+          <PrivacySettings
+            profileVisibility={profileVisibility}
+            onProfileVisibilityChange={setProfileVisibility}
+          />
           <DangerZone />
         </div>
       </div>
@@ -454,57 +529,175 @@ function ProfileSettingsForm({
 }
 
 function LoginSecurity() {
+  const { firebaseUser } = useAuth();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordStatus, setPasswordStatus] = useState<
+    "success" | "error" | ""
+  >("");
+  const [passwordMessage, setPasswordMessage] = useState("");
+
+  const resetPasswordForm = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+  const handleUpdatePassword = async () => {
+    setPasswordStatus("");
+    setPasswordMessage("");
+
+    if (!firebaseUser?.email) {
+      setPasswordStatus("error");
+      setPasswordMessage("No signed-in email account was found.");
+      return;
+    }
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordStatus("error");
+      setPasswordMessage("Please fill in all password fields.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordStatus("error");
+      setPasswordMessage("New password must be at least 6 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordStatus("error");
+      setPasswordMessage("New password and confirmation do not match.");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+
+    try {
+      const credential = EmailAuthProvider.credential(
+        firebaseUser.email,
+        currentPassword,
+      );
+      await reauthenticateWithCredential(firebaseUser, credential);
+      await updatePassword(firebaseUser, newPassword);
+      resetPasswordForm();
+      setPasswordStatus("success");
+      setPasswordMessage("Password updated successfully.");
+    } catch (err: unknown) {
+      setPasswordStatus("error");
+      setPasswordMessage(
+        err instanceof Error
+          ? err.message
+          : "Failed to update password. Please try again.",
+      );
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
   return (
     <section className="rounded-xl border border-slate-200 border-t-4 border-t-[#0758d8] bg-white p-5 shadow-sm">
-      <SectionTitle icon={<LockIcon className="h-4 w-4" />} title="Login & Security" />
+      <SectionTitle
+        icon={<LockIcon className="h-4 w-4" />}
+        title="Login & Security"
+      />
 
       <form className="mt-4 grid gap-4">
         <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
           Current Password
           <input
             type="password"
-            defaultValue="********"
-            disabled
-            className="h-9 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-400 outline-none cursor-not-allowed"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+            autoComplete="current-password"
+            className="h-9 min-w-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
           />
         </label>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-          <Field label="New Password" type="password" />
-          <Field label="Confirm New" type="password" />
+          <Field
+            label="New Password"
+            type="password"
+            value={newPassword}
+            onChange={setNewPassword}
+            autoComplete="new-password"
+          />
+          <Field
+            label="Confirm New"
+            type="password"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            autoComplete="new-password"
+          />
         </div>
+        {passwordMessage && (
+          <p
+            className={`rounded-md px-3 py-2 text-xs font-semibold ${
+              passwordStatus === "success"
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-red-50 text-red-700"
+            }`}
+          >
+            {passwordMessage}
+          </p>
+        )}
         <button
           type="button"
-          disabled
-          className="h-9 rounded-md bg-slate-100 px-4 text-xs font-bold text-slate-400 cursor-not-allowed"
+          onClick={handleUpdatePassword}
+          disabled={isUpdatingPassword}
+          className="h-9 rounded-md bg-[#0758d8] px-4 text-xs font-bold text-white transition hover:bg-[#0648b4] disabled:opacity-60"
         >
-          Update Password (Firebase Managed)
+          {isUpdatingPassword ? "Updating..." : "Update Password"}
         </button>
       </form>
     </section>
   );
 }
 
-function NotificationSettings() {
+function NotificationSettings({
+  emailNotifications,
+  pushNotifications,
+  onEmailNotificationsChange,
+  onPushNotificationsChange,
+}: {
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  onEmailNotificationsChange: (checked: boolean) => void;
+  onPushNotificationsChange: (checked: boolean) => void;
+}) {
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <SectionTitle icon={<BellIcon className="h-4 w-4" />} title="Notifications" />
+      <SectionTitle
+        icon={<BellIcon className="h-4 w-4" />}
+        title="Notifications"
+      />
 
       <div className="mt-4 grid gap-4">
         <ToggleRow
           title="Email Notifications"
           description="Weekly summaries and messages"
-          checked
+          checked={emailNotifications}
+          onChange={onEmailNotificationsChange}
         />
         <ToggleRow
           title="Push Notifications"
           description="Real-time alerts for skill matches"
+          checked={pushNotifications}
+          onChange={onPushNotificationsChange}
         />
       </div>
     </section>
   );
 }
 
-function PrivacySettings() {
+function PrivacySettings({
+  profileVisibility,
+  onProfileVisibilityChange,
+}: {
+  profileVisibility: boolean;
+  onProfileVisibilityChange: (checked: boolean) => void;
+}) {
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <SectionTitle icon={<EyeIcon className="h-4 w-4" />} title="Privacy" />
@@ -513,7 +706,8 @@ function PrivacySettings() {
         <ToggleRow
           title="Profile Visibility"
           description="Allow non-members to view your profile"
-          checked
+          checked={profileVisibility}
+          onChange={onProfileVisibilityChange}
           color="teal"
         />
       </div>
@@ -521,8 +715,8 @@ function PrivacySettings() {
       <div className="mt-4 flex gap-2.5 rounded-md border border-teal-100 bg-teal-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-teal-700">
         <InfoIcon className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
-          Making your profile public helps potential external mentors find you, but
-          restricts personal contact details until a swap is accepted.
+          Making your profile public helps potential external mentors find you,
+          but restricts personal contact details until a swap is accepted.
         </p>
       </div>
     </section>
@@ -536,8 +730,8 @@ function DangerZone() {
         <div>
           <h2 className="text-xs font-bold text-red-700">Danger Zone</h2>
           <p className="mt-1 text-[11px] font-semibold leading-relaxed text-slate-600">
-            Permanently deactivate your account. This action is irreversible and all your
-            data, including swap history, will be removed.
+            Permanently deactivate your account. This action is irreversible and
+            all your data, including swap history, will be removed.
           </p>
         </div>
         <button
@@ -555,18 +749,24 @@ function DangerZone() {
 function Field({
   label,
   type = "text",
-  defaultValue = "",
+  value,
+  onChange,
+  autoComplete,
 }: {
   label: string;
   type?: string;
-  defaultValue?: string;
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete?: string;
 }) {
   return (
     <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
       {label}
       <input
         type={type}
-        defaultValue={defaultValue}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        autoComplete={autoComplete}
         className="h-9 min-w-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
       />
     </label>
@@ -585,16 +785,20 @@ function SectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
 function ToggleRow({
   title,
   description,
-  checked = false,
+  checked,
+  onChange,
   color = "blue",
 }: {
   title: string;
   description: string;
-  checked?: boolean;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
   color?: "blue" | "teal";
 }) {
   const checkedColor =
-    color === "teal" ? "peer-checked:bg-[#62ead8]" : "peer-checked:bg-[#0758d8]";
+    color === "teal"
+      ? "peer-checked:bg-[#62ead8]"
+      : "peer-checked:bg-[#0758d8]";
 
   return (
     <label className="flex items-center justify-between gap-4">
@@ -604,7 +808,12 @@ function ToggleRow({
           {description}
         </span>
       </span>
-      <input type="checkbox" defaultChecked={checked} className="peer sr-only" />
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="peer sr-only"
+      />
       <span
         className={`h-5 w-9 shrink-0 rounded-full bg-slate-300 p-0.5 transition after:block after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:after:translate-x-4 ${checkedColor}`}
       />

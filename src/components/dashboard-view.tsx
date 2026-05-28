@@ -15,7 +15,7 @@ type DashboardViewProps = {
 
 export default function DashboardView({ role }: DashboardViewProps) {
   const { userProfile, loading } = useAuth();
-  
+
   // Stats States
   const [buyerActiveRequests, setBuyerActiveRequests] = useState(0);
   const [buyerCompletedRequests, setBuyerCompletedRequests] = useState(0);
@@ -30,15 +30,17 @@ export default function DashboardView({ role }: DashboardViewProps) {
 
     async function fetchStats() {
       try {
-
         // 1. Fetch Buyer Stats
-        const buyerQuery = query(collection(db, "requests"), where("buyerId", "==", uid));
+        const buyerQuery = query(
+          collection(db, "requests"),
+          where("buyerId", "==", uid),
+        );
         const buyerSnapshot = await getDocs(buyerQuery);
         let activeB = 0;
         let completedB = 0;
         buyerSnapshot.forEach((doc) => {
           const status = doc.data().status;
-          if (status === "completed") {
+          if (status === "completed" && doc.data().providerReview) {
             completedB++;
           } else if (status !== "rejected") {
             activeB++;
@@ -48,7 +50,10 @@ export default function DashboardView({ role }: DashboardViewProps) {
         setBuyerCompletedRequests(completedB);
 
         // 2. Fetch Provider Stats
-        const providerQuery = query(collection(db, "requests"), where("providerId", "==", uid));
+        const providerQuery = query(
+          collection(db, "requests"),
+          where("providerId", "==", uid),
+        );
         const providerSnapshot = await getDocs(providerQuery);
         let incomingP = 0;
         let activeP = 0;
@@ -58,10 +63,15 @@ export default function DashboardView({ role }: DashboardViewProps) {
         providerSnapshot.forEach((doc) => {
           const data = doc.data();
           const status = data.status;
-          
+
           if (status === "pending") {
             incomingP++;
-          } else if (status === "working" || status === "revision" || status === "done") {
+          } else if (
+            status === "working" ||
+            status === "revision" ||
+            status === "done" ||
+            status === "review_pending"
+          ) {
             activeP++;
           } else if (status === "completed") {
             if (data.review && typeof data.review.rating === "number") {
@@ -75,7 +85,9 @@ export default function DashboardView({ role }: DashboardViewProps) {
         setProviderActiveJobs(activeP);
         setProviderReviewCount(reviewsCount);
         if (reviewsCount > 0) {
-          setProviderAvgRating(parseFloat((totalStars / reviewsCount).toFixed(1)));
+          setProviderAvgRating(
+            parseFloat((totalStars / reviewsCount).toFixed(1)),
+          );
         } else {
           setProviderAvgRating(0.0);
         }
@@ -101,7 +113,9 @@ export default function DashboardView({ role }: DashboardViewProps) {
   if (!userProfile) {
     return (
       <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">Please sign in to view dashboard.</p>
+        <p className="text-sm text-slate-500">
+          Please sign in to view dashboard.
+        </p>
       </div>
     );
   }
@@ -123,8 +137,8 @@ export default function DashboardView({ role }: DashboardViewProps) {
             {userRole === "both"
               ? "Use both buyer and provider tools together without switching accounts."
               : userRole === "provider"
-              ? "Manage your incoming requests, active swap sessions, and student feedback."
-              : "Track your active swap requests, saved providers, and ratings from one place."}
+                ? "Manage your incoming requests, active swap sessions, and student feedback."
+                : "Track your active swap requests, saved providers, and ratings from one place."}
           </p>
 
           {/* Dynamic Stat Cards */}
@@ -132,16 +146,28 @@ export default function DashboardView({ role }: DashboardViewProps) {
             {userRole === "buyer" && (
               <>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-600">Active Requests</p>
-                  <p className="mt-2 text-3xl font-bold text-slate-900">{buyerActiveRequests}</p>
+                  <p className="text-sm font-semibold text-slate-600">
+                    Active Requests
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-slate-900">
+                    {buyerActiveRequests}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-600">Swaps Completed</p>
-                  <p className="mt-2 text-3xl font-bold text-slate-900">{buyerCompletedRequests}</p>
+                  <p className="text-sm font-semibold text-slate-600">
+                    Swaps Completed
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-slate-900">
+                    {buyerCompletedRequests}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-600">University Affiliation</p>
-                  <p className="mt-2.5 text-base font-bold text-blue-700 truncate">{userProfile.university || "Stanford University"}</p>
+                  <p className="text-sm font-semibold text-slate-600">
+                    University Affiliation
+                  </p>
+                  <p className="mt-2.5 text-base font-bold text-blue-700 truncate">
+                    {userProfile.university || "Stanford University"}
+                  </p>
                 </div>
               </>
             )}
@@ -149,17 +175,32 @@ export default function DashboardView({ role }: DashboardViewProps) {
             {userRole === "provider" && (
               <>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-600">Incoming Requests</p>
-                  <p className="mt-2 text-3xl font-bold text-amber-600">{providerIncomingRequests}</p>
+                  <p className="text-sm font-semibold text-slate-600">
+                    Incoming Requests
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-amber-600">
+                    {providerIncomingRequests}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-600">Active Swaps</p>
-                  <p className="mt-2 text-3xl font-bold text-blue-700">{providerActiveJobs}</p>
+                  <p className="text-sm font-semibold text-slate-600">
+                    Active Swaps
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-blue-700">
+                    {providerActiveJobs}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-600">Average Rating</p>
+                  <p className="text-sm font-semibold text-slate-600">
+                    Average Rating
+                  </p>
                   <p className="mt-2 text-3xl font-bold text-emerald-600">
-                    {providerReviewCount > 0 ? providerAvgRating.toFixed(1) : "–"} <span className="text-sm text-slate-400">({providerReviewCount} reviews)</span>
+                    {providerReviewCount > 0
+                      ? providerAvgRating.toFixed(1)
+                      : "–"}{" "}
+                    <span className="text-sm text-slate-400">
+                      ({providerReviewCount} reviews)
+                    </span>
                   </p>
                 </div>
               </>
@@ -168,17 +209,32 @@ export default function DashboardView({ role }: DashboardViewProps) {
             {userRole === "both" && (
               <>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-600">Learning Requests</p>
-                  <p className="mt-2 text-3xl font-bold text-blue-700">{buyerActiveRequests}</p>
+                  <p className="text-sm font-semibold text-slate-600">
+                    Learning Requests
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-blue-700">
+                    {buyerActiveRequests}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-600">Teaching Swaps</p>
-                  <p className="mt-2 text-3xl font-bold text-emerald-600">{providerIncomingRequests + providerActiveJobs}</p>
+                  <p className="text-sm font-semibold text-slate-600">
+                    Teaching Swaps
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-emerald-600">
+                    {providerIncomingRequests + providerActiveJobs}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-600">Average Swap Rating</p>
+                  <p className="text-sm font-semibold text-slate-600">
+                    Average Swap Rating
+                  </p>
                   <p className="mt-2 text-3xl font-bold text-amber-500">
-                    {providerReviewCount > 0 ? providerAvgRating.toFixed(1) : "–"} <span className="text-sm text-slate-400">({providerReviewCount})</span>
+                    {providerReviewCount > 0
+                      ? providerAvgRating.toFixed(1)
+                      : "–"}{" "}
+                    <span className="text-sm text-slate-400">
+                      ({providerReviewCount})
+                    </span>
                   </p>
                 </div>
               </>
@@ -197,7 +253,9 @@ export default function DashboardView({ role }: DashboardViewProps) {
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
                     Buyer Details
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Your activity as a skill learner</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Your activity as a skill learner
+                  </p>
                 </div>
                 <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600">
                   Active Buyer
@@ -205,16 +263,26 @@ export default function DashboardView({ role }: DashboardViewProps) {
               </div>
               <div className="mt-4 space-y-3.5">
                 <div className="flex items-center justify-between text-xs sm:text-sm">
-                  <span className="text-slate-500">Active Service Requests</span>
-                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">{buyerActiveRequests}</span>
+                  <span className="text-slate-500">
+                    Active Service Requests
+                  </span>
+                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                    {buyerActiveRequests}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-xs sm:text-sm">
                   <span className="text-slate-500">Swaps Completed</span>
-                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">{buyerCompletedRequests}</span>
+                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                    {buyerCompletedRequests}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-xs sm:text-sm pt-2 border-t border-slate-50">
-                  <span className="text-slate-600 font-medium">Estimated Swaps Spent</span>
-                  <span className="font-bold text-[#2f66e7]">{buyerCompletedRequests} Swaps</span>
+                  <span className="text-slate-600 font-medium">
+                    Estimated Swaps Spent
+                  </span>
+                  <span className="font-bold text-[#2f66e7]">
+                    {buyerCompletedRequests} Swaps
+                  </span>
                 </div>
               </div>
               <div className="mt-5">
@@ -235,7 +303,9 @@ export default function DashboardView({ role }: DashboardViewProps) {
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                     Provider Details
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Your activity as a skill expert</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Your activity as a skill expert
+                  </p>
                 </div>
                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-600">
                   Active Provider
@@ -244,15 +314,26 @@ export default function DashboardView({ role }: DashboardViewProps) {
               <div className="mt-4 space-y-3.5">
                 <div className="flex items-center justify-between text-xs sm:text-sm">
                   <span className="text-slate-500">Incoming Peer Requests</span>
-                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">{providerIncomingRequests}</span>
+                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                    {providerIncomingRequests}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-xs sm:text-sm">
                   <span className="text-slate-500">Active Teaching Swaps</span>
-                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">{providerActiveJobs}</span>
+                  <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                    {providerActiveJobs}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-xs sm:text-sm pt-2 border-t border-slate-50">
-                  <span className="text-slate-600 font-medium">Ratings & Feedback</span>
-                  <span className="font-bold text-[#1caa88]">{providerReviewCount > 0 ? providerAvgRating.toFixed(1) : "–"} ★ ({providerReviewCount} reviews)</span>
+                  <span className="text-slate-600 font-medium">
+                    Ratings & Feedback
+                  </span>
+                  <span className="font-bold text-[#1caa88]">
+                    {providerReviewCount > 0
+                      ? providerAvgRating.toFixed(1)
+                      : "–"}{" "}
+                    ★ ({providerReviewCount} reviews)
+                  </span>
                 </div>
               </div>
               <div className="mt-5">
@@ -276,9 +357,13 @@ export default function DashboardView({ role }: DashboardViewProps) {
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700">
                   Grow as a Peer
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900">Share your expertise and start earning!</h3>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  Share your expertise and start earning!
+                </h3>
                 <p className="max-w-2xl text-xs text-slate-600 leading-relaxed">
-                  Join our verified university provider network in Sri Lanka. List your skills in Programming, Design, Photography, or Academics, and earn rewards or swap services.
+                  Join our verified university provider network in Sri Lanka.
+                  List your skills in Programming, Design, Photography, or
+                  Academics, and earn rewards or swap services.
                 </p>
               </div>
               <Link
@@ -300,9 +385,12 @@ export default function DashboardView({ role }: DashboardViewProps) {
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700">
                   Learn & Swap
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900">Looking for other student services?</h3>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  Looking for other student services?
+                </h3>
                 <p className="max-w-2xl text-xs text-slate-600 leading-relaxed">
-                  Become a Buyer to purchase services from other talented peers, request specialized assignment/project help, and trade skills.
+                  Become a Buyer to purchase services from other talented peers,
+                  request specialized assignment/project help, and trade skills.
                 </p>
               </div>
               <Link
