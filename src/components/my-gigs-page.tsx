@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 
@@ -12,13 +12,33 @@ type MyGigsPageContentProps = {
   role?: "provider" | "both";
 };
 
+interface Gig {
+  id: string;
+  title: string;
+  rating: string;
+  reviews: number;
+  category: string;
+  points: number;
+  image: string;
+  rawIndex: number;
+}
+
+interface RequestItem {
+  id: string;
+  status?: string;
+  providerId?: string;
+  review?: {
+    rating?: number;
+  };
+}
+
 export default function MyGigsPageContent({
   activeTab = "offered",
   role = "provider",
 }: MyGigsPageContentProps) {
-  const { userProfile, loading: authLoading } = useAuth();
-  const [gigs, setGigs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { userProfile, loading: authLoading, refreshProfile } = useAuth();
+  const [gigs, setGigs] = useState<Gig[]>([]);
+  const [dbLoading, setDbLoading] = useState(true);
   const [stats, setStats] = useState({
     trustScore: "99%",
     totalSwaps: "0",
@@ -31,9 +51,16 @@ export default function MyGigsPageContent({
   const [currentPage, setCurrentPage] = useState(1);
   const cardsPerPage = 4;
 
+  const [prevActiveTab, setPrevActiveTab] = useState(activeTab);
+  if (activeTab !== prevActiveTab) {
+    setPrevActiveTab(activeTab);
+    setCurrentPage(1);
+  }
+
+  const loading = authLoading || (userProfile ? dbLoading : false);
+
   useEffect(() => {
     if (!userProfile) {
-      if (!authLoading) setLoading(false);
       return;
     }
     const providerId = userProfile.uid;
@@ -46,9 +73,15 @@ export default function MyGigsPageContent({
           where("providerId", "==", providerId)
         );
         const qSnap = await getDocs(q);
-        const reqs: any[] = [];
+        const reqs: RequestItem[] = [];
         qSnap.forEach((docSnap) => {
-          reqs.push({ id: docSnap.id, ...docSnap.data() });
+          const data = docSnap.data();
+          reqs.push({
+            id: docSnap.id,
+            status: data.status,
+            providerId: data.providerId,
+            review: data.review,
+          });
         });
 
         const completedRequests = reqs.filter((r) => r.status === "completed");
@@ -57,7 +90,7 @@ export default function MyGigsPageContent({
         // Calculate dynamic average rating
         const ratings = completedRequests
           .filter((r) => r.review && typeof r.review.rating === "number")
-          .map((r) => r.review.rating);
+          .map((r) => r.review!.rating!);
         const avgRating = ratings.length > 0 
           ? parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1))
           : 5.0;
@@ -91,6 +124,7 @@ export default function MyGigsPageContent({
             category: skill,
             points: 30 + (index * 5),
             image,
+            rawIndex: index,
           };
         });
 
@@ -98,17 +132,36 @@ export default function MyGigsPageContent({
       } catch (err) {
         console.error("Error loading provider data in my gigs page:", err);
       } finally {
-        setLoading(false);
+        setDbLoading(false);
       }
     }
 
     loadProviderData();
   }, [userProfile, authLoading]);
 
-  // Reset pagination on tab change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab]);
+  // Pagination is reset during render when activeTab changes
+
+  const handleDeleteGig = async (rawIndex: number) => {
+    if (!userProfile) return;
+    const confirmDelete = window.confirm("Are you sure you want to delete this offered skill?");
+    if (!confirmDelete) return;
+
+    try {
+      const userRef = doc(db, "users", userProfile.uid);
+      const existingSkills = (userProfile.providerProfile?.skills || []) as string[];
+      const updatedSkills = existingSkills.filter((_, idx) => idx !== rawIndex);
+
+      await updateDoc(userRef, {
+        "providerProfile.skills": updatedSkills,
+      });
+
+      await refreshProfile();
+      alert("Offered skill removed successfully.");
+    } catch (err) {
+      console.error("Error removing skill gig:", err);
+      alert("Failed to delete the skill. Please try again.");
+    }
+  };
 
   const isManageTab = activeTab === "manage";
 
@@ -224,8 +277,9 @@ export default function MyGigsPageContent({
                         ‖
                       </button>
                       <button
+                        onClick={() => handleDeleteGig(gig.rawIndex)}
                         aria-label="Delete gig"
-                        className="h-8 w-8 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-500 flex items-center justify-center transition"
+                        className="h-8 w-8 rounded-lg border border-slate-300 hover:bg-slate-50 text-red-500 hover:text-red-700 flex items-center justify-center transition"
                       >
                         🗑
                       </button>
@@ -237,7 +291,7 @@ export default function MyGigsPageContent({
           </div>
         ) : (
           <div className="mt-5 rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500 shadow-sm">
-            You don't have any gigs listed under this tab.
+            {"You don't have any gigs listed under this tab."}
           </div>
         )}
 
