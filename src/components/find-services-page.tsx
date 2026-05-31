@@ -8,6 +8,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import type { UserProfile } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
 
 type GigCardData = {
   id: string;
@@ -107,6 +108,7 @@ type FindServicesPageContentProps = {
 };
 
 export default function FindServicesPageContent({ role }: FindServicesPageContentProps) {
+  const { userProfile } = useAuth();
   const [gigs, setGigs] = useState<GigCardData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -199,6 +201,11 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
   const filteredGigs = useMemo(() => {
     return gigs
       .filter((gig) => {
+        // Exclude current user's own gigs/profiles from search
+        if (userProfile && gig.providerId === userProfile.uid) {
+          return false;
+        }
+
         const queryLower = searchQuery.toLowerCase();
         const matchesQuery =
           gig.title.toLowerCase().includes(queryLower) ||
@@ -238,7 +245,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
         if (sortBy === "Most Reviews") return b.reviews - a.reviews;
         return b.match - a.match;
       });
-  }, [availabilityFilter, categoryFilter, gigs, ratingFilter, searchQuery, sortBy, universityFilter]);
+  }, [availabilityFilter, categoryFilter, gigs, ratingFilter, searchQuery, sortBy, universityFilter, userProfile]);
 
   const cardsPerPage = 4;
   const totalPages = Math.ceil(filteredGigs.length / cardsPerPage);
