@@ -261,10 +261,14 @@ export default function ProviderProfilePublicPage({
 
           // Generate offered gigs based on the skills stored in providerProfile
           const skills: string[] = u.providerProfile?.skills || [];
+          const customImages: string[] = u.providerProfile?.gigImages || [];
           const gigs: GigData[] = skills.map((skill: string, index: number) => {
-            let image = "/img/package%201.jpg";
-            if (index % 3 === 1) image = "/img/package%202.jpg";
-            if (index % 3 === 2) image = "/img/package%203.jpg";
+            let image = customImages[index];
+            if (!image) {
+              image = "/img/package%201.jpg";
+              if (index % 3 === 1) image = "/img/package%202.jpg";
+              if (index % 3 === 2) image = "/img/package%203.jpg";
+            }
             return {
               id: `gig-${index}`,
               title: `Collaboration: ${skill}`,
@@ -367,7 +371,7 @@ export default function ProviderProfilePublicPage({
   }
 
   const firstName = profile.name.split(" ")[0];
-  const messageHref = role ? scopedHref("/chats", role) : "/get-started";
+  const messageHref = role ? `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(providerId)}` : "/get-started";
   const favoriteHref = role ? scopedHref("/favorites", role) : "/get-started";
   const reportHref = role
     ? `/report-profile/${providerId}?role=${role}`

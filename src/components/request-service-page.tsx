@@ -18,6 +18,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import { type UserProfile } from "@/lib/auth";
+import { UNIVERSITIES } from "@/lib/universities";
 
 const skillCategories = [
   "Programming",
@@ -374,13 +375,19 @@ function RequestForm({
             <span className="text-xs font-semibold text-slate-600">
               Preferred University
             </span>
-            <input
-              type="text"
-              placeholder="e.g., State Uni"
+            <select
               value={preferredUniv}
               onChange={(e) => setPreferredUniv(e.target.value)}
+              title="Preferred University"
               className={fieldClassName}
-            />
+            >
+              <option value="">Any University</option>
+              {UNIVERSITIES.map((uni) => (
+                <option key={uni} value={uni}>
+                  {uni}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className="grid min-w-0 gap-1.5">

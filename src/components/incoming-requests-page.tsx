@@ -15,6 +15,7 @@ import {
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { scopedHref } from "@/lib/role-routes";
+import { UNIVERSITIES } from "@/lib/universities";
 
 type IncomingRequestsTab = "new" | "accepted" | "completed" | "declined";
 
@@ -315,9 +316,7 @@ function NewRequestsView({
             value={university}
             options={[
               "Any University",
-              "University of Colombo",
-              "University of Moratuwa",
-              "SLIIT",
+              ...UNIVERSITIES,
             ]}
             onChange={setUniversity}
           />

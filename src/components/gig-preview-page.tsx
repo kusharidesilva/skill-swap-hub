@@ -8,6 +8,7 @@ import { collection, doc, getDoc, getDocs, query, where } from "firebase/firesto
 import { db } from "@/lib/firebase";
 import { scopedHref } from "@/lib/role-routes";
 import type { UserProfile } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
 
 type GigPreviewPageProps = {
   role: "buyer" | "provider" | "both";
@@ -95,6 +96,7 @@ export default function GigPreviewPage({
   providerId,
   skillIndex = 0,
 }: GigPreviewPageProps) {
+  const { userProfile } = useAuth();
   const [gig, setGig] = useState<GigPreviewData>(fallbackGig);
   const [loading, setLoading] = useState(Boolean(providerId));
 
@@ -164,7 +166,7 @@ export default function GigPreviewPage({
           rating: reviewCount > 0 ? Number((totalRating / reviewCount).toFixed(1)) : 5,
           reviews: reviewCount,
           reviewCards,
-          image: gigImages[safeSkillIndex % gigImages.length],
+          image: (profile?.gigImages && profile.gigImages[safeSkillIndex]) || gigImages[safeSkillIndex % gigImages.length],
           value: `${20 + (safeSkillIndex % 3) * 5} Points`,
           delivery: formatAvailability(profile?.availability) || "Flexible",
           match: 95,
@@ -194,8 +196,11 @@ export default function GigPreviewPage({
     [gig.proficiency, gig.skill],
   );
 
+  const isOwnGig = userProfile && userProfile.uid === gig.providerId;
+  const editHref = `/edit-gig/${role}/gig-${skillIndex}`;
+
   const requestHref = `${scopedHref("/request-service", role)}?providerId=${encodeURIComponent(gig.providerId)}`;
-  const chatHref = scopedHref("/chats", role);
+  const chatHref = `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(gig.providerId)}&subject=${encodeURIComponent(gig.title)}`;
 
   if (loading) {
     return (
@@ -278,8 +283,10 @@ export default function GigPreviewPage({
             packageItems={packageItems}
             requestHref={requestHref}
             chatHref={chatHref}
+            isOwnGig={Boolean(isOwnGig)}
+            editHref={editHref}
           />
-          <SkillMatchCard match={gig.match} skill={gig.skill} />
+          {!isOwnGig && <SkillMatchCard match={gig.match} skill={gig.skill} />}
         </aside>
       </div>
     </div>
@@ -317,11 +324,15 @@ function PackageCard({
   packageItems,
   requestHref,
   chatHref,
+  isOwnGig,
+  editHref,
 }: {
   gig: GigPreviewData;
   packageItems: string[];
   requestHref: string;
   chatHref: string;
+  isOwnGig: boolean;
+  editHref: string;
 }) {
   return (
     <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -348,19 +359,30 @@ function PackageCard({
           ))}
         </ul>
 
-        <Link
-          href={requestHref}
-          className="inline-flex h-10 w-full items-center justify-center rounded-md bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
-        >
-          Request Skill
-        </Link>
-        <Link
-          href={chatHref}
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-        >
-          <MailIcon className="h-4 w-4" />
-          Message Provider
-        </Link>
+        {isOwnGig ? (
+          <Link
+            href={editHref}
+            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
+          >
+            Edit Gig Settings
+          </Link>
+        ) : (
+          <>
+            <Link
+              href={requestHref}
+              className="inline-flex h-10 w-full items-center justify-center rounded-md bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
+            >
+              Request Skill
+            </Link>
+            <Link
+              href={chatHref}
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <MailIcon className="h-4 w-4" />
+              Message Provider
+            </Link>
+          </>
+        )}
       </div>
 
       <div className="bg-[#f1f4ff] px-4 py-3 text-center text-[11px] font-semibold text-slate-500">
@@ -544,6 +566,8 @@ function getInitials(name: string) {
     .toUpperCase()
     .slice(0, 2);
 }
+
+
 
 function CheckCircleIcon({ className }: { className?: string }) {
   return (

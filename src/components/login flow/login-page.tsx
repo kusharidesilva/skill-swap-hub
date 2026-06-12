@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { loginUser } from "@/lib/auth";
+import { isUniversityEmail } from "@/lib/universities";
 
 type Badge = {
   label: string;
@@ -18,11 +19,16 @@ const badges: Badge[] = [
   { label: "University Exclusive", icon: "cap" },
 ];
 
-const loginSchema = z.object({
-  email: z.string().email("Enter a valid university email."),
-  password: z.string().min(6, "Password must be at least 6 characters."),
-  remember: z.boolean().optional(),
-});
+const loginSchema = z
+  .object({
+    email: z.string().email("Enter a valid university email."),
+    password: z.string().min(6, "Password must be at least 6 characters."),
+    remember: z.boolean().optional(),
+  })
+  .refine((v) => isUniversityEmail(v.email), {
+    message: "Only official campus emails are allowed to sign in.",
+    path: ["email"],
+  });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 

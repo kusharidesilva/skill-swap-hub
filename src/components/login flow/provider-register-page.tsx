@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { upgradeToProvider, checkBuyerHistory } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
+import { UNIVERSITIES, isEmailAllowedForUniversity } from "@/lib/universities";
 
 const ALL_SKILLS = [
   "Programming",
@@ -127,6 +128,10 @@ export default function ProviderRegisterPage() {
     setServerError("");
     if (!firebaseUser) {
       setServerError("You must be logged in to upgrade your account.");
+      return;
+    }
+    if (firebaseUser.email && !isEmailAllowedForUniversity(firebaseUser.email, data.university)) {
+      setServerError("Your registered email domain does not match the selected university.");
       return;
     }
     try {
@@ -276,13 +281,18 @@ export default function ProviderRegisterPage() {
                     <label className="text-[11px] font-semibold text-slate-500">
                       University Name
                     </label>
-                    <input
+                    <select
                       id="provider-university"
-                      type="text"
-                      placeholder="Your University Name"
                       {...register("university")}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#2b62e6]"
-                    />
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600 focus:outline-none focus:border-[#2b62e6]"
+                    >
+                      <option value="">Select your University</option>
+                      {UNIVERSITIES.map((uni) => (
+                        <option key={uni} value={uni}>
+                          {uni}
+                        </option>
+                      ))}
+                    </select>
                     {errors.university && (
                       <p className="text-[10px] text-red-500">
                         {errors.university.message}

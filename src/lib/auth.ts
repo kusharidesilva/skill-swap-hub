@@ -38,6 +38,7 @@ export interface UserProfile {
     proficiency: string;
     availability: string[];
     bio: string;
+    gigImages?: string[];
   };
   settings?: {
     emailNotifications: boolean;

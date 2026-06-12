@@ -112,10 +112,14 @@ export default function MyGigsPageContent({
 
         // Generate actual offered gigs based on the skills stored in providerProfile
         const skills: string[] = userProfile?.providerProfile?.skills || [];
+        const customImages: string[] = userProfile?.providerProfile?.gigImages || [];
         const dbGigs = skills.map((skill: string, index: number) => {
-          let image = "/img/package%201.jpg";
-          if (index % 3 === 1) image = "/img/package%202.jpg";
-          if (index % 3 === 2) image = "/img/package%203.jpg";
+          let image = customImages[index];
+          if (!image) {
+            image = "/img/package%201.jpg";
+            if (index % 3 === 1) image = "/img/package%202.jpg";
+            if (index % 3 === 2) image = "/img/package%203.jpg";
+          }
           return {
             id: `gig-${index}`,
             title: `Collaboration: ${skill}`,
@@ -149,10 +153,13 @@ export default function MyGigsPageContent({
     try {
       const userRef = doc(db, "users", userProfile.uid);
       const existingSkills = (userProfile.providerProfile?.skills || []) as string[];
+      const existingImages = (userProfile.providerProfile?.gigImages || []) as string[];
       const updatedSkills = existingSkills.filter((_, idx) => idx !== rawIndex);
+      const updatedImages = existingImages.filter((_, idx) => idx !== rawIndex);
 
       await updateDoc(userRef, {
         "providerProfile.skills": updatedSkills,
+        "providerProfile.gigImages": updatedImages,
       });
 
       await refreshProfile();
@@ -233,19 +240,24 @@ export default function MyGigsPageContent({
                 className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col justify-between"
               >
                 <div>
-                  <div className="h-32 w-full overflow-hidden bg-slate-100 relative">
+                  <Link
+                    href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile?.uid || "")}&skillIndex=${gig.rawIndex}`}
+                    className="h-32 w-full overflow-hidden bg-slate-100 relative block"
+                  >
                     <Image
                       src={gig.image}
                       alt={gig.title}
                       fill
                       sizes="(max-w-780px) 100vw, 300px"
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover hover:scale-105 transition duration-300"
                     />
-                  </div>
+                  </Link>
 
                   <div className="p-3.5">
-                    <h2 className="text-sm font-bold leading-tight text-slate-900 line-clamp-2 min-h-[2.5rem]">
-                      {gig.title}
+                    <h2 className="text-sm font-bold leading-tight text-slate-900 line-clamp-2 min-h-[2.5rem] hover:text-[#1453c4] transition">
+                      <Link href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile?.uid || "")}&skillIndex=${gig.rawIndex}`}>
+                        {gig.title}
+                      </Link>
                     </h2>
                     <p className="mt-1.5 text-xs font-semibold text-slate-700">
                       <span className="text-teal-700">★</span> {gig.rating}{" "}

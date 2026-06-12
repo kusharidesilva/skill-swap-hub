@@ -1,15 +1,28 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import {
-  scopedHref,
-  type Role,
-} from "@/lib/role-routes";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
+import { 
+  collection, 
+  doc, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot, 
+  addDoc, 
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+  getDoc,
+  getDocs
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
+import { type Role } from "@/lib/role-routes";
 
 type Conversation = {
-  id: number;
+  id: string;
   name: string;
   skill: string;
   university: string;
@@ -18,84 +31,14 @@ type Conversation = {
   time: string;
   unread?: number;
   online?: boolean;
+  peerId: string;
 };
 
 type ChatMessage = {
-  id: number;
+  id: string;
   sender: "peer" | "me";
   text: string;
   time: string;
-};
-
-const conversations: Conversation[] = [
-  {
-    id: 1,
-    name: "Alex Rivera",
-    skill: "Python Data Analysis",
-    university: "Tech University",
-    avatar: "/img/chats/alex-rivera.jpg",
-    lastMessage: "Hey Alex! Thanks for reaching out...",
-    time: "10:42 AM",
-    online: true,
-  },
-  {
-    id: 2,
-    name: "Sarah Chen",
-    skill: "Advanced Calculus Tutoring",
-    university: "Science Faculty",
-    avatar: "/img/chats/sarah-chen.jpg",
-    lastMessage: "When are you free next week?",
-    time: "Yesterday",
-    unread: 2,
-  },
-  {
-    id: 3,
-    name: "Marcus Johnson",
-    skill: "Graphic Design Portfolio",
-    university: "Arts Institute",
-    avatar: "/img/chats/marcus-johnson.jpg",
-    lastMessage: "Sounds good, talk then!",
-    time: "Mon",
-  },
-];
-
-const messagesByConversation: Record<number, ChatMessage[]> = {
-  1: [
-    {
-      id: 1,
-      sender: "peer",
-      text: "Hi! I saw your request for help with pandas and numpy arrays. I'm available this Thursday at 2 PM if that works for you?",
-      time: "10:42 AM",
-    },
-    {
-      id: 2,
-      sender: "me",
-      text: "Hey Alex! Thanks for reaching out. Yes, Thursday at 2 PM works perfectly for me. Should we meet at the main library or do this over Zoom?",
-      time: "10:45 AM",
-    },
-  ],
-  2: [
-    {
-      id: 1,
-      sender: "peer",
-      text: "When are you free next week? I can help you go through limits and derivatives before your quiz.",
-      time: "Yesterday",
-    },
-  ],
-  3: [
-    {
-      id: 1,
-      sender: "me",
-      text: "I will send over my portfolio draft tonight.",
-      time: "Mon",
-    },
-    {
-      id: 2,
-      sender: "peer",
-      text: "Sounds good, talk then!",
-      time: "Mon",
-    },
-  ],
 };
 
 type ChatsPageProps = {
@@ -103,33 +46,220 @@ type ChatsPageProps = {
 };
 
 export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
-  const [activeId, setActiveId] = useState(conversations[0].id);
+  const { userProfile } = useAuth();
+  const searchParams = useSearchParams();
+  const peerIdParam = searchParams.get("peerId");
+  const subjectParam = searchParams.get("subject");
+
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [draftMessage, setDraftMessage] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const activeConversation =
-    conversations.find((conversation) => conversation.id === activeId) ??
-    conversations[0];
+  // 1. Check/create conversation when peerId is passed in URL query parameter
+  useEffect(() => {
+    if (!userProfile || !peerIdParam) return;
+
+    async function initializeConversation() {
+      const peerId = String(peerIdParam);
+      const currentUid = String(userProfile?.uid);
+      const currentName = String(userProfile?.name || "Student");
+      const currentUniv = String(userProfile?.university || "");
+
+      try {
+        const q = query(
+          collection(db, "chats"),
+          where("participants", "array-contains", currentUid)
+        );
+        const snap = await getDocs(q);
+        let existingChatId: string | null = null;
+
+        snap.forEach((d) => {
+          const data = d.data();
+          if (data.participants?.includes(peerId)) {
+            existingChatId = d.id;
+          }
+        });
+
+        if (existingChatId) {
+          setActiveId(existingChatId);
+        } else {
+          // Fetch peer info to initialize the chat doc
+          const peerSnap = await getDoc(doc(db, "users", peerId));
+          let peerName = "Student Partner";
+          let peerUniv = "University";
+          let peerSkill = subjectParam || "Skill Swap";
+
+          if (peerSnap.exists()) {
+            const peerData = peerSnap.data();
+            peerName = peerData.name || "Student Partner";
+            peerUniv = peerData.university || "University";
+          }
+
+          const newChatId = `${currentUid}_${peerId}`;
+          const chatDocRef = doc(db, "chats", newChatId);
+
+          await setDoc(chatDocRef, {
+            participants: [currentUid, peerId],
+            participantNames: {
+              [currentUid]: currentName,
+              [peerId]: peerName,
+            },
+            participantUniversities: {
+              [currentUid]: currentUniv,
+              [peerId]: peerUniv,
+            },
+            participantSkills: {
+              [currentUid]: "Skills Help",
+              [peerId]: peerSkill,
+            },
+            lastMessage: "Chat started",
+            updatedAt: serverTimestamp(),
+          });
+
+          setActiveId(newChatId);
+        }
+      } catch (err) {
+        console.error("Error initializing conversation:", err);
+      }
+    }
+
+    initializeConversation();
+  }, [userProfile, peerIdParam, subjectParam]);
+
+  // 2. Load list of conversations in real-time from Firestore
+  useEffect(() => {
+    if (!userProfile) return;
+
+    const q = query(
+      collection(db, "chats"),
+      where("participants", "array-contains", userProfile.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list: Conversation[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data();
+        const peerId = data.participants?.find((p: string) => p !== userProfile.uid) || "";
+        const name = data.participantNames?.[peerId] || "Student Partner";
+        const skill = data.participantSkills?.[peerId] || "Skill Exchange";
+        const university = data.participantUniversities?.[peerId] || "Sri Lankan University";
+
+        let timeStr = "Recently";
+        if (data.updatedAt) {
+          const date = data.updatedAt.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt);
+          timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        }
+
+        list.push({
+          id: d.id,
+          name,
+          skill,
+          university,
+          avatar: "", // rendered using Initials fallback
+          lastMessage: data.lastMessage || "",
+          time: timeStr,
+          peerId,
+        });
+      });
+
+      setConversations(list);
+      setLoading(false);
+
+      // Select first conversation if none is active
+      if (list.length > 0 && !activeId) {
+        setActiveId(list[0].id);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [userProfile, activeId]);
+
+  // 3. Load messages for the active conversation in real-time
+  useEffect(() => {
+    if (!activeId) return;
+
+    const messagesQuery = query(
+      collection(db, `chats/${activeId}/messages`),
+      orderBy("createdAt", "asc")
+    );
+
+    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+      const list: ChatMessage[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data();
+        let timeStr = "Recently";
+        if (data.createdAt) {
+          const date = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+          timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        }
+        list.push({
+          id: d.id,
+          sender: data.senderId === userProfile?.uid ? "me" : "peer",
+          text: data.text || "",
+          time: timeStr,
+        });
+      });
+      setMessages(list);
+    });
+
+    return () => unsubscribe();
+  }, [activeId, userProfile]);
+
+  // 4. Send Message Handler
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = draftMessage.trim();
+    if (!text || !activeId || !userProfile) return;
+
+    try {
+      await addDoc(collection(db, `chats/${activeId}/messages`), {
+        senderId: userProfile.uid,
+        text,
+        createdAt: serverTimestamp(),
+      });
+
+      await updateDoc(doc(db, "chats", activeId), {
+        lastMessage: text,
+        updatedAt: serverTimestamp(),
+      });
+
+      setDraftMessage("");
+    } catch (err) {
+      console.error("Error sending message:", err);
+    }
+  };
+
+  const activeConversation = conversations.find((conversation) => conversation.id === activeId) || null;
 
   const filteredConversations = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-
-    if (!query) {
-      return conversations;
-    }
+    const queryTerm = searchTerm.trim().toLowerCase();
+    if (!queryTerm) return conversations;
 
     return conversations.filter((conversation) =>
       [conversation.name, conversation.skill, conversation.lastMessage].some(
-        (value) => value.toLowerCase().includes(query),
-      ),
+        (val) => val.toLowerCase().includes(queryTerm)
+      )
     );
-  }, [searchTerm]);
+  }, [searchTerm, conversations]);
 
-  const messages = messagesByConversation[activeConversation.id] ?? [];
+  if (loading) {
+    return (
+      <div className="flex h-[400px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
+          <p className="text-sm text-slate-500">Loading your chats...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="grid min-h-[720px] lg:grid-cols-[320px_minmax(0,1fr)]">
+        {/* Sidebar */}
         <aside className="border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
           <div className="border-b border-slate-100 p-5">
             <div className="flex items-center justify-between gap-3">
@@ -140,7 +270,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
                 </p>
               </div>
               <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#0f4cbf]">
-                3 chats
+                {conversations.length} {conversations.length === 1 ? "chat" : "chats"}
               </span>
             </div>
 
@@ -156,41 +286,60 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
             </label>
           </div>
 
-          <div className="divide-y divide-slate-100">
-            {filteredConversations.map((conversation) => (
-              <ConversationButton
-                key={conversation.id}
-                conversation={conversation}
-                active={conversation.id === activeConversation.id}
-                onClick={() => setActiveId(conversation.id)}
-              />
-            ))}
+          <div className="divide-y divide-slate-100 overflow-y-auto max-h-[580px]">
+            {filteredConversations.length > 0 ? (
+              filteredConversations.map((conversation) => (
+                <ConversationButton
+                  key={conversation.id}
+                  conversation={conversation}
+                  active={conversation.id === activeConversation?.id}
+                  onClick={() => setActiveId(conversation.id)}
+                />
+              ))
+            ) : (
+              <div className="p-8 text-center text-sm text-slate-400">
+                No conversations found.
+              </div>
+            )}
           </div>
         </aside>
 
-        <div className="flex min-h-[720px] flex-col bg-[#eef2ff]">
-          <ChatHeader conversation={activeConversation} role={role} />
+        {/* Conversation Pane */}
+        {activeConversation ? (
+          <div className="flex min-h-[720px] flex-col bg-[#eef2ff]">
+            <ChatHeader conversation={activeConversation} role={role} />
 
-          <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8">
-            <div className="mb-6 flex justify-center">
-              <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-slate-400">
-                Today
-              </span>
+            <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8 max-h-[540px]">
+              <div className="space-y-4">
+                {messages.length > 0 ? (
+                  messages.map((message) => (
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      peerName={activeConversation.name}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center text-xs text-slate-400 pt-8">
+                    Send a message to start the conversation!
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  avatar={activeConversation.avatar}
-                />
-              ))}
-            </div>
+            <Composer value={draftMessage} onChange={setDraftMessage} onSubmit={handleSendMessage} />
           </div>
-
-          <Composer value={draftMessage} onChange={setDraftMessage} />
-        </div>
+        ) : (
+          <div className="flex min-h-[720px] flex-col items-center justify-center bg-[#eef2ff] p-8 text-center">
+            <div className="rounded-full bg-blue-100 p-4 text-[#2f66e7]">
+              <SendIcon className="h-8 w-8" />
+            </div>
+            <h2 className="mt-4 text-lg font-bold text-slate-800">Your Inbox</h2>
+            <p className="mt-1 text-sm text-slate-500 max-w-sm">
+              Select a conversation from the sidebar or request a skill swap to message other members.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -205,6 +354,13 @@ function ConversationButton({
   active: boolean;
   onClick: () => void;
 }) {
+  const initials = conversation.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
     <button
       type="button"
@@ -214,13 +370,9 @@ function ConversationButton({
       }`}
     >
       <div className="relative shrink-0">
-        <Image
-          src={conversation.avatar}
-          alt={conversation.name}
-          width={44}
-          height={44}
-          className="h-11 w-11 rounded-full object-cover"
-        />
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white shadow-sm">
+          {initials}
+        </div>
         {conversation.online ? (
           <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
         ) : null}
@@ -263,35 +415,23 @@ function ChatHeader({
   conversation: Conversation;
   role: Role;
 }) {
-  const peerSlug =
-    conversation.id === 1
-      ? "alex-rivera"
-      : conversation.id === 2
-        ? "sarah-chen"
-        : "marcus-johnson";
-
-  const peerParam =
-    conversation.id === 1
-      ? "alex"
-      : conversation.id === 2
-        ? "sarah"
-        : "marcus";
-
-  const peerProfileHref = `/provider-profile/${peerSlug}?role=${role}`;
-  const reportPeerHref = `/report-profile/${peerSlug}?role=${role}`;
+  const peerProfileHref = `/provider-profile/${conversation.peerId}?role=${role}`;
+  const reportPeerHref = `/report-profile/${conversation.peerId}?role=${role}`;
+  const initials = conversation.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <header className="border-b border-blue-200 bg-[#eef2ff] px-5 py-4 sm:px-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
           <div className="relative shrink-0">
-            <Image
-              src={conversation.avatar}
-              alt={conversation.name}
-              width={52}
-              height={52}
-              className="h-13 w-13 rounded-full object-cover"
-            />
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-base font-bold text-white shadow-md">
+              {initials}
+            </div>
             {conversation.online ? (
               <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-[#eef2ff] bg-emerald-500" />
             ) : null}
@@ -365,25 +505,27 @@ function HeaderActionButton({
 
 function MessageBubble({
   message,
-  avatar,
+  peerName,
 }: {
   message: ChatMessage;
-  avatar: string;
+  peerName: string;
 }) {
   const isMine = message.sender === "me";
+  const peerInitials = peerName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <div
       className={`flex items-end gap-3 ${isMine ? "justify-end" : "justify-start"}`}
     >
       {!isMine ? (
-        <Image
-          src={avatar}
-          alt=""
-          width={32}
-          height={32}
-          className="h-8 w-8 rounded-full object-cover"
-        />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-400 to-slate-500 text-xs font-bold text-white shadow-sm">
+          {peerInitials}
+        </div>
       ) : null}
 
       <div
@@ -402,8 +544,8 @@ function MessageBubble({
       </div>
 
       {isMine ? (
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-sm font-bold text-white">
-          U
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-sm font-bold text-white shadow-sm">
+          ME
         </span>
       ) : null}
     </div>
@@ -413,12 +555,14 @@ function MessageBubble({
 function Composer({
   value,
   onChange,
+  onSubmit,
 }: {
   value: string;
   onChange: (value: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
 }) {
   return (
-    <form className="border-t border-slate-200 bg-white/85 p-4">
+    <form onSubmit={onSubmit} className="border-t border-slate-200 bg-white/85 p-4">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -498,20 +642,6 @@ function UserIcon({ className }: { className?: string }) {
     >
       <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4z" />
       <path d="M4 20c1.7-3 5-4.5 8-4.5s6.3 1.5 8 4.5" />
-    </svg>
-  );
-}
-
-function StarIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path d="M12 3l2.6 5.4 5.9.9-4.3 4.1 1 5.9L12 16.8 6.8 19.3l1-5.9L3.5 9.3l5.9-.9z" />
     </svg>
   );
 }

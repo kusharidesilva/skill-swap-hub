@@ -9,6 +9,7 @@ import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import type { UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
+import { UNIVERSITIES } from "@/lib/universities";
 
 type GigCardData = {
   id: string;
@@ -46,7 +47,7 @@ const filterConfig = [
   { label: "Category", options: ["All Categories", ...ALL_SKILLS] },
   {
     label: "University",
-    options: ["Any University", "Univ of Colombo", "Univ of Moratuwa", "SLIIT", "NSBM"],
+    options: ["Any University", ...UNIVERSITIES],
   },
   { label: "Rating", options: ["Any Rating", "4.5+", "4.0+"] },
   { label: "Availability", options: ["Any Time", "Weekends", "Evenings", "Weekdays"] },
@@ -146,6 +147,9 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
 
         usersSnapshot.forEach((docSnap) => {
           const user = docSnap.data() as UserProfile;
+          // Exclude current logged-in user from search results
+          if (userProfile && user.uid === userProfile.uid) return;
+
           const profile = user.providerProfile;
           if (!profile) return;
 
@@ -173,7 +177,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
               rating,
               reviews: ratingData?.count || 0,
               match: 95,
-              image: gigImages[index % gigImages.length],
+              image: (profile.gigImages && profile.gigImages[skillIndex]) || gigImages[index % gigImages.length],
               points: 20 + (skillIndex % 3) * 5,
               tags: skills.slice(0, 3),
             });
@@ -191,7 +195,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
     }
 
     fetchGigs();
-  }, []);
+  }, [userProfile]);
 
   const updateFilters = (update: () => void) => {
     update();

@@ -10,6 +10,7 @@ import {
   updatePassword,
 } from "firebase/auth";
 import type { UserProfile } from "@/lib/auth";
+import { UNIVERSITIES, isEmailAllowedForUniversity } from "@/lib/universities";
 
 export type Role = "buyer" | "provider" | "both";
 
@@ -131,6 +132,13 @@ function ProfileSettingsForm({
     setIsSaving(true);
     setSaveStatus("");
     setErrorMessage("");
+
+    if (userProfile.email && !isEmailAllowedForUniversity(userProfile.email, university)) {
+      setSaveStatus("error");
+      setErrorMessage("Your registered email domain does not match the selected university.");
+      setIsSaving(false);
+      return;
+    }
 
     try {
       const userRef = doc(db, "users", userProfile.uid);
@@ -289,12 +297,18 @@ function ProfileSettingsForm({
 
                 <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
                   University
-                  <input
-                    type="text"
+                  <select
                     value={university}
                     onChange={(e) => setUniversity(e.target.value)}
-                    className="h-9 min-w-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
-                  />
+                    className="h-9 min-w-0 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+                  >
+                    <option value="">Select your University</option>
+                    {UNIVERSITIES.map((uni) => (
+                      <option key={uni} value={uni}>
+                        {uni}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
                 <label className="grid gap-1.5 text-xs font-semibold text-slate-600">

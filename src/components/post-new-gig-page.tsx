@@ -1,4 +1,26 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
+
+const CATEGORIES = [
+  "Programming",
+  "UX Design",
+  "Graphic Design",
+  "Mathematics",
+  "Photography",
+  "Video Editing",
+  "Data Analysis",
+  "Web Development",
+  "Content Writing",
+  "Music",
+];
+
+const DELIVERY_OPTIONS = ["1 Day", "2 Days", "3 Days", "5 Days", "7 Days", "14 Days"];
 
 type PostNewGigPageProps = {
   role: "provider" | "both";
@@ -7,122 +29,413 @@ type PostNewGigPageProps = {
 };
 
 export default function PostNewGigPage({ role, mode = "create", gigId }: PostNewGigPageProps) {
+  const router = useRouter();
+  const { userProfile, refreshProfile } = useAuth();
   const isEditMode = mode === "edit";
-  const previewHref =
-    isEditMode && gigId
-      ? `/gig-preview/${role}?source=edit&gigId=${encodeURIComponent(gigId)}`
-      : `/gig-preview/${role}`;
+
+  // Derive the skill index from gigId (gigId format: "gig-N")
+  const skillIndex =
+    isEditMode && gigId ? parseInt(gigId.replace("gig-", ""), 10) : -1;
+
+  // Form state
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [summary, setSummary] = useState("");
+  const [description, setDescription] = useState("");
+  const [points, setPoints] = useState(50);
+  const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0]);
+  const [selectedImage, setSelectedImage] = useState("/img/package%201.jpg");
+
+  // Tags state
+  const [tagInput, setTagInput] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+
+  // UI state
+  const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  const backHref =
+    role === "both" ? "/my-gigs/both?tab=manage" : "/my-gigs/provider?tab=manage";
+
+  // Pre-fill form in edit mode from current userProfile data
+  useEffect(() => {
+    if (!isEditMode || !userProfile || skillIndex < 0) return;
+    const skills = userProfile.providerProfile?.skills || [];
+    const skill = skills[skillIndex];
+    if (!skill) return;
+    
+    const timer = setTimeout(() => {
+      setTitle(skill.startsWith("Collaboration: ") ? skill : `Collaboration: ${skill}`);
+      setCategory(CATEGORIES.includes(skill) ? skill : CATEGORIES[0]);
+      
+      const gigImages = userProfile.providerProfile?.gigImages || [];
+      if (gigImages[skillIndex]) {
+        setSelectedImage(gigImages[skillIndex]);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [isEditMode, userProfile, skillIndex]);
+
+  const addTag = () => {
+    const trimmed = tagInput.trim();
+    if (trimmed && !tags.includes(trimmed) && tags.length < 5) {
+      setTags([...tags, trimmed]);
+    }
+    setTagInput("");
+  };
+
+  const removeTag = (tag: string) => setTags(tags.filter((t) => t !== tag));
+
+  const handlePublish = async () => {
+    if (!userProfile) return;
+    if (!title.trim()) {
+      setFeedback({ type: "error", msg: "Please enter a gig title." });
+      return;
+    }
+    if (!summary.trim()) {
+      setFeedback({ type: "error", msg: "Please enter a short summary." });
+      return;
+    }
+
+    setIsSaving(true);
+    setFeedback(null);
+
+    try {
+      const userRef = doc(db, "users", userProfile.uid);
+      const existingSkills: string[] = [...(userProfile.providerProfile?.skills || [])];
+      const existingImages: string[] = [...(userProfile.providerProfile?.gigImages || [])];
+
+      const gigLabel = title.trim();
+
+      // Ensure existingImages length matches existingSkills length to prevent index misalignment
+      while (existingImages.length < existingSkills.length) {
+        existingImages.push("/img/package%201.jpg");
+      }
+
+      if (isEditMode && skillIndex >= 0) {
+        // Replace the skill and image at the specific index
+        existingSkills[skillIndex] = gigLabel;
+        existingImages[skillIndex] = selectedImage;
+      } else {
+        // Add a new skill
+        if (existingSkills.includes(gigLabel)) {
+          setFeedback({ type: "error", msg: "A gig with this title already exists." });
+          setIsSaving(false);
+          return;
+        }
+        existingSkills.push(gigLabel);
+        existingImages.push(selectedImage);
+      }
+
+      await updateDoc(userRef, {
+        "providerProfile.skills": existingSkills,
+        "providerProfile.gigImages": existingImages,
+      });
+
+      await refreshProfile();
+
+      setFeedback({
+        type: "success",
+        msg: isEditMode
+          ? "Gig updated successfully! Redirecting..."
+          : "Gig published successfully! Redirecting...",
+      });
+
+      setTimeout(() => {
+        router.push(backHref);
+      }, 1500);
+    } catch (err) {
+      console.error("Error saving gig:", err);
+      setFeedback({
+        type: "error",
+        msg: err instanceof Error ? err.message : "Failed to save gig. Please try again.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <section className="space-y-6 pb-8">
       <div className="mx-auto max-w-3xl">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 px-1 text-xs text-slate-500 mb-2">
+          <Link href={backHref} className="hover:text-[#1453c4] font-semibold transition">
+            ← Back to My Gigs
+          </Link>
+        </div>
+
+        {/* Step indicator */}
         <div className="px-6 pt-2">
           <div className="flex items-center justify-between text-sm font-semibold text-slate-400">
             <StepItem number={1} label="Overview" active />
             <Connector />
             <StepItem number={2} label="Description" />
             <Connector />
-            <StepItem number={3} label="Media & Point" />
+            <StepItem number={3} label="Points & Publish" />
           </div>
         </div>
 
-        <article className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <SectionTitle title="Gig Overview" />
+        {/* Feedback Banner */}
+        {feedback && (
+          <div
+            className={`mt-4 rounded-lg px-4 py-3 text-sm font-semibold border ${
+              feedback.type === "success"
+                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                : "bg-red-50 border-red-200 text-red-800"
+            }`}
+          >
+            {feedback.msg}
+          </div>
+        )}
+
+        <article className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <SectionTitle title={isEditMode ? "Edit Gig" : "Gig Overview"} />
+
           <div className="mt-5 space-y-4">
-            <LabeledInput label="Gig Title" placeholder="e.g., I will design a modern book cover for your project" />
-            <p className="-mt-3 text-xs font-medium text-slate-400">Create a catchy title starting with &apos;I will...&apos;</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <LabeledSelect label="Category" value="Graphic Design" />
-              <LabeledSelect label="Subcategory" value="Book Design" />
-            </div>
+            {/* Gig Title */}
             <label className="block text-sm font-semibold text-slate-700">
-              Search Tags / Keywords (Max 5)
-              <div className="mt-2 flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 bg-[#f6f7ff] px-3">
-                <Tag label="Book Cover" />
-                <Tag label="Design" />
-                <span className="text-slate-400">Add a tag...</span>
-              </div>
+              Gig Title *
+              <input
+                className="mt-2 h-11 w-full rounded-lg border border-slate-200 px-4 text-base text-slate-700 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100"
+                placeholder="e.g., I will help you with Web Development projects"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
             </label>
+            <p className="-mt-3 text-xs font-medium text-slate-400">
+              Create a catchy title starting with &apos;I will...&apos;
+            </p>
+
+            {/* Category */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-semibold text-slate-700">
+                Category
+                <select
+                  className="mt-2 h-11 w-full rounded-lg border border-slate-200 px-4 text-base text-slate-700 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100 bg-white"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-semibold text-slate-700">
+                Delivery Time
+                <select
+                  className="mt-2 h-11 w-full rounded-lg border border-slate-200 px-4 text-base text-slate-700 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100 bg-white"
+                  value={delivery}
+                  onChange={(e) => setDelivery(e.target.value)}
+                >
+                  {DELIVERY_OPTIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {/* Tags */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700">
+                Search Tags / Keywords (Max 5)
+              </label>
+              <div className="mt-2 flex min-h-11 items-center gap-2 flex-wrap rounded-lg border border-slate-200 bg-[#f6f7ff] px-3 py-2">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-700"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(tag)}
+                      className="text-teal-500 hover:text-teal-800"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {tags.length < 5 && (
+                  <input
+                    type="text"
+                    value={tagInput}
+                    placeholder="Add a tag & press Enter..."
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addTag();
+                      }
+                    }}
+                    className="flex-1 min-w-[120px] bg-transparent text-sm text-slate-600 outline-none placeholder:text-slate-400"
+                  />
+                )}
+              </div>
+            </div>
           </div>
 
+          {/* Detailed Info */}
           <SectionTitle title="Detailed Information" className="mt-8" />
           <div className="mt-5 space-y-4">
-            <LabeledInput label="Short Summary" placeholder="A one-sentence pitch for your gig" />
+            <label className="block text-sm font-semibold text-slate-700">
+              Short Summary *
+              <input
+                className="mt-2 h-11 w-full rounded-lg border border-slate-200 px-4 text-base text-slate-600 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100"
+                placeholder="A one-sentence pitch for your gig"
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+              />
+            </label>
+
             <label className="block text-sm font-semibold text-slate-700">
               Detailed Description
-              <div className="mt-2 overflow-hidden rounded-lg border border-slate-200">
-                <div className="flex h-9 items-center gap-3 border-b border-slate-200 bg-[#f2f3ff] px-3 text-sm text-slate-600">
-                  <span className="font-bold">B</span>
-                  <span className="italic">I</span>
-                  <span>•</span>
-                  <span>≡</span>
-                  <span>🔗</span>
-                </div>
-                <textarea
-                  className="h-36 w-full resize-none px-4 py-3 text-base text-slate-600 outline-none"
-                  defaultValue="Describe what you are offering in detail. Mention your tools, process, and what the buyer will receive..."
-                />
-              </div>
+              <textarea
+                className="mt-2 h-36 w-full resize-none rounded-lg border border-slate-200 px-4 py-3 text-base text-slate-600 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100"
+                placeholder="Describe what you are offering in detail. Mention your tools, process, and what the student will receive..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
             </label>
           </div>
 
+          {/* Swap Terms */}
           <SectionTitle title="Swap Terms" className="mt-8" />
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-semibold text-slate-700">
               Point Value (Price)
-              <div className="mt-2 flex h-11 items-center justify-between rounded-lg border border-slate-200 px-3">
-                <span className="text-slate-500">50</span>
-                <span className="font-semibold text-teal-700">PTS</span>
+              <div className="mt-2 flex h-11 items-center rounded-lg border border-slate-200 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setPoints((p) => Math.max(10, p - 5))}
+                  className="h-full px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-lg transition"
+                >
+                  −
+                </button>
+                <div className="flex-1 flex items-center justify-center gap-2">
+                  <span className="text-slate-800 font-semibold text-lg">{points}</span>
+                  <span className="text-xs font-bold text-teal-700">PTS</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPoints((p) => Math.min(500, p + 5))}
+                  className="h-full px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-lg transition"
+                >
+                  +
+                </button>
               </div>
               <span className="mt-1 block text-xs font-medium text-slate-400">
-                How many Skill Points is this swap worth?
+                How many Skill Points is this swap worth? (10–500)
               </span>
             </label>
-            <LabeledSelect label="Delivery Time (Days)" value="1 Day" />
           </div>
 
-          <SectionTitle title="Portfolio & Thumbnails" className="mt-8" />
-          <div className="mt-5 rounded-xl border-2 border-dashed border-[#c8d0ee] bg-[#f5f6ff] px-6 py-10 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-teal-300 text-xl text-teal-900">
-              ⤴
+          {/* Gig Poster Section */}
+          <SectionTitle title="Gig Poster / Thumbnail" className="mt-8" />
+          <div className="mt-5 space-y-4">
+            <p className="text-sm font-semibold text-slate-700">
+              Choose a template or upload your custom poster:
+            </p>
+            
+            {/* Presets */}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {[
+                { label: "Web & Coding", src: "/img/package%201.jpg" },
+                { label: "Design", src: "/img/package%202.jpg" },
+                { label: "Business", src: "/img/package%203.jpg" },
+                { label: "Academic", src: "/img/package%204.jpg" },
+              ].map((preset) => (
+                <button
+                  key={preset.src}
+                  type="button"
+                  onClick={() => setSelectedImage(preset.src)}
+                  className={`relative overflow-hidden rounded-xl border-4 transition ${
+                    selectedImage === preset.src || decodeURIComponent(selectedImage).endsWith(preset.src.replace("/img/", ""))
+                      ? "border-[#1453c4] scale-105"
+                      : "border-transparent opacity-75 hover:opacity-100"
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={preset.src} alt={preset.label} className="h-24 w-full object-cover" />
+                  <div className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-center text-[10px] font-bold text-white">
+                    {preset.label}
+                  </div>
+                </button>
+              ))}
             </div>
-            <p className="mt-4 text-2xl font-semibold text-slate-800">Upload Gig Images</p>
-            <p className="mt-2 text-lg text-slate-500">Drag and drop images or click to browse. Support JPG, PNG up to 10MB.</p>
-          </div>
 
-          <div className="mt-4 grid grid-cols-4 gap-3">
-            <div className="h-24 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/img/package%201.jpg" alt="Gig thumbnail" className="h-full w-full object-cover" />
+            {/* Custom upload */}
+            <div className="rounded-xl border-2 border-dashed border-[#c8d0ee] bg-[#f5f6ff] px-6 py-6 text-center">
+              <label className="cursor-pointer block">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-teal-300 text-lg text-teal-900">
+                  ⤴
+                </div>
+                <p className="mt-2 text-lg font-semibold text-slate-800">Upload Custom Image</p>
+                <p className="text-xs text-slate-500">Support JPG, PNG. Image will be converted for profile display.</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        if (typeof reader.result === "string") {
+                          setSelectedImage(reader.result);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="hidden"
+                />
+              </label>
             </div>
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={index}
-                className="flex h-24 items-center justify-center rounded-lg border border-slate-200 bg-[#f2f3ff] text-slate-300"
-              >
-                🖼
+
+            {/* Preview of current poster */}
+            {selectedImage && (
+              <div className="mt-4">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Current Selected Poster Preview:
+                </p>
+                <div className="mt-2 max-w-sm overflow-hidden rounded-xl border border-slate-200 shadow-sm relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={selectedImage} alt="Poster preview" className="h-44 w-full object-cover" />
+                </div>
               </div>
-            ))}
+            )}
           </div>
 
-          <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-5">
-            <button className="rounded-lg border border-slate-300 px-5 py-2 text-base font-semibold text-slate-700">
-              Save as Draft
+          {/* Action Buttons */}
+          <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-5">
+            <Link
+              href={backHref}
+              className="rounded-lg border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+            >
+              Cancel
+            </Link>
+            <button
+              type="button"
+              onClick={handlePublish}
+              disabled={isSaving}
+              className="rounded-lg bg-[#1453c4] px-7 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0e3f9e] transition disabled:opacity-60"
+            >
+              {isSaving
+                ? isEditMode
+                  ? "Saving..."
+                  : "Publishing..."
+                : isEditMode
+                  ? "Save Changes"
+                  : "Publish Gig"}
             </button>
-            <div className="flex items-center gap-6">
-              <Link href={previewHref} className="text-base font-semibold text-[#1453c4]">
-                Preview Gig
-              </Link>
-              <button className="rounded-lg bg-[#1453c4] px-7 py-2 text-base font-semibold text-white shadow-sm">
-                {isEditMode ? "Save Gig" : "Publish Gig"}
-              </button>
-            </div>
           </div>
         </article>
-      </div>
-
-      <div className="hidden">
-        <Link href={role === "both" ? "/my-gigs/both?tab=manage" : "/my-gigs/provider?tab=manage"}>Back</Link>
       </div>
     </section>
   );
@@ -131,42 +444,9 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
 function SectionTitle({ title, className = "" }: { title: string; className?: string }) {
   return (
     <div className={className}>
-      <h2 className="text-3xl font-semibold text-slate-800">{title}</h2>
+      <h2 className="text-xl font-semibold text-slate-800">{title}</h2>
       <div className="mt-2 h-px bg-slate-200" />
     </div>
-  );
-}
-
-function LabeledInput({ label, placeholder }: { label: string; placeholder: string }) {
-  return (
-    <label className="block text-sm font-semibold text-slate-700">
-      {label}
-      <input
-        className="mt-2 h-11 w-full rounded-lg border border-slate-200 px-4 text-base text-slate-600 outline-none focus:border-slate-300"
-        placeholder={placeholder}
-      />
-    </label>
-  );
-}
-
-function LabeledSelect({ label, value }: { label: string; value: string }) {
-  return (
-    <label className="block text-sm font-semibold text-slate-700">
-      {label}
-      <div className="mt-2 flex h-11 items-center justify-between rounded-lg border border-slate-200 px-4 text-base text-slate-700">
-        <span>{value}</span>
-        <span className="text-slate-500">⌄</span>
-      </div>
-    </label>
-  );
-}
-
-function Tag({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-700">
-      {label}
-      <span>×</span>
-    </span>
   );
 }
 
@@ -188,7 +468,7 @@ function StepItem({
       >
         {number}
       </div>
-      <span className={`${active ? "text-[#1453c4]" : "text-slate-400"}`}>{label}</span>
+      <span className={`${active ? "text-[#1453c4]" : "text-slate-400"} text-sm`}>{label}</span>
     </div>
   );
 }

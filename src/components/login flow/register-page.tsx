@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { registerBuyer } from "@/lib/auth";
+import { UNIVERSITIES, isEmailAllowedForUniversity } from "@/lib/universities";
 
 const registerSchema = z
   .object({
@@ -22,6 +23,13 @@ const registerSchema = z
   .refine((v) => v.password === v.confirmPassword, {
     message: "Passwords do not match.",
     path: ["confirmPassword"],
+  })
+  .refine((v) => {
+    if (!v.university) return true;
+    return isEmailAllowedForUniversity(v.email, v.university);
+  }, {
+    message: "Email domain does not match the selected university.",
+    path: ["email"],
   });
 
 type RegisterValues = z.infer<typeof registerSchema>;
@@ -153,9 +161,11 @@ export default function RegisterPage() {
                     className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-[#2b62e6]"
                   >
                     <option value="">Select your University</option>
-                    <option>University of Colombo</option>
-                    <option>University of Moratuwa</option>
-                    <option>University of Peradeniya</option>
+                    {UNIVERSITIES.map((uni) => (
+                      <option key={uni} value={uni}>
+                        {uni}
+                      </option>
+                    ))}
                   </select>
                   {errors.university && <p className="mt-1 text-xs text-red-500">{errors.university.message}</p>}
                 </div>
