@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
+import { type UserProfile } from "@/lib/auth";
 import { scopedHref } from "@/lib/role-routes";
 import { UNIVERSITIES } from "@/lib/universities";
 
@@ -184,6 +185,7 @@ export default function IncomingRequestsPageContent({
         <NewRequestsView
           requests={requests.filter((r) => r.status === "pending")}
           role={role}
+          userProfile={userProfile}
         />
       )}
       {activeTab === "accepted" && (
@@ -246,9 +248,11 @@ function TabLink({
 function NewRequestsView({
   requests,
   role,
+  userProfile,
 }: {
   requests: RequestData[];
   role: "provider" | "both";
+  userProfile: UserProfile | null;
 }) {
   const [category, setCategory] = useState("All Categories");
   const [university, setUniversity] = useState("Any University");
@@ -277,10 +281,15 @@ function NewRequestsView({
     status: "working" | "rejected",
   ) => {
     try {
-      await updateDoc(doc(db, "requests", reqId), {
+      const updateData: any = {
         status,
         updatedAt: serverTimestamp(),
-      });
+      };
+      if (status === "working" && userProfile) {
+        updateData.providerId = userProfile.uid;
+        updateData.providerName = userProfile.name || "Provider Partner";
+      }
+      await updateDoc(doc(db, "requests", reqId), updateData);
     } catch (err) {
       console.error(`Error updating request status to ${status}:`, err);
     }
@@ -386,7 +395,7 @@ function NewRequestsView({
             </div>
             <div className="flex items-center gap-3 text-xs font-semibold">
               <Link
-                href={scopedHref("/chats", role)}
+                href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(activeRequest.buyerId)}&subject=${encodeURIComponent(activeRequest.title)}`}
                 className="text-[#1453c4] hover:underline"
               >
                 Chat Now
@@ -598,7 +607,7 @@ function AcceptedView({
                   ))}
                 <div className="flex gap-2">
                   <Link
-                    href={scopedHref("/chats", role)}
+                    href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(item.buyerId)}&subject=${encodeURIComponent(item.title)}`}
                     className="flex-1 rounded-lg border border-[#1453c4] px-3 py-2 text-center text-xs font-semibold text-[#1453c4] hover:bg-blue-50"
                   >
                     Chat

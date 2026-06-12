@@ -786,7 +786,7 @@ function RecentRequestsPanel({
                 {item.status === "working" && (
                   <div className="mt-4 border-t border-slate-100 pt-3">
                     <Link
-                      href={scopedHref("/chats", role)}
+                      href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(item.providerId)}&subject=${encodeURIComponent(item.title)}`}
                       className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-blue-600 px-4 text-xs font-bold text-white shadow-xs transition hover:bg-blue-700"
                     >
                       <ChatIcon className="mr-1.5 h-3.5 w-3.5" />
