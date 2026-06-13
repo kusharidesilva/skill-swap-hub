@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import { type UserProfile } from "@/lib/auth";
 import { UNIVERSITIES } from "@/lib/universities";
+import { createNotification } from "@/lib/notifications";
 
 const skillCategories = [
   "Programming",
@@ -157,7 +158,7 @@ export default function RequestServiceContent({
           providerName={providerName}
           refreshProfile={refreshProfile}
         />
-        <RecentRequestsPanel buyerId={userProfile.uid} role={role} />
+        <RecentRequestsPanel buyerId={userProfile.uid} buyerName={userProfile.name} role={role} />
       </section>
     </div>
   );
@@ -223,6 +224,18 @@ function RequestForm({
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+
+      // Send notification to the provider
+      if (providerId && providerId !== "general") {
+        await createNotification({
+          userId: providerId,
+          title: "New Swap Request",
+          description: `${buyerProfile.name} requested a swap for "${title.trim()}"`,
+          type: "request",
+          icon: "◆",
+          tone: "blue",
+        });
+      }
 
       // If this user is currently a pure provider who just made their first
       // buyer request, upgrade their Firestore role to "both" so the
@@ -424,9 +437,11 @@ function RequestForm({
 
 function RecentRequestsPanel({
   buyerId,
+  buyerName,
   role,
 }: {
   buyerId: string;
+  buyerName: string;
   role: Role;
 }) {
   const [requests, setRequests] = useState<RequestData[]>([]);
@@ -489,6 +504,7 @@ function RecentRequestsPanel({
   // Handle accepting work & adding review
   const handleAcceptComplete = async (reqId: string) => {
     try {
+      const reqObj = requests.find((r) => r.id === reqId);
       await updateDoc(doc(db, "requests", reqId), {
         status: "review_pending",
         updatedAt: serverTimestamp(),
@@ -497,6 +513,18 @@ function RecentRequestsPanel({
           comment: reviewComment.trim() || "Outstanding swap session!",
         },
       });
+
+      if (reqObj && reqObj.providerId && reqObj.providerId !== "general") {
+        await createNotification({
+          userId: reqObj.providerId,
+          title: "Swap Completed & Rated",
+          description: `${buyerName || "Buyer"} rated your session: ${reviewRating} stars!`,
+          type: "review",
+          icon: "★",
+          tone: "indigo",
+        });
+      }
+
       setActiveReviewId(null);
       setReviewComment("");
       setReviewRating(5);
@@ -509,11 +537,24 @@ function RecentRequestsPanel({
   const handleRequestRevision = async (reqId: string) => {
     if (!revisionText.trim()) return;
     try {
+      const reqObj = requests.find((r) => r.id === reqId);
       await updateDoc(doc(db, "requests", reqId), {
         status: "revision",
         revisionNotes: revisionText.trim(),
         updatedAt: serverTimestamp(),
       });
+
+      if (reqObj && reqObj.providerId && reqObj.providerId !== "general") {
+        await createNotification({
+          userId: reqObj.providerId,
+          title: "Revision Requested",
+          description: `${buyerName || "Buyer"} requested changes for "${reqObj.title}"`,
+          type: "request",
+          icon: "!",
+          tone: "red",
+        });
+      }
+
       setActiveRevisionId(null);
       setRevisionText("");
     } catch (err) {

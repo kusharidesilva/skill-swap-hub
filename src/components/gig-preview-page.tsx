@@ -244,7 +244,7 @@ export default function GigPreviewPage({
             </div>
           </section>
 
-          <ProviderCard gig={gig} />
+          <ProviderCard gig={gig} role={role} />
           <AboutCard summary={gig.summary} />
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -293,29 +293,31 @@ export default function GigPreviewPage({
   );
 }
 
-function ProviderCard({ gig }: { gig: GigPreviewData }) {
+function ProviderCard({ gig, role }: { gig: GigPreviewData; role: string }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-sm font-bold text-white ring-2 ring-[#2f66e7]/20">
-          {getInitials(gig.providerName)}
-        </div>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm font-bold text-slate-900">{gig.providerName}</h2>
-            <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[9px] font-bold uppercase text-teal-700">
-              {gig.proficiency}
-            </span>
+    <Link href={`/provider-profile/${gig.providerId}?role=${role}`}>
+      <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:border-[#1453c4]/45 hover:shadow-md cursor-pointer">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-sm font-bold text-white ring-2 ring-[#2f66e7]/20">
+            {getInitials(gig.providerName)}
           </div>
-          <p className="mt-0.5 break-words text-xs text-slate-600">
-            {gig.university} - {gig.providerDegree}
-          </p>
-          <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-teal-700">
-            <StarIcon className="h-3.5 w-3.5" /> {gig.rating.toFixed(1)} ({gig.reviews} reviews)
-          </p>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-bold text-[#1453c4] hover:underline">{gig.providerName}</h2>
+              <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[9px] font-bold uppercase text-teal-700">
+                {gig.proficiency}
+              </span>
+            </div>
+            <p className="mt-0.5 break-words text-xs text-slate-600">
+              {gig.university} - {gig.providerDegree}
+            </p>
+            <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-teal-700">
+              <StarIcon className="h-3.5 w-3.5" /> {gig.rating.toFixed(1)} ({gig.reviews} reviews)
+            </p>
+          </div>
         </div>
-      </div>
-    </article>
+      </article>
+    </Link>
   );
 }
 

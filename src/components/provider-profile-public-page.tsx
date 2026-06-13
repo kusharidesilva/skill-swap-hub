@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
+import { useAuth } from "@/context/AuthContext";
 
 type ProviderProfilePublicPageProps = {
   providerId: string;
@@ -219,8 +220,55 @@ export default function ProviderProfilePublicPage({
   role,
   activeTab,
 }: ProviderProfilePublicPageProps) {
+  const { userProfile, loading: authLoading, refreshProfile } = useAuth();
   const [profile, setProfile] = useState<PublicProviderProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPrivateProfile, setIsPrivateProfile] = useState(false);
+
+  const isFavorited = userProfile?.favorites?.some((fav) => (fav as { providerId?: string }).providerId === providerId) || false;
+
+  const handleToggleFavorite = async () => {
+    if (!userProfile) {
+      window.location.href = "/get-started";
+      return;
+    }
+    if (!profile) return;
+
+    try {
+      const favorites = (userProfile.favorites || []) as Record<string, unknown>[];
+      let updatedFavorites;
+
+      if (isFavorited) {
+        updatedFavorites = favorites.filter((fav) => (fav as { providerId?: string }).providerId !== providerId);
+      } else {
+        const now = new Date();
+        const savedAtStr = `Saved ${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+        const newFav = {
+          id: providerId,
+          providerId: providerId,
+          title: profile.gigs[0]?.title || `Collaboration with ${profile.name}`,
+          category: profile.gigs[0]?.category || "General",
+          instructor: profile.name,
+          rating: profile.avgRating,
+          image: profile.image && profile.image.startsWith("/img/")
+            ? profile.image
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=2f66e7&color=fff&size=400`,
+          avatar: profile.name.charAt(0).toUpperCase(),
+          level: "Member",
+          savedAt: savedAtStr,
+          description: profile.gigs[0]?.title || `Collaborate on skill swaps with ${profile.name}`,
+        };
+        updatedFavorites = [...favorites, newFav];
+      }
+
+      await updateDoc(doc(db, "users", userProfile.uid), {
+        favorites: updatedFavorites,
+      });
+      await refreshProfile();
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
+    }
+  };
 
   useEffect(() => {
     async function loadProviderProfile() {
@@ -228,10 +276,12 @@ export default function ProviderProfilePublicPage({
         // 1. Fetch user document
         const userDoc = await getDoc(doc(db, "users", providerId));
         
-        // 2. Fetch requests for this provider (to compute actual avg rating, total swaps, trust score, and reviews list)
+        // 2. Fetch only COMPLETED requests for this provider
+        //    (used to compute avg rating, total swaps, trust score, and public reviews)
         const q = query(
           collection(db, "requests"),
-          where("providerId", "==", providerId)
+          where("providerId", "==", providerId),
+          where("status", "==", "completed")
         );
         const qSnap = await getDocs(q);
         const reqs: FirebaseRequestDoc[] = [];
@@ -241,6 +291,14 @@ export default function ProviderProfilePublicPage({
 
         if (userDoc.exists()) {
           const u = userDoc.data();
+
+          if (u.settings?.profileVisibility === false && (!userProfile || userProfile.uid !== providerId)) {
+            setIsPrivateProfile(true);
+            setLoading(false);
+            return;
+          }
+          setIsPrivateProfile(false);
+
           const completedRequests = reqs.filter((r) => r.status === "completed");
           const totalSwaps = completedRequests.length;
           
@@ -349,15 +407,47 @@ export default function ProviderProfilePublicPage({
     }
 
     loadProviderProfile();
-  }, [providerId]);
+  }, [providerId, userProfile]);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col items-center gap-4">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
           <p className="text-sm text-slate-500">Loading profile...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (isPrivateProfile) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+        <div className="rounded-full bg-slate-105 p-5 text-slate-450 bg-slate-100 text-slate-400">
+          <svg
+            className="h-12 w-12"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+            />
+          </svg>
+        </div>
+        <h2 className="mt-6 text-2xl font-bold text-slate-800">Private Profile</h2>
+        <p className="mt-2 text-base text-slate-500 max-w-sm">
+          This member has set their profile visibility to private. Only they can view their profile details and listings.
+        </p>
+        <Link
+          href={role ? scopedHref("/find-services", role) : "/"}
+          className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-[#2f66e7] px-6 text-sm font-semibold text-white transition hover:bg-[#2051ca]"
+        >
+          Back to Find Services
+        </Link>
       </div>
     );
   }
@@ -372,7 +462,6 @@ export default function ProviderProfilePublicPage({
 
   const firstName = profile.name.split(" ")[0];
   const messageHref = role ? `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(providerId)}` : "/get-started";
-  const favoriteHref = role ? scopedHref("/favorites", role) : "/get-started";
   const reportHref = role
     ? `/report-profile/${providerId}?role=${role}`
     : "/get-started";
@@ -436,12 +525,17 @@ export default function ProviderProfilePublicPage({
               >
                 Message {firstName}
               </Link>
-              <Link
-                href={favoriteHref}
-                className="inline-flex h-8 items-center justify-center rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              <button
+                type="button"
+                onClick={handleToggleFavorite}
+                className={`inline-flex h-8 items-center justify-center rounded-md border px-3 text-xs font-semibold transition ${
+                  isFavorited
+                    ? "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
               >
-                Save to Favorites
-              </Link>
+                {isFavorited ? "❤️ Saved" : "Save to Favorites"}
+              </button>
               <Link
                 href={reportHref}
                 className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-red-600 transition hover:text-red-700"

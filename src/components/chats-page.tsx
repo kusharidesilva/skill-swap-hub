@@ -20,6 +20,7 @@ import {
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { type Role } from "@/lib/role-routes";
+import { createNotification } from "@/lib/notifications";
 
 type Conversation = {
   id: string;
@@ -90,7 +91,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           const peerSnap = await getDoc(doc(db, "users", peerId));
           let peerName = "Student Partner";
           let peerUniv = "University";
-          let peerSkill = subjectParam || "Skill Swap";
+          const peerSkill = subjectParam || "Skill Swap";
 
           if (peerSnap.exists()) {
             const peerData = peerSnap.data();
@@ -225,6 +226,18 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
         lastMessage: text,
         updatedAt: serverTimestamp(),
       });
+
+      const peerConversation = conversations.find((c) => c.id === activeId);
+      if (peerConversation && peerConversation.peerId !== userProfile.uid) {
+        await createNotification({
+          userId: peerConversation.peerId,
+          title: `New Message from ${userProfile.name}`,
+          description: text.length > 60 ? `${text.slice(0, 57)}...` : text,
+          type: "message",
+          icon: "✉",
+          tone: "emerald",
+        });
+      }
 
       setDraftMessage("");
     } catch (err) {

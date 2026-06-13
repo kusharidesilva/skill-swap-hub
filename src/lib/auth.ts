@@ -45,6 +45,7 @@ export interface UserProfile {
     pushNotifications: boolean;
     profileVisibility: boolean;
   };
+  favorites?: Record<string, unknown>[];
 }
 
 // ─── Register Buyer ───────────────────────────────────────────────────────────

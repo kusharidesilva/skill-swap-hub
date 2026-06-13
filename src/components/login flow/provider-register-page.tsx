@@ -281,18 +281,19 @@ export default function ProviderRegisterPage() {
                     <label className="text-[11px] font-semibold text-slate-500">
                       University Name
                     </label>
-                    <select
+                    <input
                       id="provider-university"
+                      type="text"
+                      placeholder="Type or select your University"
                       {...register("university")}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600 focus:outline-none focus:border-[#2b62e6]"
-                    >
-                      <option value="">Select your University</option>
+                      list="provider-university-options"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#2b62e6]"
+                    />
+                    <datalist id="provider-university-options">
                       {UNIVERSITIES.map((uni) => (
-                        <option key={uni} value={uni}>
-                          {uni}
-                        </option>
+                        <option key={uni} value={uni} />
                       ))}
-                    </select>
+                    </datalist>
                     {errors.university && (
                       <p className="text-[10px] text-red-500">
                         {errors.university.message}

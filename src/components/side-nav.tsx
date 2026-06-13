@@ -52,7 +52,7 @@ const navConfig: Record<Role, NavItem[]> = {
     },
     {
       label: "Report Issue",
-      href: "/report-profile?role=buyer",
+      href: "/report-issue?role=buyer",
       section: "footer",
       icon: AlertTriangleIcon,
     },
@@ -97,7 +97,7 @@ const navConfig: Record<Role, NavItem[]> = {
     },
     {
       label: "Report Issue",
-      href: "/report-profile?role=provider",
+      href: "/report-issue?role=provider",
       section: "footer",
       icon: AlertTriangleIcon,
     },
@@ -149,7 +149,7 @@ const navConfig: Record<Role, NavItem[]> = {
     },
     {
       label: "Report Issue",
-      href: "/report-profile?role=both",
+      href: "/report-issue?role=both",
       section: "footer",
       icon: AlertTriangleIcon,
     },

@@ -10,13 +10,13 @@ import {
   doc,
   updateDoc,
   serverTimestamp,
-  getDocs,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { type UserProfile } from "@/lib/auth";
 import { scopedHref } from "@/lib/role-routes";
 import { UNIVERSITIES } from "@/lib/universities";
+import { createNotification } from "@/lib/notifications";
 
 type IncomingRequestsTab = "new" | "accepted" | "completed" | "declined";
 
@@ -281,7 +281,13 @@ function NewRequestsView({
     status: "working" | "rejected",
   ) => {
     try {
-      const updateData: any = {
+      const reqObj = requests.find((r) => r.id === reqId);
+      const updateData: {
+        status: string;
+        updatedAt: unknown;
+        providerId?: string;
+        providerName?: string;
+      } = {
         status,
         updatedAt: serverTimestamp(),
       };
@@ -290,6 +296,18 @@ function NewRequestsView({
         updateData.providerName = userProfile.name || "Provider Partner";
       }
       await updateDoc(doc(db, "requests", reqId), updateData);
+
+      if (reqObj) {
+        const actionText = status === "working" ? "accepted" : "declined";
+        await createNotification({
+          userId: reqObj.buyerId,
+          title: status === "working" ? "Swap Request Accepted" : "Swap Request Declined",
+          description: `${userProfile?.name || "Provider"} has ${actionText} your swap request for "${reqObj.title}"`,
+          type: "request",
+          icon: status === "working" ? "✓" : "!",
+          tone: status === "working" ? "green" : "red",
+        });
+      }
     } catch (err) {
       console.error(`Error updating request status to ${status}:`, err);
     }
@@ -426,10 +444,22 @@ function AcceptedView({
 
   const handleMarkDone = async (reqId: string) => {
     try {
+      const reqObj = requests.find((r) => r.id === reqId);
       await updateDoc(doc(db, "requests", reqId), {
         status: "done",
         updatedAt: serverTimestamp(),
       });
+
+      if (reqObj) {
+        await createNotification({
+          userId: reqObj.buyerId,
+          title: "Session Finished",
+          description: `Provider marked the session "${reqObj.title}" as complete. Please accept and review.`,
+          type: "request",
+          icon: "✓",
+          tone: "teal",
+        });
+      }
     } catch (err) {
       console.error("Error setting request status to done:", err);
     }
@@ -439,6 +469,7 @@ function AcceptedView({
     if (!providerComment.trim()) return;
     setSubmitting(true);
     try {
+      const reqObj = requests.find((r) => r.id === reqId);
       await updateDoc(doc(db, "requests", reqId), {
         status: "completed",
         providerReview: {
@@ -447,6 +478,18 @@ function AcceptedView({
         },
         updatedAt: serverTimestamp(),
       });
+
+      if (reqObj) {
+        await createNotification({
+          userId: reqObj.buyerId,
+          title: "New Review Received",
+          description: `Provider left you a review: "${providerComment.trim().slice(0, 60)}..."`,
+          type: "review",
+          icon: "★",
+          tone: "emerald",
+        });
+      }
+
       setReviewingId(null);
       setProviderComment("");
       setProviderRating(5);
@@ -643,6 +686,7 @@ function CompletedView({ requests }: { requests: RequestData[] }) {
     if (!providerComment.trim()) return;
     setSubmitting(true);
     try {
+      const reqObj = requests.find((r) => r.id === reqId);
       await updateDoc(doc(db, "requests", reqId), {
         providerReview: {
           rating: providerRating,
@@ -650,6 +694,18 @@ function CompletedView({ requests }: { requests: RequestData[] }) {
         },
         updatedAt: serverTimestamp(),
       });
+
+      if (reqObj) {
+        await createNotification({
+          userId: reqObj.buyerId,
+          title: "New Review Received",
+          description: `Provider left you a review: "${providerComment.trim().slice(0, 60)}..."`,
+          type: "review",
+          icon: "★",
+          tone: "emerald",
+        });
+      }
+
       setReviewingId(null);
       setProviderComment("");
       setProviderRating(5);
@@ -841,6 +897,29 @@ function Field({
   options: string[];
   onChange: (value: string) => void;
 }) {
+  const isUniversity = label.toLowerCase() === "university";
+
+  if (isUniversity) {
+    return (
+      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+        {label}
+        <input
+          type="text"
+          value={value === "Any University" ? "" : value}
+          onChange={(event) => onChange(event.target.value || "Any University")}
+          placeholder="Type or select university..."
+          list="university-options"
+          className="mt-1.5 h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-[#1453c4] transition-colors"
+        />
+        <datalist id="university-options">
+          {options.map((option) => (
+            <option key={option} value={option} />
+          ))}
+        </datalist>
+      </label>
+    );
+  }
+
   return (
     <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
       {label}

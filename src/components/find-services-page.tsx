@@ -224,7 +224,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
           return false;
         }
 
-        if (universityFilter !== "Any University") {
+        if (universityFilter && universityFilter !== "Any University") {
           const university = gig.university.toLowerCase();
           const filter = universityFilter.toLowerCase();
           if (!university.includes(filter) && !filter.includes(university)) return false;
@@ -450,6 +450,29 @@ function FiltersSidebar(props: {
               else if (filter.label === "Availability") props.setAvailabilityFilter(value);
               else props.setSortBy(value);
             };
+
+            if (filter.label === "University") {
+              return (
+                <div key={filter.label} className="flex flex-col gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    {filter.label}
+                  </span>
+                  <input
+                    type="text"
+                    value={props.universityFilter === "Any University" ? "" : props.universityFilter}
+                    onChange={(e) => props.setUniversityFilter(e.target.value || "Any University")}
+                    placeholder="Type or select university..."
+                    list="find-university-options"
+                    className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-xs text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+                  />
+                  <datalist id="find-university-options">
+                    {filter.options.map((option) => (
+                      <option key={option} value={option} />
+                    ))}
+                  </datalist>
+                </div>
+              );
+            }
 
             return (
               <div key={filter.label} className="flex flex-col gap-1.5">

@@ -10,7 +10,7 @@ import {
   updatePassword,
 } from "firebase/auth";
 import type { UserProfile } from "@/lib/auth";
-import { UNIVERSITIES, isEmailAllowedForUniversity } from "@/lib/universities";
+import { UNIVERSITIES } from "@/lib/universities";
 
 export type Role = "buyer" | "provider" | "both";
 
@@ -132,13 +132,6 @@ function ProfileSettingsForm({
     setIsSaving(true);
     setSaveStatus("");
     setErrorMessage("");
-
-    if (userProfile.email && !isEmailAllowedForUniversity(userProfile.email, university)) {
-      setSaveStatus("error");
-      setErrorMessage("Your registered email domain does not match the selected university.");
-      setIsSaving(false);
-      return;
-    }
 
     try {
       const userRef = doc(db, "users", userProfile.uid);
@@ -297,18 +290,19 @@ function ProfileSettingsForm({
 
                 <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
                   University
-                  <select
+                  <input
+                    type="text"
                     value={university}
                     onChange={(e) => setUniversity(e.target.value)}
+                    placeholder="Type or select university..."
+                    list="settings-university-options"
                     className="h-9 min-w-0 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
-                  >
-                    <option value="">Select your University</option>
+                  />
+                  <datalist id="settings-university-options">
                     {UNIVERSITIES.map((uni) => (
-                      <option key={uni} value={uni}>
-                        {uni}
-                      </option>
+                      <option key={uni} value={uni} />
                     ))}
-                  </select>
+                  </datalist>
                 </label>
 
                 <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
@@ -553,6 +547,10 @@ function LoginSecurity() {
   >("");
   const [passwordMessage, setPasswordMessage] = useState("");
 
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const resetPasswordForm = () => {
     setCurrentPassword("");
     setNewPassword("");
@@ -621,29 +619,62 @@ function LoginSecurity() {
       <form className="mt-4 grid gap-4">
         <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
           Current Password
-          <input
-            type="password"
-            value={currentPassword}
-            onChange={(event) => setCurrentPassword(event.target.value)}
-            autoComplete="current-password"
-            className="h-9 min-w-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
-          />
+          <div className="flex items-center justify-between rounded-md border border-slate-300 px-3 h-9 bg-white focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100 transition">
+            <input
+              type={showCurrent ? "text" : "password"}
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              autoComplete="current-password"
+              className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setShowCurrent(!showCurrent)}
+              className="text-slate-400 hover:text-slate-600 focus:outline-none"
+            >
+              {showCurrent ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+            </button>
+          </div>
         </label>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-          <Field
-            label="New Password"
-            type="password"
-            value={newPassword}
-            onChange={setNewPassword}
-            autoComplete="new-password"
-          />
-          <Field
-            label="Confirm New"
-            type="password"
-            value={confirmPassword}
-            onChange={setConfirmPassword}
-            autoComplete="new-password"
-          />
+          <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
+            New Password
+            <div className="flex items-center justify-between rounded-md border border-slate-300 px-3 h-9 bg-white focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100 transition">
+              <input
+                type={showNew ? "text" : "password"}
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                autoComplete="new-password"
+                className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNew(!showNew)}
+                className="text-slate-400 hover:text-slate-600 focus:outline-none"
+              >
+                {showNew ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+              </button>
+            </div>
+          </label>
+          <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
+            Confirm New
+            <div className="flex items-center justify-between rounded-md border border-slate-300 px-3 h-9 bg-white focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100 transition">
+              <input
+                type={showConfirm ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                autoComplete="new-password"
+                className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm(!showConfirm)}
+                className="text-slate-400 hover:text-slate-600 focus:outline-none"
+              >
+                {showConfirm ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+              </button>
+            </div>
+          </label>
         </div>
         {passwordMessage && (
           <p
@@ -695,8 +726,8 @@ function NotificationSettings({
           onChange={onEmailNotificationsChange}
         />
         <ToggleRow
-          title="Push Notifications"
-          description="Real-time alerts for skill matches"
+          title="System Notifications"
+          description="Real-time alerts for matches & swaps"
           checked={pushNotifications}
           onChange={onPushNotificationsChange}
         />
@@ -760,33 +791,6 @@ function DangerZone() {
   );
 }
 
-function Field({
-  label,
-  type = "text",
-  value,
-  onChange,
-  autoComplete,
-}: {
-  label: string;
-  type?: string;
-  value: string;
-  onChange: (value: string) => void;
-  autoComplete?: string;
-}) {
-  return (
-    <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
-      {label}
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        autoComplete={autoComplete}
-        className="h-9 min-w-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
-      />
-    </label>
-  );
-}
-
 function SectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
   return (
     <div className="flex items-center gap-1.5 text-sm font-bold text-slate-800">
@@ -815,22 +819,25 @@ function ToggleRow({
       : "peer-checked:bg-[#0758d8]";
 
   return (
-    <label className="flex items-center justify-between gap-4">
+    <label className="flex cursor-pointer items-center justify-between gap-4">
       <span className="min-w-0">
         <span className="block text-xs font-bold text-slate-900">{title}</span>
         <span className="mt-0.5 block text-[11px] font-semibold text-slate-500">
           {description}
         </span>
       </span>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="peer sr-only"
-      />
-      <span
-        className={`h-5 w-9 shrink-0 rounded-full bg-slate-300 p-0.5 transition after:block after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:after:translate-x-4 ${checkedColor}`}
-      />
+      {/* checkbox must directly precede the visual pill for peer-checked: to work */}
+      <span className="relative inline-flex shrink-0 items-center">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+          className="peer sr-only"
+        />
+        <span
+          className={`block h-5 w-9 rounded-full bg-slate-300 p-0.5 transition peer-checked:after:translate-x-4 ${checkedColor} after:block after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-['']`}
+        />
+      </span>
     </label>
   );
 }
@@ -927,6 +934,23 @@ function EyeIcon({ className }: IconProps) {
     >
       <path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" />
       <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
     </svg>
   );
 }

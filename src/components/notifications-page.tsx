@@ -1,63 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  doc,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
 
-const notifications = [
-  {
-    title: "New Match Found!",
-    description:
-      "You have been matched with Alex Chen for \"Advanced React Patterns\". Reach out and start swapping!",
-    time: "2 mins ago",
-    tone: "blue",
-    icon: "◆",
-    read: false,
-  },
-  {
-    title: "New Message",
-    description:
-      "Sarah Miller: \"Hey! I'd love to help you with Python in exchange for some UI design tips...\"",
-    time: "45 mins ago",
-    tone: "emerald",
-    icon: "✉",
-    read: false,
-  },
-  {
-    title: "Request Accepted",
-    description:
-      "Your request to swap \"Spanish Conversations\" with Carlos Ruiz was accepted.",
-    time: "3 hours ago",
-    tone: "green",
-    icon: "✓",
-    read: false,
-  },
-  {
-    title: "Payment Verified",
-    description:
-      "The proof of session for \"Basic Accounting\" has been verified. Your skill credits have been updated.",
-    time: "Yesterday",
-    tone: "teal",
-    icon: "▣",
-    read: true,
-  },
-  {
-    title: "New Review Received",
-    description:
-      "\"Amazing teacher! Very patient with my coding mistakes.\" - James L. gave you 5 stars!",
-    time: "2 days ago",
-    tone: "indigo",
-    icon: "★",
-    read: true,
-  },
-  {
-    title: "Support Ticket Update",
-    description:
-      "Your report regarding \"No-show for session\" has been reviewed. A credit refund has been issued to your account.",
-    time: "3 days ago",
-    tone: "red",
-    icon: "!",
-    read: true,
-  },
-];
+interface NotificationItem {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  tone: "blue" | "emerald" | "green" | "teal" | "indigo" | "red";
+  icon: string;
+  read: boolean;
+  type?: string;
+  href?: string;
+  destination?: string;
+}
 
 const toneStyles: Record<string, { badge: string; dot: string }> = {
   blue: { badge: "bg-blue-50 text-blue-600", dot: "bg-blue-500" },
@@ -68,16 +37,163 @@ const toneStyles: Record<string, { badge: string; dot: string }> = {
   red: { badge: "bg-red-50 text-red-600", dot: "bg-red-500" },
 };
 
+function formatRelativeTime(createdAt: { toDate?: () => Date } | Date | string | number | null | undefined) {
+  if (!createdAt) return "Just now";
+  const date = typeof createdAt === "object" && createdAt && "toDate" in createdAt && typeof createdAt.toDate === "function"
+    ? createdAt.toDate()
+    : new Date(createdAt as Date | string | number);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? "s" : ""} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+  if (diffDays === 1) return "Yesterday";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export default function NotificationsPage() {
-  const [items, setItems] = useState(notifications);
+  const { userProfile } = useAuth();
+  const router = useRouter();
+  const [items, setItems] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleMarkAllRead = () => {
-    setItems((prev) => prev.map((item) => ({ ...item, read: true })));
+  useEffect(() => {
+    if (!userProfile) return;
+
+    const q = query(
+      collection(db, "notifications"),
+      where("userId", "==", userProfile.uid),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const notifications: NotificationItem[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          notifications.push({
+            id: docSnap.id,
+            title: data.title || "",
+            description: data.description || "",
+            time: formatRelativeTime(data.createdAt),
+            tone: data.tone || "blue",
+            icon: data.icon || "◆",
+            read: Boolean(data.read),
+            type: data.type || "",
+            href: data.href || "",
+            destination: data.destination || "",
+          });
+        });
+        setItems(notifications);
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Error fetching notifications:", err);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [userProfile]);
+
+  const handleMarkAllRead = async () => {
+    if (!userProfile) return;
+    try {
+      const promises = items
+        .filter((item) => !item.read)
+        .map((item) =>
+          updateDoc(doc(db, "notifications", item.id), { read: true })
+        );
+      await Promise.all(promises);
+    } catch (err) {
+      console.error("Error marking all read:", err);
+    }
   };
 
-  const handleClearAll = () => {
-    setItems([]);
+  const handleClearAll = async () => {
+    if (!userProfile) return;
+    try {
+      const promises = items.map((item) =>
+        deleteDoc(doc(db, "notifications", item.id))
+      );
+      await Promise.all(promises);
+    } catch (err) {
+      console.error("Error clearing notifications:", err);
+    }
   };
+
+  const handleNotificationClick = async (item: NotificationItem) => {
+    // 1. Mark as read in background if not read
+    if (!item.read) {
+      try {
+        await updateDoc(doc(db, "notifications", item.id), { read: true });
+      } catch (err) {
+        console.error("Error marking notification read on click:", err);
+      }
+    }
+
+    // 2. Navigate to destination
+    if (!userProfile) return;
+    const role = userProfile.role || "buyer";
+    
+    // Explicit paths stored in DB take precedence
+    const targetPath = item.href || item.destination;
+    if (targetPath) {
+      router.push(targetPath);
+      return;
+    }
+
+    const lowerTitle = item.title.toLowerCase();
+    const type = item.type || "";
+
+    // Chats / Messages
+    if (type === "message" || lowerTitle.includes("message") || lowerTitle.includes("chat")) {
+      router.push(role === "both" ? "/chats/both" : role === "provider" ? "/chats/provider" : "/chats/buyer");
+      return;
+    }
+
+    // Reviews
+    if (type === "review" || lowerTitle.includes("review") || lowerTitle.includes("rated") || lowerTitle.includes("completed & rated")) {
+      router.push(role === "both" ? "/ratings/both" : "/ratings/provider");
+      return;
+    }
+
+    // Requests
+    if (type === "request" || type === "match" || lowerTitle.includes("request")) {
+      const isBuyerFocused =
+        lowerTitle.includes("accepted") ||
+        lowerTitle.includes("declined") ||
+        lowerTitle.includes("finished") ||
+        lowerTitle.includes("completed") ||
+        lowerTitle.includes("session finished");
+
+      if (isBuyerFocused) {
+        router.push(role === "both" ? "/request-service/both" : "/request-service/buyer");
+      } else {
+        router.push(role === "both" ? "/incoming-requests/both" : "/incoming-requests/provider");
+      }
+      return;
+    }
+
+    // Fallback Dashboard
+    router.push(`/dashboard/${role}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
+          <p className="text-sm text-slate-500">Loading notifications...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -89,18 +205,22 @@ export default function NotificationsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <button
-            onClick={handleMarkAllRead}
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-          >
-            Mark all as read
-          </button>
-          <button
-            onClick={handleClearAll}
-            className="text-sm font-semibold text-slate-400 hover:text-slate-600"
-          >
-            Clear all
-          </button>
+          {items.some((item) => !item.read) && (
+            <button
+              onClick={handleMarkAllRead}
+              className="rounded-full border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+            >
+              Mark all as read
+            </button>
+          )}
+          {items.length > 0 && (
+            <button
+              onClick={handleClearAll}
+              className="text-sm font-semibold text-slate-400 hover:text-slate-600"
+            >
+              Clear all
+            </button>
+          )}
         </div>
       </div>
 
@@ -111,32 +231,43 @@ export default function NotificationsPage() {
           </div>
         ) : (
           items.map((item) => {
-          const styles = toneStyles[item.tone] ?? toneStyles.blue;
+            const styles = toneStyles[item.tone] ?? toneStyles.blue;
 
-          return (
-            <div
-              key={`${item.title}-${item.time}`}
-              className={`flex items-start gap-4 rounded-2xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-200 hover:shadow-md ${
-                item.read ? "border-slate-100 bg-white" : "border-blue-100 bg-blue-50/40"
-              }`}
-            >
-              <div className="relative">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${styles.badge}`}>
-                  <span className="text-sm font-semibold">{item.icon}</span>
+            return (
+              <div
+                key={item.id}
+                onClick={() => handleNotificationClick(item)}
+                className={`flex cursor-pointer items-start gap-4 rounded-2xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md ${
+                  item.read
+                    ? "border-slate-100 bg-white"
+                    : "border-blue-100 bg-blue-50/40"
+                }`}
+              >
+                <div className="relative">
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full ${styles.badge}`}
+                  >
+                    <span className="text-sm font-semibold">{item.icon}</span>
+                  </div>
+                  {!item.read ? (
+                    <span
+                      className={`absolute -left-2 top-1 h-2.5 w-2.5 rounded-full ${styles.dot}`}
+                    />
+                  ) : null}
                 </div>
-                {!item.read ? (
-                  <span className={`absolute -left-2 top-1 h-2.5 w-2.5 rounded-full ${styles.dot}`} />
-                ) : null}
-              </div>
-              <div className="flex-1">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-slate-900">{item.title}</h3>
-                  <span className="text-xs text-slate-400">{item.time}</span>
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      {item.title}
+                    </h3>
+                    <span className="text-xs text-slate-400">{item.time}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600">
+                    {item.description}
+                  </p>
                 </div>
-                <p className="mt-2 text-sm text-slate-600">{item.description}</p>
               </div>
-            </div>
-          );
+            );
           })
         )}
       </div>

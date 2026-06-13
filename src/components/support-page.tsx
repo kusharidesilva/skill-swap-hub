@@ -104,7 +104,7 @@ export default function SupportPage() {
             {categories.map((item) => (
               <div
                 key={item.title}
-                className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:scale-[1.03] hover:shadow-md hover:border-[#0f4cbf]/35 cursor-pointer"
               >
                 <div
                   className={`flex h-11 w-11 items-center justify-center rounded-2xl ${item.tone}`}
@@ -137,16 +137,19 @@ export default function SupportPage() {
         <div className="mx-auto max-w-4xl px-6 pb-12">
           <div className="space-y-6 border-l-2 border-slate-200 pl-6">
             {faqs.map((faq, index) => (
-              <div key={faq.question} className="relative">
+              <div
+                key={faq.question}
+                className="relative group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:translate-x-1"
+              >
                 <div
-                  className={`absolute -left-8.5 top-1.5 h-6 w-1 rounded-full ${
-                    index === 0 ? "bg-[#0f4cbf]" : "bg-slate-300"
-                  }`}
+                  className="absolute -left-8.5 top-1.5 h-6 w-1 rounded-full bg-slate-300 transition-all duration-300 group-hover:bg-[#0f4cbf] group-hover:h-10 group-hover:top-0"
                 />
-                <h3 className="text-sm font-semibold text-slate-900">
+                <h3 className="text-sm font-semibold text-slate-900 transition-colors duration-300 group-hover:text-[#0f4cbf]">
                   {faq.question}
                 </h3>
-                <p className="mt-2 text-sm text-slate-600">{faq.answer}</p>
+                <p className="mt-2 text-sm text-slate-600 transition-colors duration-300 group-hover:text-slate-850">
+                  {faq.answer}
+                </p>
               </div>
             ))}
           </div>

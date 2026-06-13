@@ -38,6 +38,8 @@ export default function RegisterPage() {
   const router = useRouter();
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
@@ -134,39 +136,66 @@ export default function RegisterPage() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="text-xs font-semibold text-slate-600">Password</label>
-                    <input
-                      type="password"
-                      placeholder="Password"
-                      {...register("password")}
-                      className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#2b62e6]"
-                    />
+                    <div className="relative mt-2 flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Password"
+                        {...register("password")}
+                        className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-slate-400 hover:text-slate-600 focus:outline-none ml-2"
+                      >
+                        {showPassword ? (
+                          <EyeOffIcon className="h-4 w-4" />
+                        ) : (
+                          <EyeIcon className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                     {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-slate-600">Confirm Password</label>
-                    <input
-                      type="password"
-                      placeholder="Confirm Password"
-                      {...register("confirmPassword")}
-                      className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#2b62e6]"
-                    />
+                    <div className="relative mt-2 flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirm Password"
+                        {...register("confirmPassword")}
+                        className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="text-slate-400 hover:text-slate-600 focus:outline-none ml-2"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOffIcon className="h-4 w-4" />
+                        ) : (
+                          <EyeIcon className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                     {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>}
                   </div>
                 </div>
 
                 <div>
                   <label className="text-xs font-semibold text-slate-600">University Name</label>
-                  <select
+                  <input
+                    type="text"
+                    placeholder="Type or select your University"
                     {...register("university")}
-                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-[#2b62e6]"
-                  >
-                    <option value="">Select your University</option>
+                    list="register-university-options"
+                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#2b62e6]"
+                  />
+                  <datalist id="register-university-options">
                     {UNIVERSITIES.map((uni) => (
-                      <option key={uni} value={uni}>
-                        {uni}
-                      </option>
+                      <option key={uni} value={uni} />
                     ))}
-                  </select>
+                  </datalist>
                   {errors.university && <p className="mt-1 text-xs text-red-500">{errors.university.message}</p>}
                 </div>
 
@@ -258,6 +287,40 @@ function CloseIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <path d="M6 6l12 12" strokeLinecap="round" />
       <path d="M18 6L6 18" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function EyeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
     </svg>
   );
 }

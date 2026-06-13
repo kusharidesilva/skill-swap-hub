@@ -24,14 +24,14 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
   const { userProfile, loading } = useAuth();
   const [received, setReceived]   = useState<ReviewItem[]>([]);
   const [given, setGiven]         = useState<ReviewItem[]>([]);
-  const [fetching, setFetching]   = useState(true);
+  const [fetching, setFetching]   = useState(false);
 
   // Both buyer and provider dashboards now show "received" as the default tab if they have reviews
   const [tab, setTab] = useState<ReviewsTab>("received");
   const [filterStars, setFilterStars] = useState<"all" | "5" | "4" | "3">("all");
 
   useEffect(() => {
-    if (!userProfile) { setFetching(false); return; }
+    if (!userProfile) return;
 
     async function load() {
       setFetching(true);
