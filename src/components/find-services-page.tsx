@@ -51,7 +51,6 @@ const filterConfig = [
   },
   { label: "Rating", options: ["Any Rating", "4.5+", "4.0+"] },
   { label: "Availability", options: ["Any Time", "Weekends", "Evenings", "Weekdays"] },
-  { label: "Sort By", options: ["Match Score", "Highest Rated", "Most Reviews"] },
 ];
 
 const gigImages = [
@@ -118,7 +117,6 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
   const [universityFilter, setUniversityFilter] = useState("Any University");
   const [ratingFilter, setRatingFilter] = useState("Any Rating");
   const [availabilityFilter, setAvailabilityFilter] = useState("Any Time");
-  const [sortBy, setSortBy] = useState("Match Score");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -244,12 +242,8 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
 
         return true;
       })
-      .sort((a, b) => {
-        if (sortBy === "Highest Rated") return b.rating - a.rating;
-        if (sortBy === "Most Reviews") return b.reviews - a.reviews;
-        return b.match - a.match;
-      });
-  }, [availabilityFilter, categoryFilter, gigs, ratingFilter, searchQuery, sortBy, universityFilter, userProfile]);
+      .sort((a, b) => b.match - a.match);
+  }, [availabilityFilter, categoryFilter, gigs, ratingFilter, searchQuery, universityFilter, userProfile]);
 
   const cardsPerPage = 4;
   const totalPages = Math.ceil(filteredGigs.length / cardsPerPage);
@@ -321,8 +315,6 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
         setRatingFilter={(value) => updateFilters(() => setRatingFilter(value))}
         availabilityFilter={availabilityFilter}
         setAvailabilityFilter={(value) => updateFilters(() => setAvailabilityFilter(value))}
-        sortBy={sortBy}
-        setSortBy={(value) => updateFilters(() => setSortBy(value))}
       />
     </div>
   );
@@ -353,7 +345,6 @@ function GigCard({
           <h2 className="line-clamp-2 text-base font-semibold leading-6 text-slate-900">{gig.title}</h2>
           <div className="shrink-0 text-right">
             <p className="text-sm font-bold text-slate-900">★ {gig.rating.toFixed(1)}</p>
-            <p className="text-[10px] text-slate-500">({gig.reviews} reviews)</p>
           </div>
         </div>
 
@@ -371,9 +362,8 @@ function GigCard({
         </div>
 
         <div className="mt-auto border-t border-slate-200 pt-3">
-          <div className="flex items-center justify-between text-[11px] text-slate-500">
+          <div className="text-[11px] text-slate-500">
             <span className="truncate">{availability}</span>
-            <span className="font-semibold text-teal-700">Match: {gig.match}%</span>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Link
@@ -406,8 +396,6 @@ function FiltersSidebar(props: {
   setRatingFilter: (value: string) => void;
   availabilityFilter: string;
   setAvailabilityFilter: (value: string) => void;
-  sortBy: string;
-  setSortBy: (value: string) => void;
 }) {
   return (
     <aside className="w-full shrink-0 order-1 lg:order-2 lg:w-72">
@@ -439,16 +427,13 @@ function FiltersSidebar(props: {
                   ? props.universityFilter
                   : filter.label === "Rating"
                     ? props.ratingFilter
-                    : filter.label === "Availability"
-                      ? props.availabilityFilter
-                      : props.sortBy;
+                    : props.availabilityFilter;
 
             const selectHandler = (value: string) => {
               if (filter.label === "Category") props.setCategoryFilter(value);
               else if (filter.label === "University") props.setUniversityFilter(value);
               else if (filter.label === "Rating") props.setRatingFilter(value);
-              else if (filter.label === "Availability") props.setAvailabilityFilter(value);
-              else props.setSortBy(value);
+              else props.setAvailabilityFilter(value);
             };
 
             if (filter.label === "University") {
