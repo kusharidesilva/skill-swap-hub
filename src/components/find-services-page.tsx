@@ -28,6 +28,7 @@ type GigCardData = {
   image: string;
   points: number;
   tags: string[];
+  serviceType: string;
 };
 
 const ALL_SKILLS = [
@@ -82,6 +83,7 @@ const mockGigCards: GigCardData[] = [
     image: "/img/favorites/web-development.jpg",
     points: 30,
     tags: ["React", "Next.js", "Tailwind"],
+    serviceType: "Skill Exchange",
   },
   {
     id: "gig-figma-prototype",
@@ -100,6 +102,7 @@ const mockGigCards: GigCardData[] = [
     image: "/img/favorites/ui-ux-design.jpg",
     points: 25,
     tags: ["Figma", "UI Design", "Prototype"],
+    serviceType: "Skill Exchange",
   },
 ];
 
@@ -166,7 +169,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
               providerName: user.name || "Anonymous Member",
               providerDegree: user.degree || "Undergraduate",
               university: user.university || "Sri Lankan University",
-              title: `I will help you with ${skill}`,
+              title: `${skill} Help`,
               category,
               summary:
                 profile.bio ||
@@ -178,6 +181,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
               image: (profile.gigImages && profile.gigImages[skillIndex]) || gigImages[index % gigImages.length],
               points: 20 + (skillIndex % 3) * 5,
               tags: skills.slice(0, 3),
+              serviceType: "Skill Exchange",
             });
             index += 1;
           });
@@ -332,26 +336,31 @@ function GigCard({
   const availability = Array.isArray(gig.availability) ? gig.availability.join(", ") : gig.availability;
 
   return (
-    <article className="flex min-h-[350px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
+    <article className="flex min-h-[330px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
       <div className="relative h-32 bg-slate-100">
         <Image src={gig.image} alt={gig.title} fill className="object-cover" sizes="(min-width: 1024px) 320px, 100vw" />
         <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-[#1453c4] shadow-sm">
           {gig.category}
         </span>
+        <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
+          <span className="text-amber-400">★</span>
+          {gig.rating.toFixed(1)}
+        </span>
       </div>
 
       <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-start justify-between gap-3">
-          <h2 className="line-clamp-2 text-base font-semibold leading-6 text-slate-900">{gig.title}</h2>
-          <div className="shrink-0 text-right">
-            <p className="text-sm font-bold text-slate-900">★ {gig.rating.toFixed(1)}</p>
-          </div>
-        </div>
+        <h2 className="line-clamp-2 text-base font-semibold leading-6 text-slate-900">
+          {gig.title}
+        </h2>
 
-        <p className="mt-2 text-xs font-semibold text-slate-600">{gig.providerName}</p>
+        <p className="mt-2.5 text-xs font-semibold text-slate-600">
+          {gig.providerName}
+        </p>
         <p className="text-xs text-slate-500">{gig.university}</p>
 
-        <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-600">{gig.summary}</p>
+        <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-600">
+          {gig.summary}
+        </p>
 
         <div className="mt-3 flex flex-wrap gap-1">
           {gig.tags.slice(0, 3).map((tag) => (
@@ -361,9 +370,12 @@ function GigCard({
           ))}
         </div>
 
-        <div className="mt-auto border-t border-slate-200 pt-3">
-          <div className="text-[11px] text-slate-500">
+        <div className="mt-4 border-t border-slate-200 pt-3">
+          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
             <span className="truncate">{availability}</span>
+            <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-[#dff2f4] px-2 py-0.5 text-[10px] font-semibold leading-none text-teal-800">
+              {gig.serviceType}
+            </span>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Link

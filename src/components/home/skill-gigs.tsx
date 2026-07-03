@@ -7,6 +7,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { usePathname } from "next/navigation";
 import type { SVGProps } from "react";
 import { db } from "@/lib/firebase";
+import { scopedHref } from "@/lib/role-routes";
 
 const gigImages = [
   "/img/package%201.jpg",
@@ -17,14 +18,17 @@ const gigImages = [
 
 type LiveGig = {
   id: string;
+  providerId: string;
   title: string;
   category: string;
   rating: number;
   providerName: string;
   university: string;
+  summary: string;
   availability: string;
   image: string;
   serviceType: string;
+  tags: string[];
 };
 
 export default function SkillGigsSection() {
@@ -66,14 +70,17 @@ export default function SkillGigsSection() {
             if (liveGigs.length >= 4) return;
             liveGigs.push({
               id: `${userDoc.id}-${skillIndex}`,
+              providerId: userDoc.id,
               title: `${skill} Help`,
               category: skill,
               rating: 4.5 + Math.round(Math.random() * 5) / 10,
               providerName,
               university,
+              summary: `Practical ${skill.toLowerCase()} support from a verified university student.`,
               availability,
               image: gigImages[(userIndex + skillIndex) % gigImages.length],
               serviceType: "Skill Exchange",
+              tags: [skill, "Skill Exchange", availability],
             });
           });
           userIndex++;
@@ -134,12 +141,12 @@ export default function SkillGigsSection() {
           // Fallback static cards if no providers have skills yet
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { title: "Graphic Design for Social Media Posts", category: "Design", rating: 4.8, providerName: "Campus student", university: "Rajini Campus", availability: "Weekends", image: "/img/package%201.jpg", serviceType: "Skill Exchange / Paid" },
-              { title: "Python Programming Help", category: "Programming", rating: 4.7, providerName: "Campus student", university: "SLIIT", availability: "Evenings", image: "/img/package%202.jpg", serviceType: "Skill Exchange" },
-              { title: "CV Writing and LinkedIn Help", category: "Career", rating: 4.9, providerName: "Campus student", university: "NSBM", availability: "Flexible", image: "/img/package%203.jpg", serviceType: "Paid" },
-              { title: "PowerPoint Presentation Design", category: "Academic", rating: 4.6, providerName: "Campus student", university: "KDU", availability: "Weekdays", image: "/img/package%204.jpg", serviceType: "Skill Exchange / Paid" },
+              { id: "graphic-design-social-posts", providerId: "graphic-design-social-posts", title: "Graphic Design for Social Media Posts", category: "Design", rating: 4.8, providerName: "Campus student", university: "Rajini Campus", availability: "Weekends", image: "/img/package%201.jpg", serviceType: "Skill Exchange / Paid", summary: "Creative design support for polished social content and branding assets.", tags: ["Design", "Skill Exchange / Paid", "Weekends"] },
+              { id: "python-programming-help", providerId: "python-programming-help", title: "Python Programming Help", category: "Programming", rating: 4.7, providerName: "Campus student", university: "SLIIT", availability: "Evenings", image: "/img/package%202.jpg", serviceType: "Skill Exchange", summary: "Friendly coding support for Python tasks, debugging, and project guidance.", tags: ["Programming", "Skill Exchange", "Evenings"] },
+              { id: "cv-writing-linkedin-help", providerId: "cv-writing-linkedin-help", title: "CV Writing and LinkedIn Help", category: "Career", rating: 4.9, providerName: "Campus student", university: "NSBM", availability: "Flexible", image: "/img/package%203.jpg", serviceType: "Paid", summary: "Professional profile help to improve CVs, LinkedIn presence, and applications.", tags: ["Career", "Paid", "Flexible"] },
+              { id: "powerpoint-design-help", providerId: "powerpoint-design-help", title: "PowerPoint Presentation Design", category: "Academic", rating: 4.6, providerName: "Campus student", university: "KDU", availability: "Weekdays", image: "/img/package%204.jpg", serviceType: "Skill Exchange / Paid", summary: "Clean and persuasive slide design for academic or project presentations.", tags: ["Academic", "Skill Exchange / Paid", "Weekdays"] },
             ].map((gig) => (
-              <GigCard key={gig.title} gig={{ id: gig.title, ...gig }} viewAllHref={viewAllHref} />
+              <GigCard key={gig.id} gig={gig} viewAllHref={viewAllHref} />
             ))}
           </div>
         ) : (
@@ -155,46 +162,87 @@ export default function SkillGigsSection() {
 }
 
 function GigCard({ gig, viewAllHref }: { gig: LiveGig; viewAllHref: string }) {
+  const pathname = usePathname();
+  const isBuyerHome = pathname === "/home/buyer";
+  const isProviderHome = pathname === "/home/provider";
+  const isBothHome = pathname === "/home/both";
+  const requestRole = isBuyerHome ? "buyer" : isProviderHome ? "provider" : isBothHome ? "both" : "buyer";
+  const previewHref = `/gig-preview/${requestRole}?providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0`;
+  const requestHref = `${scopedHref("/request-service", requestRole)}?providerId=${encodeURIComponent(gig.providerId)}`;
+
   return (
-    <Link
-      href={viewAllHref}
-      className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
-    >
-      <div className="relative h-40 w-full overflow-hidden">
+    <article className="flex min-h-[330px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
+      <div className="relative h-32 bg-slate-100">
         <Image
           src={gig.image}
           alt={gig.title}
           fill
-          className="object-cover transition group-hover:scale-105 duration-300"
-          sizes="(min-width: 1024px) 240px, (min-width: 640px) 45vw, 90vw"
+          className="object-cover"
+          sizes="(min-width: 1024px) 320px, 100vw"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/45 via-slate-900/10 to-transparent" />
-        <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700">
+        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-[#1453c4] shadow-sm">
           {gig.category}
         </span>
-        <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-xs font-semibold text-slate-700">
-          <StarIcon className="h-3 w-3 text-amber-400" aria-hidden="true" />
+        <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
+          <span className="text-amber-400">â˜…</span>
           {gig.rating.toFixed(1)}
         </span>
       </div>
-      <div className="p-5">
-        <h3 className="text-sm font-semibold text-slate-900">{gig.title}</h3>
-        <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#2f66e7] text-white text-[10px] font-bold">
+      <div className="flex flex-1 flex-col p-4">
+        <h3 className="min-h-[3rem] line-clamp-2 text-base font-semibold leading-6 text-slate-900">
+          {gig.title}
+        </h3>
+
+        <div className="mt-2.5 flex items-center gap-2 text-xs text-slate-500">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#2f66e7] text-[10px] font-bold text-white">
             {gig.providerName.charAt(0).toUpperCase()}
           </span>
-          <span>{gig.university} student</span>
+          <div className="min-w-0">
+            <p className="truncate font-medium text-slate-700">{gig.providerName}</p>
+            <p className="truncate text-slate-500">{gig.university} student</p>
+          </div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600">
-            {gig.serviceType}
-          </span>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600">
-            {gig.availability}
-          </span>
+
+        <p className="mt-3 min-h-[2.5rem] line-clamp-2 text-xs leading-5 text-slate-600">
+          {gig.summary}
+        </p>
+
+        <div className="mt-3 min-h-[2.5rem] flex flex-wrap gap-1">
+          {gig.tags.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full bg-[#dff2f4] px-2.5 py-0.5 text-xs font-medium text-teal-800"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-4 border-t border-slate-200 pt-3">
+          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+            <span className="truncate">{gig.availability}</span>
+            <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-[#dff2f4] px-2 py-0.5 text-[10px] font-semibold leading-none text-teal-800">
+              {gig.serviceType}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Link
+              href={previewHref}
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              View Gig
+            </Link>
+            <Link
+              href={requestHref}
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-[#2f66e7] px-2 text-xs font-semibold text-white transition hover:bg-[#2557cf]"
+            >
+              Request
+            </Link>
+          </div>
         </div>
       </div>
-    </Link>
+    </article>
   );
 }
 
