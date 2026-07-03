@@ -43,8 +43,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[250px_minmax(0,1fr)]">
-      <aside className="sticky top-0 flex h-screen flex-col border-r border-slate-200 bg-[#f3f4ff] px-4 py-6 shadow-[inset_-1px_0_0_rgba(15,23,42,0.04)]">
+    <div className="grid h-screen overflow-hidden lg:grid-cols-[250px_minmax(0,1fr)]">
+      <aside className="flex h-screen flex-col border-r border-slate-200 bg-[#f3f4ff] px-4 py-6 shadow-[inset_-1px_0_0_rgba(15,23,42,0.04)]">
         <div className="px-2">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
             Skill Swap Hub
@@ -64,7 +64,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition ${
-                  active ? "bg-[#2f66e7] text-white shadow-sm" : "text-slate-600 hover:bg-white"
+                  active ? "bg-[#2559d8] text-white shadow-md" : "text-slate-600 hover:bg-white"
                 }`}
               >
                 <span
@@ -88,7 +88,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             <Link
               href="/admin/settings"
               className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition ${
-                pathname === "/admin/settings" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:bg-white"
+                pathname === "/admin/settings" ? "bg-[#2559d8] text-white shadow-md" : "text-slate-600 hover:bg-white"
               }`}
             >
               <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm">
@@ -111,7 +111,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       </aside>
 
       <main className="min-w-0 bg-[#f6f7ff]">
-        <header className="sticky top-0 z-10 flex h-20 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-[0_4px_12px_rgba(15,23,42,0.04)]">
+        <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-[0_4px_12px_rgba(15,23,42,0.04)]">
           <h2 className="text-2xl font-medium text-slate-900">{title}</h2>
           <div ref={menuRef} className="relative">
             <button
@@ -151,7 +151,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        {children}
+        <div className="h-[calc(100vh-5rem)] overflow-y-auto">
+          {children}
+        </div>
       </main>
     </div>
   );
