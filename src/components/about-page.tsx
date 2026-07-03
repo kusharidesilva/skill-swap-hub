@@ -15,7 +15,7 @@ const values = [
       "Students offer skills they already have and request the skills they need, creating a useful peer-to-peer network.",
     icon: "book",
   },
-  {
+  { 
     title: "Trusted Student Community",
     description:
       "Every student is verified using their official university email and verification code, keeping the community safe.",
