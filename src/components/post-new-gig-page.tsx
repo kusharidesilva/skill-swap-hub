@@ -173,7 +173,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
             <Connector />
             <StepItem number={2} label="Description" />
             <Connector />
-            <StepItem number={3} label="Points & Publish" />
+            <StepItem number={3} label="Publish" />
           </div>
         </div>
 
@@ -309,7 +309,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
           <SectionTitle title="Swap Terms" className="mt-8" />
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-semibold text-slate-700">
-              Point Value (Price)
+              Value (Price)
               <div className="mt-2 flex h-11 items-center rounded-lg border border-slate-200 overflow-hidden">
                 <button
                   type="button"
@@ -331,7 +331,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                 </button>
               </div>
               <span className="mt-1 block text-xs font-medium text-slate-400">
-                How many Skill Points is this swap worth? (10–500)
+                How much is this swap worth? (10–500)
               </span>
             </label>
           </div>

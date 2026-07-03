@@ -606,7 +606,7 @@ export default function ProviderProfilePublicPage({
                         {gig.category}
                       </span>
                       <span className="shrink-0 text-xs font-semibold text-[#1453c4]">
-                        {gig.points} Points
+                        {gig.points}
                       </span>
                     </div>
                   </div>

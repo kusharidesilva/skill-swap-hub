@@ -233,65 +233,65 @@ export default function MyGigsPageContent({
         </div>
 
         {currentGigs.length > 0 ? (
-          <div className="mt-5 grid gap-4 lg:grid-cols-4">
+          <div className="mt-5 grid gap-6 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
             {currentGigs.map((gig) => (
               <article
                 key={gig.id}
-                className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col justify-between"
+                className="flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
               >
                 <div>
                   <Link
                     href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile?.uid || "")}&skillIndex=${gig.rawIndex}`}
-                    className="h-32 w-full overflow-hidden bg-slate-100 relative block"
+                    className="relative block h-48 w-full overflow-hidden bg-slate-100 xl:h-52"
                   >
                     <Image
                       src={gig.image}
                       alt={gig.title}
                       fill
-                      sizes="(max-w-780px) 100vw, 300px"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 320px"
                       className="h-full w-full object-cover hover:scale-105 transition duration-300"
                     />
                   </Link>
 
-                  <div className="p-3.5">
-                    <h2 className="text-sm font-bold leading-tight text-slate-900 line-clamp-2 min-h-[2.5rem] hover:text-[#1453c4] transition">
+                  <div className="p-5">
+                    <h2 className="min-h-[3.75rem] text-[1.15rem] font-semibold leading-7 text-slate-900 line-clamp-2 transition hover:text-[#1453c4]">
                       <Link href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile?.uid || "")}&skillIndex=${gig.rawIndex}`}>
                         {gig.title}
                       </Link>
                     </h2>
-                    <p className="mt-1.5 text-xs font-semibold text-slate-700">
+                    <p className="mt-2 text-sm font-semibold text-slate-700">
                       <span className="text-teal-700">★</span> {gig.rating}{" "}
                       <span className="font-normal text-slate-500">({gig.reviews} reviews)</span>
                     </p>
 
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-                      <span className="rounded-md bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-700 truncate max-w-[120px]">
+                    <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                      <span className="max-w-[60%] truncate rounded-full bg-teal-50 px-3.5 py-1.5 text-sm font-semibold text-teal-700">
                         {gig.category}
                       </span>
-                      <span className="text-xs font-semibold text-[#1453c4]">{gig.points} Points</span>
+                      <span className="shrink-0 text-base font-semibold text-[#1453c4]">{gig.points}</span>
                     </div>
                   </div>
                 </div>
 
                 {isManageTab && (
-                  <div className="p-3.5 pt-0">
-                    <div className="border-t border-slate-200 pt-3 flex items-center gap-2">
+                  <div className="p-5 pt-0">
+                    <div className="flex items-center gap-3 border-t border-slate-200 pt-4">
                       <Link
                         href={`/edit-gig/${role}/${gig.id}`}
-                        className="flex-1 rounded-lg bg-[#e5e7f2] hover:bg-[#d9dbe6] px-3 py-1.5 text-center text-xs font-semibold text-slate-800 transition"
+                        className="flex-1 rounded-xl bg-[#e5e7f2] px-3 py-2.5 text-center text-sm font-semibold text-slate-800 transition hover:bg-[#d9dbe6]"
                       >
                         Edit
                       </Link>
                       <button
                         aria-label="Pause gig"
-                        className="h-8 w-8 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-500 flex items-center justify-center transition"
+                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-slate-500 transition hover:bg-slate-50"
                       >
                         ‖
                       </button>
                       <button
                         onClick={() => handleDeleteGig(gig.rawIndex)}
                         aria-label="Delete gig"
-                        className="h-8 w-8 rounded-lg border border-slate-300 hover:bg-slate-50 text-red-500 hover:text-red-700 flex items-center justify-center transition"
+                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-red-500 transition hover:bg-slate-50 hover:text-red-700"
                       >
                         🗑
                       </button>
@@ -379,11 +379,11 @@ function MetricCard({
   stars?: boolean;
 }) {
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{title}</p>
-      <p className="mt-2 text-[2.2rem] font-bold leading-none text-slate-900">{value}</p>
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{title}</p>
+      <p className="mt-2.5 text-[2.45rem] font-bold leading-none text-slate-900">{value}</p>
       {stars ? <Stars className="mt-2 justify-center text-teal-700" /> : null}
-      {sub ? <p className={`mt-1.5 text-xs ${teal ? "text-teal-700 font-semibold" : "text-slate-500"}`}>{sub}</p> : null}
+      {sub ? <p className={`mt-1.5 text-sm ${teal ? "text-teal-700 font-semibold" : "text-slate-500"}`}>{sub}</p> : null}
       {accent ? <div className="mx-auto mt-3 h-1 w-full rounded-full bg-teal-500" /> : null}
     </article>
   );
