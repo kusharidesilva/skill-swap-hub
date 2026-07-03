@@ -149,7 +149,7 @@ export default function AboutPage({
                 service or skill exchange.
               </p>
             </div>
-            <div className="mt-8 flex flex-wrap gap-6 text-sm font-semibold text-slate-700">
+            {/* <div className="mt-8 flex flex-wrap gap-6 text-sm font-semibold text-slate-700">
               <div>
                 <div className="text-3xl font-semibold text-[#0f4cbf]">15+</div>
                 <div className="text-xs uppercase tracking-wide">
@@ -166,7 +166,7 @@ export default function AboutPage({
                   Skill Categories
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
