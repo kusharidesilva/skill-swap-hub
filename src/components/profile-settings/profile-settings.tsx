@@ -551,6 +551,11 @@ function LoginSecurity() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const strongPasswordMessage =
+    "Use a strong password with at least 6 characters, including uppercase, lowercase, a number, and a symbol.";
+  const isStrongPassword = (value: string) =>
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/.test(value);
+
   const resetPasswordForm = () => {
     setCurrentPassword("");
     setNewPassword("");
@@ -573,9 +578,9 @@ function LoginSecurity() {
       return;
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 6 || !isStrongPassword(newPassword)) {
       setPasswordStatus("error");
-      setPasswordMessage("New password must be at least 6 characters.");
+      setPasswordMessage(strongPasswordMessage);
       return;
     }
 
@@ -655,6 +660,9 @@ function LoginSecurity() {
                 {showNew ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
             </div>
+            <p className="text-[11px] font-medium text-slate-500">
+              {strongPasswordMessage}
+            </p>
           </label>
           <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
             Confirm New
