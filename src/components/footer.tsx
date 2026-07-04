@@ -15,6 +15,7 @@ export default function SiteFooter({ role = "guest" }: SiteFooterProps) {
   const roleHomeHref = homeHref(role);
   const helpCenterHref = role === "guest" ? "/help" : helpHref(role);
   const aboutPageHref = aboutHref(role);
+  const currentYear = new Date().getFullYear();
 
   const footerColumns: FooterColumn[] = [
     {
@@ -92,7 +93,7 @@ export default function SiteFooter({ role = "guest" }: SiteFooterProps) {
         </div>
 
         <div className="mt-12 border-t border-slate-200/80 pt-8 text-center text-sm font-semibold text-slate-500">
-          (c) 2026 Skill Swap Hub | All Rights Reserved
+          © {currentYear} Skill Swap Hub | All Rights Reserved
         </div>
       </div>
     </footer>
