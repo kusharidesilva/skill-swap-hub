@@ -9,6 +9,7 @@ import { z } from "zod";
 import { upgradeToProvider, checkBuyerHistory } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { UNIVERSITIES, isEmailAllowedForUniversity } from "@/lib/universities";
+import { dashboardHref } from "@/lib/role-routes";
 
 const ALL_SKILLS = [
   "Programming",
@@ -70,15 +71,15 @@ export default function ProviderRegisterPage() {
       if (userProfile.role === "both") {
         checkBuyerHistory(userProfile.uid).then((hasHistory) => {
           if (hasHistory) {
-            router.replace("/home/both");
+            router.replace(dashboardHref("both"));
           } else {
-            router.replace("/home/provider");
+            router.replace(dashboardHref("provider"));
           }
         });
         return;
       }
       if (userProfile.role === "provider") {
-        router.replace("/home/provider");
+        router.replace(dashboardHref("provider"));
         return;
       }
 

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import type { Role } from "@/lib/role-routes";
+import { dashboardHref, type Role } from "@/lib/role-routes";
 
 interface AuthGuardProps {
   /** The role this page is restricted to. Pass undefined to allow any logged-in user. */
@@ -51,7 +51,7 @@ export default function AuthGuard({ requiredRole, children }: AuthGuardProps) {
         role === "provider"; // providers can freely browse buyer pages
 
       if (!hasAccess) {
-        router.replace(`/home/${role}`);
+        router.replace(dashboardHref(role));
       }
     }
   }, [loading, firebaseUser, userProfile, requiredRole, router]);
