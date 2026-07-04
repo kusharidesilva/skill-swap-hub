@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { formatRatingLabel } from "@/lib/ratings";
 import { useAuth } from "@/context/AuthContext";
 import type { ProviderGig, UserProfile } from "@/lib/auth";
 
@@ -94,7 +95,7 @@ export default function MyGigsPageContent({
   const [stats, setStats] = useState({
     trustScore: "99%",
     totalSwaps: "0",
-    avgRating: "5.0",
+    avgRating: "New",
     avgResponse: "1h",
     reviewsCount: 0,
   });
@@ -141,7 +142,7 @@ export default function MyGigsPageContent({
         const avgRating =
           ratings.length > 0
             ? parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1))
-            : 5.0;
+            : 0;
 
         const totalRequests = reqs.length;
         const totalRejected = reqs.filter((r) => r.status === "rejected").length;
@@ -153,7 +154,7 @@ export default function MyGigsPageContent({
         setStats({
           trustScore,
           totalSwaps: String(completedRequests.length),
-          avgRating: avgRating.toFixed(1),
+          avgRating: formatRatingLabel(avgRating),
           avgResponse: "1h",
           reviewsCount: completedRequests.length,
         });

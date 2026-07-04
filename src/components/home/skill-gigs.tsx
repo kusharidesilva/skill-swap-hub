@@ -7,6 +7,7 @@ import { collection, doc, getDocs, onSnapshot, query, updateDoc, where } from "f
 import { usePathname } from "next/navigation";
 import type { SVGProps } from "react";
 import { db } from "@/lib/firebase";
+import { formatRatingLabel } from "@/lib/ratings";
 import { scopedHref } from "@/lib/role-routes";
 import { useAuth } from "@/context/AuthContext";
 
@@ -272,7 +273,7 @@ function GigCard({ gig }: { gig: LiveGig }) {
             title: gig.title,
             category: gig.category,
             instructor: gig.providerName,
-            rating: gig.rating.toFixed(1),
+            rating: formatRatingLabel(gig.rating),
             image: gig.image,
             avatar: gig.providerImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(gig.providerName)}&background=2f66e7&color=fff&size=400`,
             level: gig.university,
@@ -318,7 +319,7 @@ function GigCard({ gig }: { gig: LiveGig }) {
           </button>
           <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
             <StarIcon className="h-3.5 w-3.5 text-amber-400" />
-            {gig.rating > 0 ? gig.rating.toFixed(1) : "New"}
+            {formatRatingLabel(gig.rating)}
           </span>
         </div>
       </div>

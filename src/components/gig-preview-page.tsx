@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { collection, doc, getDoc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
+import { formatRatingLabel } from "@/lib/ratings";
 import { scopedHref } from "@/lib/role-routes";
 import type { UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
@@ -141,7 +142,7 @@ export default function GigPreviewPage({
             title: gig.title,
             category: gig.category,
             instructor: gig.providerName,
-            rating: gig.rating.toFixed(1),
+            rating: formatRatingLabel(gig.rating),
             image: gig.image,
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(gig.providerName)}&background=2f66e7&color=fff&size=400`,
             level: gig.proficiency,
@@ -329,7 +330,7 @@ export default function GigPreviewPage({
                 </button>
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
                   <StarIcon className="h-3.5 w-3.5 text-amber-400" />
-                  {gig.rating > 0 ? gig.rating.toFixed(1) : "New"}
+                  {formatRatingLabel(gig.rating)}
                 </span>
               </div>
             </div>
@@ -407,7 +408,7 @@ function ProviderCard({ gig, role }: { gig: GigPreviewData; role: string }) {
             </p>
             <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-teal-700">
               <StarIcon className="h-3.5 w-3.5" />{" "}
-              {gig.rating > 0 ? gig.rating.toFixed(1) : "New"} ({gig.reviews} reviews)
+              {formatRatingLabel(gig.rating)} ({gig.reviews} reviews)
             </p>
           </div>
         </div>
@@ -591,7 +592,7 @@ function ReviewCard({
         <div>
           <h3 className="text-sm font-bold text-slate-900">{review.name}</h3>
           <p className="text-xs font-semibold text-teal-700">
-            {review.rating > 0 ? review.rating.toFixed(1) : "New"} rating
+            {formatRatingLabel(review.rating)} rating
           </p>
         </div>
       </div>
