@@ -163,7 +163,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
-                    University Affiliation
+                    University Name
                   </p>
                   <p className="mt-2.5 text-base font-bold text-blue-700 truncate">
                     {userProfile.university || "Stanford University"}
@@ -210,7 +210,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
               <>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
-                    Learning Requests
+                    Service Requests
                   </p>
                   <p className="mt-2 text-3xl font-bold text-blue-700">
                     {buyerActiveRequests}
@@ -218,7 +218,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
-                    Teaching Swaps
+                    Provided Swaps
                   </p>
                   <p className="mt-2 text-3xl font-bold text-emerald-600">
                     {providerIncomingRequests + providerActiveJobs}
@@ -226,7 +226,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
-                    Average Swap Rating
+                    Rating & Reviews
                   </p>
                   <p className="mt-2 text-3xl font-bold text-amber-500">
                     {providerReviewCount > 0
@@ -254,7 +254,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                     Buyer Details
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Your activity as a skill learner
+                    Your activity as a service buyer
                   </p>
                 </div>
                 <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600">
@@ -290,7 +290,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                   href="/home/buyer"
                   className="block w-full text-center rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors"
                 >
-                  Go to Buyer Home →
+                  Go to Buyer Home 
                 </Link>
               </div>
             </div>
@@ -304,7 +304,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                     Provider Details
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Your activity as a skill expert
+                    Your activity as a service provider
                   </p>
                 </div>
                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-600">
@@ -313,20 +313,20 @@ export default function DashboardView({ role }: DashboardViewProps) {
               </div>
               <div className="mt-4 space-y-3.5">
                 <div className="flex items-center justify-between text-xs sm:text-sm">
-                  <span className="text-slate-500">Incoming Peer Requests</span>
+                  <span className="text-slate-500">Incoming Requests</span>
                   <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
                     {providerIncomingRequests}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs sm:text-sm">
-                  <span className="text-slate-500">Active Teaching Swaps</span>
+                  <span className="text-slate-500">Active Swaps</span>
                   <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
                     {providerActiveJobs}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs sm:text-sm pt-2 border-t border-slate-50">
                   <span className="text-slate-600 font-medium">
-                    Ratings & Feedback
+                    Ratings & Reviews
                   </span>
                   <span className="font-bold text-[#1caa88]">
                     {providerReviewCount > 0
@@ -341,7 +341,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                   href="/incoming-requests/both"
                   className="block w-full text-center rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors"
                 >
-                  Manage Incoming Requests →
+                  Manage Incoming Requests 
                 </Link>
               </div>
             </div>
@@ -363,7 +363,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                 <p className="max-w-2xl text-xs text-slate-600 leading-relaxed">
                   Join our verified university provider network in Sri Lanka.
                   List your skills in Programming, Design, Photography, or
-                  Academics, and earn rewards or swap services.
+                  Academics, and earn money or swap services.
                 </p>
               </div>
               <Link
