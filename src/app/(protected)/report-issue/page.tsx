@@ -1,10 +1,12 @@
 import ProfileShell from "@/components/profile-shell";
-import ReportIssuePageContent from "@/components/report-issue-page";
+import ReportProfilePage from "@/components/report-profile-page";
 
 export default function ReportIssuePage() {
   return (
     <ProfileShell role="buyer">
-      <ReportIssuePageContent />
+      <div className="mx-auto w-full max-w-6xl">
+        <ReportProfilePage />
+      </div>
     </ProfileShell>
   );
 }

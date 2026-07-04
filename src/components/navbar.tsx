@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 import {
   aboutHref,
   dashboardHref,
@@ -24,6 +25,7 @@ interface NavbarProps {
 
 export default function Navbar({ role: propRole }: NavbarProps) {
   const pathname = usePathname();
+  const { userProfile } = useAuth();
   const [activeSection, setActiveSection] = useState("Home");
 
   // Determine the active role based on prop or pathname auto-detection
@@ -229,8 +231,16 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                   <HeartIcon className="h-5 w-5" />
                 </Link>
                 <details className="relative">
-                  <summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:text-slate-900">
-                    <UserIcon className="h-5 w-5" />
+                  <summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center overflow-hidden rounded-full border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:text-slate-900">
+                    {userProfile?.profileImageUrl ? (
+                      <img
+                        src={userProfile.profileImageUrl}
+                        alt={userProfile.name || "Profile"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <UserIcon className="h-5 w-5" />
+                    )}
                   </summary>
                   <div className="absolute right-0 mt-3 w-48 rounded-xl border border-slate-200 bg-white p-2 text-sm text-slate-600 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
                     <Link

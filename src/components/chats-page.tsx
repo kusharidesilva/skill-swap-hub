@@ -429,7 +429,7 @@ function ChatHeader({
   role: Role;
 }) {
   const peerProfileHref = `/provider-profile/${conversation.peerId}?role=${role}`;
-  const reportPeerHref = `/report-profile/${conversation.peerId}?role=${role}`;
+  const reportPeerHref = `/report-issue/${role}/${conversation.peerId}`;
   const initials = conversation.name
     .split(" ")
     .map((n) => n[0])

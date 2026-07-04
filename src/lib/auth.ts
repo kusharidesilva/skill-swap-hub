@@ -26,6 +26,7 @@ export interface UserProfile {
   uid: string;
   name: string;
   email: string;
+  profileImageUrl?: string;
   university: string;
   degree: string;
   yearOfStudy: string;

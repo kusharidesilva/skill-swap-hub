@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { collection, getDocs, query, where } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
@@ -112,10 +113,11 @@ type FindServicesPageContentProps = {
 
 export default function FindServicesPageContent({ role }: FindServicesPageContentProps) {
   const { userProfile } = useAuth();
+  const searchParams = useSearchParams();
   const [gigs, setGigs] = useState<GigCardData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get("query") || "");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [universityFilter, setUniversityFilter] = useState("Any University");
   const [ratingFilter, setRatingFilter] = useState("Any Rating");

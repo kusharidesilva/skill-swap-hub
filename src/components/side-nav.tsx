@@ -52,7 +52,7 @@ const navConfig: Record<Role, NavItem[]> = {
     },
     {
       label: "Report Issue",
-      href: "/report-issue?role=buyer",
+      href: scopedHref("/report-issue", "buyer"),
       section: "footer",
       icon: AlertTriangleIcon,
     },
@@ -97,7 +97,7 @@ const navConfig: Record<Role, NavItem[]> = {
     },
     {
       label: "Report Issue",
-      href: "/report-issue?role=provider",
+      href: scopedHref("/report-issue", "provider"),
       section: "footer",
       icon: AlertTriangleIcon,
     },
@@ -149,7 +149,7 @@ const navConfig: Record<Role, NavItem[]> = {
     },
     {
       label: "Report Issue",
-      href: "/report-issue?role=both",
+      href: scopedHref("/report-issue", "both"),
       section: "footer",
       icon: AlertTriangleIcon,
     },
@@ -246,8 +246,8 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
 function SideNavLink({ link, pathname }: { link: NavItem; pathname: string }) {
   const isInsideServicePage = pathname.startsWith("/service/");
   const isFindServicesLink = link.label === "Find Services";
-  const isReportProfilePage = pathname.startsWith("/report-profile");
   const isReportIssueLink = link.label === "Report Issue";
+  const isReportIssuePage = pathname.startsWith("/report-issue");
   const isPostGigPage = pathname.startsWith("/post-gig");
   const isGigPreviewPage = pathname.startsWith("/gig-preview");
   const isEditGigPage = pathname.startsWith("/edit-gig");
@@ -256,7 +256,7 @@ function SideNavLink({ link, pathname }: { link: NavItem; pathname: string }) {
     pathname === link.href ||
     pathname.startsWith(`${link.href}/`) ||
     (isInsideServicePage && isFindServicesLink) ||
-    (isReportProfilePage && isReportIssueLink) ||
+    (isReportIssuePage && isReportIssueLink) ||
     (isPostGigPage && isMyGigsLink) ||
     (isGigPreviewPage && isMyGigsLink) ||
     (isEditGigPage && isMyGigsLink);
