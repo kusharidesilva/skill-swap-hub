@@ -10,11 +10,22 @@ import { z } from "zod";
 import { registerBuyer } from "@/lib/auth";
 import { UNIVERSITIES, isEmailAllowedForUniversity } from "@/lib/universities";
 
+const strongPasswordMessage =
+  "Use a strong password with at least 6 characters, including uppercase, lowercase, a number, and a symbol.";
+
+const strongPasswordSchema = z
+  .string()
+  .min(6, strongPasswordMessage)
+  .regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/,
+    strongPasswordMessage,
+  );
+
 const registerSchema = z
   .object({
     name: z.string().min(2, "Enter your full name."),
     email: z.string().email("Enter a valid university email."),
-    password: z.string().min(6, "Password must be at least 6 characters."),
+    password: strongPasswordSchema,
     confirmPassword: z.string().min(6, "Please confirm your password."),
     university: z.string().min(1, "Select your university."),
     degree: z.string().min(2, "Enter your degree programme."),
@@ -155,6 +166,9 @@ export default function RegisterPage() {
                         )}
                       </button>
                     </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {strongPasswordMessage}
+                    </p>
                     {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
                   </div>
                   <div>

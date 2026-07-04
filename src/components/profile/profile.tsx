@@ -136,8 +136,18 @@ export default function Profile({ role: propRole }: { role: Role }) {
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-5">
             {/* Letter Avatar for Verified Student */}
-            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-gradient-to-tr from-blue-500 to-[#2b62e6] text-xl font-bold text-white shadow-inner">
-              {name.charAt(0).toUpperCase()}
+            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 shadow-inner">
+              {userProfile.profileImageUrl ? (
+                <img
+                  src={userProfile.profileImageUrl}
+                  alt={name || "Profile"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-blue-500 to-[#2b62e6] text-xl font-bold text-white">
+                  {name.charAt(0).toUpperCase()}
+                </span>
+              )}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-3">

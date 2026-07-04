@@ -167,7 +167,7 @@ export default function GigPreviewPage({
           reviews: reviewCount,
           reviewCards,
           image: (profile?.gigImages && profile.gigImages[safeSkillIndex]) || gigImages[safeSkillIndex % gigImages.length],
-          value: `${20 + (safeSkillIndex % 3) * 5} Points`,
+          value: `${20 + (safeSkillIndex % 3) * 5}`,
           delivery: formatAvailability(profile?.availability) || "Flexible",
           match: 95,
         };

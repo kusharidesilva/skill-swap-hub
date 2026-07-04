@@ -7,6 +7,7 @@ import { useState, useCallback } from "react";
 import { resendVerificationEmail } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { auth } from "@/lib/firebase";
+import { dashboardHref } from "@/lib/role-routes";
 
 interface Props {
   searchParams?: { from?: string; registered?: string };
@@ -40,7 +41,7 @@ export default function VerifyEmailPage({ searchParams }: Props) {
       if (currentUser.emailVerified) {
         setVerifySuccess(true);
         setTimeout(() => {
-          router.push(isProvider ? "/home/provider" : "/home/buyer");
+          router.push(dashboardHref(isProvider ? "provider" : "buyer"));
         }, 1500);
       } else {
         setErrorMsg(

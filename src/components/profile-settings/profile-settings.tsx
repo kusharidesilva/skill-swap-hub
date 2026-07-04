@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -27,6 +28,8 @@ const ALL_SKILLS_SUGGESTIONS = [
   "Content Writing",
   "Music",
 ];
+const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const PROFILE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 export default function ProfileSettings({ role }: { role: Role }) {
   const { userProfile, loading, refreshProfile } = useAuth();
@@ -90,6 +93,11 @@ function ProfileSettingsForm({
     userProfile.yearOfStudy || "1st Year",
   );
   const [bio, setBio] = useState(userProfile.providerProfile?.bio || "");
+  const [profileImageUrl, setProfileImageUrl] = useState(
+    userProfile.profileImageUrl || "",
+  );
+  const [selectedProfileImageFile, setSelectedProfileImageFile] =
+    useState<File | null>(null);
 
   // Skills States
   const [offeredSkills, setOfferedSkills] = useState<string[]>(
@@ -126,6 +134,7 @@ function ProfileSettingsForm({
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"success" | "error" | "">("");
   const [errorMessage, setErrorMessage] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Save changes handler
   const handleSaveProfile = async () => {
@@ -135,9 +144,27 @@ function ProfileSettingsForm({
 
     try {
       const userRef = doc(db, "users", userProfile.uid);
+      let nextProfileImageUrl = profileImageUrl;
+
+      if (selectedProfileImageFile) {
+        const safeFileName = selectedProfileImageFile.name.replace(
+          /[^a-zA-Z0-9.-]/g,
+          "_",
+        );
+        const storageRef = ref(
+          storage,
+          `profile-images/${userProfile.uid}/${Date.now()}-${safeFileName}`,
+        );
+
+        await uploadBytes(storageRef, selectedProfileImageFile, {
+          contentType: selectedProfileImageFile.type,
+        });
+        nextProfileImageUrl = await getDownloadURL(storageRef);
+      }
 
       const updates: Record<string, unknown> = {
         name,
+        profileImageUrl: nextProfileImageUrl,
         university,
         degree,
         yearOfStudy,
@@ -160,6 +187,8 @@ function ProfileSettingsForm({
       }
 
       await updateDoc(userRef, updates);
+      setProfileImageUrl(nextProfileImageUrl);
+      setSelectedProfileImageFile(null);
       await refreshProfile();
       setSaveStatus("success");
       setTimeout(() => setSaveStatus(""), 3000);
@@ -171,6 +200,32 @@ function ProfileSettingsForm({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    if (!PROFILE_IMAGE_TYPES.has(file.type)) {
+      setSaveStatus("error");
+      setErrorMessage("Please upload a PNG, JPG, or WEBP image.");
+      return;
+    }
+
+    if (file.size > MAX_PROFILE_IMAGE_SIZE_BYTES) {
+      setSaveStatus("error");
+      setErrorMessage("Profile image must be 5MB or smaller.");
+      return;
+    }
+
+    setSaveStatus("");
+    setErrorMessage("");
+    setSelectedProfileImageFile(file);
+    setProfileImageUrl(URL.createObjectURL(file));
   };
 
   // Helper additions
@@ -199,7 +254,7 @@ function ProfileSettingsForm({
   };
 
   return (
-    <div className="flex w-full flex-col gap-8 pb-10">
+    <div className="flex w-full min-w-0 flex-col gap-8 pb-10">
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
@@ -224,10 +279,36 @@ function ProfileSettingsForm({
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative h-12 w-12 shrink-0">
-              <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2 border-white shadow-md ring-1 ring-slate-200 bg-gradient-to-tr from-blue-500 to-[#2b62e6] text-lg font-bold text-white">
-                {name.charAt(0).toUpperCase()}
-              </div>
+            <div className="relative h-14 w-14 shrink-0">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".png,.jpg,.jpeg,.webp"
+                onChange={handleProfileImageChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="group relative block h-14 w-14 overflow-hidden rounded-full border-2 border-white shadow-md ring-1 ring-slate-200"
+                aria-label="Change profile image"
+                title="Change profile image"
+              >
+                {profileImageUrl ? (
+                  <img
+                    src={profileImageUrl}
+                    alt={name || "Profile"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-blue-500 to-[#2b62e6] text-lg font-bold text-white">
+                    {name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className="absolute inset-0 flex items-center justify-center bg-slate-950/0 text-white opacity-0 transition group-hover:bg-slate-950/40 group-hover:opacity-100">
+                  <EditIcon className="h-4 w-4" />
+                </span>
+              </button>
             </div>
 
             <div className="min-w-0">
@@ -257,9 +338,9 @@ function ProfileSettingsForm({
       </section>
 
       {/* Main Settings Grid */}
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.28fr)_minmax(320px,0.92fr)]">
         {/* Left Column */}
-        <div className="grid gap-5">
+        <div className="grid min-w-0 gap-5">
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <SectionTitle
               icon={<UserIcon className="h-4 w-4" />}
@@ -389,16 +470,16 @@ function ProfileSettingsForm({
         </div>
 
         {/* Right Column */}
-        <div className="grid gap-5">
+        <div className="grid min-w-0 gap-5 self-start">
           {showOffered && (
-            <section className="h-fit rounded-xl border border-slate-200 border-l-4 border-l-emerald-600 bg-white p-5 shadow-sm">
+            <section className="min-w-0 rounded-xl border border-slate-200 border-l-4 border-l-emerald-600 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-xs font-semibold text-slate-800">
                   Skills I Can Offer
                 </h2>
               </div>
 
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex items-center gap-2">
                 <input
                   type="text"
                   placeholder="Type skill & press Enter"
@@ -410,12 +491,12 @@ function ProfileSettingsForm({
                       addOfferedSkill(newOfferedSkill);
                     }
                   }}
-                  className="h-8 flex-1 rounded-md border border-slate-300 px-3 text-xs focus:border-[#0758d8] outline-none"
+                  className="h-8 min-w-0 flex-1 rounded-md border border-slate-300 px-3 text-xs outline-none focus:border-[#0758d8]"
                 />
                 <button
                   type="button"
                   onClick={() => addOfferedSkill(newOfferedSkill)}
-                  className="rounded-md bg-[#0758d8] px-3 text-[10px] font-bold text-white hover:bg-[#0648b4]"
+                  className="inline-flex h-8 shrink-0 items-center justify-center rounded-md bg-[#0758d8] px-3 text-[10px] font-bold text-white hover:bg-[#0648b4]"
                 >
                   Add
                 </button>
@@ -466,14 +547,14 @@ function ProfileSettingsForm({
           )}
 
           {showNeeded && (
-            <section className="h-fit rounded-xl border border-slate-200 border-l-4 border-l-[#0758d8] bg-white p-5 shadow-sm">
+            <section className="min-w-0 rounded-xl border border-slate-200 border-l-4 border-l-[#0758d8] bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-xs font-semibold text-slate-800">
                   Skills I Need
                 </h2>
               </div>
 
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex items-center gap-2">
                 <input
                   type="text"
                   placeholder="Type skill & press Enter"
@@ -485,12 +566,12 @@ function ProfileSettingsForm({
                       addNeededSkill(newNeededSkill);
                     }
                   }}
-                  className="h-8 flex-1 rounded-md border border-slate-300 px-3 text-xs focus:border-[#0758d8] outline-none"
+                  className="h-8 min-w-0 flex-1 rounded-md border border-slate-300 px-3 text-xs outline-none focus:border-[#0758d8]"
                 />
                 <button
                   type="button"
                   onClick={() => addNeededSkill(newNeededSkill)}
-                  className="rounded-md bg-[#0758d8] px-3 text-[10px] font-bold text-white hover:bg-[#0648b4]"
+                  className="inline-flex h-8 shrink-0 items-center justify-center rounded-md bg-[#0758d8] px-3 text-[10px] font-bold text-white hover:bg-[#0648b4]"
                 >
                   Add
                 </button>
@@ -551,6 +632,11 @@ function LoginSecurity() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const strongPasswordMessage =
+    "Use a strong password with at least 6 characters, including uppercase, lowercase, a number, and a symbol.";
+  const isStrongPassword = (value: string) =>
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/.test(value);
+
   const resetPasswordForm = () => {
     setCurrentPassword("");
     setNewPassword("");
@@ -573,9 +659,9 @@ function LoginSecurity() {
       return;
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 6 || !isStrongPassword(newPassword)) {
       setPasswordStatus("error");
-      setPasswordMessage("New password must be at least 6 characters.");
+      setPasswordMessage(strongPasswordMessage);
       return;
     }
 
@@ -655,6 +741,9 @@ function LoginSecurity() {
                 {showNew ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
             </div>
+            <p className="text-[11px] font-medium text-slate-500">
+              {strongPasswordMessage}
+            </p>
           </label>
           <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
             Confirm New
@@ -998,6 +1087,23 @@ function CalendarIcon({ className }: IconProps) {
       <line x1="16" y1="2" x2="16" y2="6" />
       <line x1="8" y1="2" x2="8" y2="6" />
       <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function EditIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 20h9" />
+      <path d="m16.5 3.5 4 4L8 20l-5 1 1-5Z" />
     </svg>
   );
 }

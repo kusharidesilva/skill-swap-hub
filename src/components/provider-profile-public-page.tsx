@@ -463,7 +463,7 @@ export default function ProviderProfilePublicPage({
   const firstName = profile.name.split(" ")[0];
   const messageHref = role ? `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(providerId)}` : "/get-started";
   const reportHref = role
-    ? `/report-profile/${providerId}?role=${role}`
+    ? `${scopedHref("/report-issue", role)}/${providerId}`
     : "/get-started";
 
   const baseProfileHref = role
@@ -606,7 +606,7 @@ export default function ProviderProfilePublicPage({
                         {gig.category}
                       </span>
                       <span className="shrink-0 text-xs font-semibold text-[#1453c4]">
-                        {gig.points} Points
+                        {gig.points}
                       </span>
                     </div>
                   </div>

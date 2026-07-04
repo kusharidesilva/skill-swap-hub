@@ -1,7 +1,11 @@
+"use client";
+
 import type { ReactElement, SVGProps } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { dashboardHref, homeHref, type SiteRole } from "@/lib/role-routes";
+import { useRouter } from "next/navigation";
+import { dashboardHref, homeHref, scopedHref, type SiteRole } from "@/lib/role-routes";
 
 type IconType = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -11,8 +15,8 @@ type Highlight = {
 };
 
 const highlights: Highlight[] = [
-  { label: "Verified Students", Icon: VerifiedIcon },
-  { label: "Peer Matching", Icon: MatchIcon },
+  { label: "VERIFIED STUDENTS", Icon: VerifiedIcon },
+  { label: "PEER MATCHING", Icon: MatchIcon },
 ];
 
 type HeroSectionProps = {
@@ -20,9 +24,31 @@ type HeroSectionProps = {
 };
 
 export default function HeroSection({ role = "guest" }: HeroSectionProps) {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
   const exploreHref = `${homeHref(role)}#explore-skills`;
   const primaryHref = role === "guest" ? "/get-started" : dashboardHref(role);
   const primaryLabel = role === "guest" ? "Get Started" : "Go to Dashboard";
+  const searchResultsHref =
+    role === "guest"
+      ? "/get-started"
+      : `${scopedHref("/find-services", role)}?query=${encodeURIComponent(searchQuery.trim())}`;
+
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (role === "guest") {
+      router.push("/get-started");
+      return;
+    }
+
+    const trimmedQuery = searchQuery.trim();
+    router.push(
+      trimmedQuery
+        ? `${scopedHref("/find-services", role)}?query=${encodeURIComponent(trimmedQuery)}`
+        : scopedHref("/find-services", role)
+    );
+  };
 
   return (
     <section className="relative overflow-hidden bg-[#ebf5f0]">
@@ -69,23 +95,35 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
             </Link>
           </div>
           <form
+            onSubmit={handleSearchSubmit}
             className="mt-8 flex w-full max-w-xl items-center gap-3 rounded-xl bg-white p-1.5 shadow-md border border-slate-200/80"
             role="search"
           >
             <div className="flex flex-1 items-center gap-2.5 px-3 text-slate-400">
               <SearchIcon className="h-5 w-5 text-slate-400" aria-hidden="true" />
               <input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
                 className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
                 type="text"
                 placeholder="Search for skills"
               />
             </div>
-            <button
-              type="submit"
-              className="rounded-lg bg-[#2b62e6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
-            >
-              Search Skills
-            </button>
+            {role === "guest" ? (
+              <Link
+                href={searchResultsHref}
+                className="rounded-lg bg-[#2b62e6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+              >
+                Search Skills
+              </Link>
+            ) : (
+              <button
+                type="submit"
+                className="rounded-lg bg-[#2b62e6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+              >
+                Search Skills
+              </button>
+            )}
           </form>
         </div>
         <div className="relative flex items-end justify-center lg:justify-end -mb-5 lg:-mb-10 self-end lg:translate-x-16">

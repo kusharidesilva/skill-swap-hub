@@ -5,28 +5,32 @@ const categories = [
     title: "Account & Profile",
     description:
       "Guidance on creating a student account, verifying university email, updating profile details, adding skills, and managing account settings.",
-    tone: "bg-[#eef1ff] text-[#2b54d6]",
+    tone: "bg-[#e7edff] text-[#2452da]",
+    cardTone: "bg-white",
     icon: "user",
   },
   {
     title: "Safety & Security",
     description:
       "Learn how university email verification, private chat, ratings, reviews, and report options help maintain a trusted student-only environment.",
-    tone: "bg-[#ffe9e1] text-[#ef6a42]",
+    tone: "bg-[#ffe8e3] text-[#f06447]",
+    cardTone: "bg-[#f4f5ff]",
     icon: "shield",
   },
   {
     title: "Skill Swapping",
     description:
       "Understand how to post skill offers, request services, find matching students, filter by ratings, and start a skill exchange with verified peers.",
-    tone: "bg-[#e6fbf5] text-[#1caa88]",
+    tone: "bg-[#77efe0] text-[#087e78]",
+    cardTone: "bg-[#ecfbfa]",
     icon: "swap",
   },
   {
     title: "Payments & Private Agreements",
     description:
       "Skill Swap Hub does not process payments. If students agree on a paid service, payment discussions and slip sharing happen privately inside chat.",
-    tone: "bg-[#fff1e6] text-[#f28643]",
+    tone: "bg-[#ffe9dc] text-[#bf642e]",
+    cardTone: "bg-white",
     icon: "wallet",
   },
 ];
@@ -97,25 +101,28 @@ export default function SupportPage() {
 
       <section className="bg-white">
         <div className="mx-auto max-w-6xl px-6 py-14">
-          <h2 className="text-xl font-semibold text-slate-900">
+          <h2 className="text-[18px] font-semibold leading-none text-slate-900 sm:text-[19px]">
             Information Categories
           </h2>
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="mt-8 grid gap-5 md:grid-cols-2">
             {categories.map((item) => (
               <div
                 key={item.title}
-                className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:scale-[1.03] hover:shadow-md hover:border-[#0f4cbf]/35 cursor-pointer"
+                className={`flex items-start gap-4 rounded-[14px] border border-[#d7def1] px-7 py-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${item.cardTone}`}
               >
                 <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-2xl ${item.tone}`}
+                  className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] ${item.tone}`}
                 >
-                  <CategoryIcon type={item.icon} className="h-5 w-5" />
+                  <CategoryIcon
+                    type={item.icon}
+                    className="h-[17px] w-[17px]"
+                  />
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900">
+                <div className="max-w-[25rem]">
+                  <h3 className="text-[16px] font-semibold leading-[1.25] text-slate-900">
                     {item.title}
                   </h3>
-                  <p className="mt-2 text-sm text-slate-600">
+                  <p className="mt-2 text-[14px] leading-[1.55] text-slate-600">
                     {item.description}
                   </p>
                 </div>
@@ -136,18 +143,16 @@ export default function SupportPage() {
         </div>
         <div className="mx-auto max-w-4xl px-6 pb-12">
           <div className="space-y-6 border-l-2 border-slate-200 pl-6">
-            {faqs.map((faq, index) => (
+            {faqs.map((faq) => (
               <div
                 key={faq.question}
-                className="relative group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:translate-x-1"
+                className="group relative cursor-pointer transition-all duration-300 hover:translate-x-1 hover:scale-[1.02]"
               >
-                <div
-                  className="absolute -left-8.5 top-1.5 h-6 w-1 rounded-full bg-slate-300 transition-all duration-300 group-hover:bg-[#0f4cbf] group-hover:h-10 group-hover:top-0"
-                />
+                <div className="absolute -left-8.5 top-1.5 h-6 w-1 rounded-full bg-slate-300 transition-all duration-300 group-hover:top-0 group-hover:h-10 group-hover:bg-[#0f4cbf]" />
                 <h3 className="text-sm font-semibold text-slate-900 transition-colors duration-300 group-hover:text-[#0f4cbf]">
                   {faq.question}
                 </h3>
-                <p className="mt-2 text-sm text-slate-600 transition-colors duration-300 group-hover:text-slate-850">
+                <p className="mt-2 text-sm text-slate-600 transition-colors duration-300 group-hover:text-slate-800">
                   {faq.answer}
                 </p>
               </div>
@@ -156,50 +161,44 @@ export default function SupportPage() {
         </div>
       </section>
 
-      <section className="bg-white pb-16">
+      <section id="contact-section" className="bg-white pb-16 scroll-mt-20">
         <div className="mx-auto max-w-6xl px-6">
-          <div className="grid gap-8 rounded-3xl bg-[#0f4cbf] px-8 py-8 text-white shadow-lg lg:grid-cols-[1.1fr_0.9fr]">
-            <div>
-              <h2 className="text-xl font-semibold">Contact Information</h2>
-              <p className="mt-3 text-sm text-white/85">
+          <div className="grid gap-8 rounded-[30px] bg-[#1654d1] px-10 py-10 text-white shadow-lg lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+            <div className="max-w-[35rem]">
+              <h2 className="text-[20px] font-semibold leading-tight sm:text-[21px]">
+                Contact Information
+              </h2>
+              <p className="mt-4 max-w-[32rem] text-[14px] leading-[1.6] text-white/82">
                 Our support team is available to help students with account
                 issues, verification problems, reports, and platform-related
                 questions.
               </p>
-              <div className="mt-6 grid gap-3 text-sm text-white/90">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-                    @
-                  </span>
-                  support@skillswap.lk
+              <div className="mt-8 grid gap-x-8 gap-y-5 text-[14px] text-white/95 sm:grid-cols-2">
+                <div className="flex items-center gap-3">
+                  <MailIcon className="h-[18px] w-[18px] shrink-0" />
+                  <span>support@skillswap.lk</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-                    ☎
-                  </span>
-                  Student Help Desk
+                <div className="flex items-center gap-3">
+                  <HelpDeskIcon className="h-[18px] w-[18px] shrink-0" />
+                  <span>Student Help Desk</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-                    🕒
-                  </span>
-                  Mon-Fri: 9AM - 6PM
+                <div className="flex items-center gap-3">
+                  <ClockIcon className="h-[18px] w-[18px] shrink-0" />
+                  <span>Mon-Fri: 9AM - 6PM</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-                    📍
-                  </span>
-                  Colombo, Sri Lanka
+                <div className="flex items-center gap-3">
+                  <LocationIcon className="h-[18px] w-[18px] shrink-0" />
+                  <span>Colombo, Sri Lanka</span>
                 </div>
               </div>
             </div>
-            <div className="overflow-hidden rounded-2xl bg-white/10">
+            <div className="overflow-hidden rounded-[18px] bg-white/10 lg:justify-self-end">
               <Image
                 src="/img/03.jpg"
                 alt="Support team assisting a student"
-                width={520}
-                height={320}
-                className="h-full w-full object-cover"
+                width={420}
+                height={250}
+                className="h-[210px] w-full object-cover sm:h-[230px] lg:h-[182px] lg:w-[330px]"
               />
             </div>
           </div>
@@ -225,9 +224,9 @@ function CategoryIcon({
         stroke="currentColor"
         strokeWidth={2}
       >
-        <path d="M12 3l7 3v6c0 4.1-2.8 7.7-7 9-4.2-1.3-7-4.9-7-9V6l7-3z" />
+        <path d="M12 3.25l6.5 2.8v5.8c0 4-2.7 7.47-6.5 8.75-3.8-1.28-6.5-4.75-6.5-8.75v-5.8l6.5-2.8z" />
         <path
-          d="M9.5 12.5l2 2 4-4"
+          d="M9.4 12.35l1.9 1.9 3.7-3.95"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
@@ -244,9 +243,19 @@ function CategoryIcon({
         stroke="currentColor"
         strokeWidth={2}
       >
-        <path d="M7 7h11l-3-3" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M17 17H6l3 3" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M7 7v10" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M7 7h9.5" strokeLinecap="round" />
+        <path
+          d="M13.5 4.5L17 7l-3.5 2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d="M17 17H7.5" strokeLinecap="round" />
+        <path
+          d="M10.5 14.5L7 17l3.5 2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d="M7 7v10" strokeLinecap="round" />
       </svg>
     );
   }
@@ -260,9 +269,10 @@ function CategoryIcon({
         stroke="currentColor"
         strokeWidth={2}
       >
-        <path d="M3 7h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
-        <path d="M3 7V5a2 2 0 0 1 2-2h12" />
-        <circle cx="17" cy="12" r="1.5" fill="currentColor" />
+        <path d="M4 7.25h14.5a1.75 1.75 0 0 1 1.75 1.75v6a1.75 1.75 0 0 1-1.75 1.75H5.5A1.5 1.5 0 0 1 4 15.25v-8z" />
+        <path d="M4 7.25V5.8A1.8 1.8 0 0 1 5.8 4h10.95" />
+        <path d="M15.5 11h4.75v2.5H15.5A1.25 1.25 0 0 1 14.25 12.25 1.25 1.25 0 0 1 15.5 11z" />
+        <circle cx="16.75" cy="12.25" r="0.85" fill="currentColor" stroke="none" />
       </svg>
     );
   }
@@ -275,9 +285,74 @@ function CategoryIcon({
       stroke="currentColor"
       strokeWidth={2}
     >
-      <path d="M8 10a4 4 0 1 0-4-4 4 4 0 0 0 4 4z" />
-      <path d="M12 20c.5-3 3.3-5 6-5s5.5 2 6 5" />
-      <path d="M2 20c.7-2.3 2.8-3.8 5.3-4" />
+      <circle cx="12" cy="8.1" r="3.4" />
+      <path
+        d="M6.4 18.2c0-3.1 2.5-5.25 5.6-5.25s5.6 2.15 5.6 5.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="8.1" r="1.35" />
+    </svg>
+  );
+}
+
+function MailIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path d="M4 7.5h16v9H4z" />
+      <path d="M5 8.5l7 5 7-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function HelpDeskIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path d="M5 7.5h14v9H5z" />
+      <path d="M8 11h8" strokeLinecap="round" />
+      <path d="M8 14h5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ClockIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4.5l3 1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LocationIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path d="M12 20s6-4.35 6-10a6 6 0 1 0-12 0c0 5.65 6 10 6 10z" />
+      <circle cx="12" cy="10" r="2.1" />
     </svg>
   );
 }

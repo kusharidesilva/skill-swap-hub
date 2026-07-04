@@ -15,7 +15,7 @@ const values = [
       "Students offer skills they already have and request the skills they need, creating a useful peer-to-peer network.",
     icon: "book",
   },
-  {
+  { 
     title: "Trusted Student Community",
     description:
       "Every student is verified using their official university email and verification code, keeping the community safe.",
@@ -59,9 +59,9 @@ export default function AboutPage({
         />
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_85px)]">
           <div className="relative z-10 flex flex-col justify-center">
-            <span className="inline-flex items-center gap-2 rounded-full bg-[#d9f4ea] px-3 py-1 text-xs font-semibold text-[#0f8a6b] self-start">
-              <span className="h-2 w-2 rounded-full bg-[#0f8a6b]" />
-              OUR MISSION
+            <span className="inline-flex items-center gap-2 self-start rounded-full bg-[#dfe8ff] px-3 py-1 text-xs font-semibold text-[#315ccf]">
+              <span className="h-2 w-2 rounded-full bg-[#315ccf]" />
+              WHY SKILL SWAP HUB
             </span>
             <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl leading-tight">
               <span className="block">Empowering</span>
@@ -149,7 +149,9 @@ export default function AboutPage({
                 service or skill exchange.
               </p>
             </div>
-            <div className="mt-8 flex flex-wrap gap-6 text-sm font-semibold text-slate-700">
+
+            {/* Counts */}
+            {/* <div className="mt-8 flex flex-wrap gap-6 text-sm font-semibold text-slate-700">
               <div>
                 <div className="text-3xl font-semibold text-[#0f4cbf]">15+</div>
                 <div className="text-xs uppercase tracking-wide">
@@ -166,7 +168,8 @@ export default function AboutPage({
                   Skill Categories
                 </div>
               </div>
-            </div>
+            </div> */}
+            
           </div>
         </div>
       </section>
@@ -265,10 +268,18 @@ function ValueIcon({ type, className }: { type: string; className?: string }) {
         stroke="currentColor"
         strokeWidth={2}
       >
-        <path d="M8 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4z" />
-        <path d="M17 15a3 3 0 1 0-3-3 3 3 0 0 0 3 3z" />
-        <path d="M2 20c1.4-2.3 3.8-3.5 6.5-3.5" strokeLinecap="round" />
-        <path d="M13 20c.9-1.6 2.4-2.6 4.2-3" strokeLinecap="round" />
+        <circle cx="8" cy="8.25" r="3.25" />
+        <circle cx="16.25" cy="9.5" r="2.75" />
+        <path
+          d="M3.5 18.5c1.3-2.7 4-4.25 7-4.25s5.7 1.55 7 4.25"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M14.25 17.25c.9-1.45 2.42-2.37 4.25-2.37 1.05 0 2.01.29 2.82.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     );
   }

@@ -19,6 +19,9 @@ const badges: Badge[] = [
   { label: "University Exclusive", icon: "cap" },
 ];
 
+const strongPasswordHint =
+  "Use your strong password with at least 6 characters.";
+
 const loginSchema = z
   .object({
     email: z.string().email("Enter a valid university email."),
@@ -223,6 +226,9 @@ export default function LoginPage() {
                       )}
                     </button>
                   </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    {strongPasswordHint}
+                  </p>
                   {errors.password && (
                     <p className="mt-2 text-xs text-red-500">{errors.password.message}</p>
                   )}

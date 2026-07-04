@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   collection,
   addDoc,
@@ -35,6 +38,26 @@ const skillCategories = [
 ];
 
 const levelOptions = ["Beginner", "Intermediate", "Advanced"];
+const serviceTypeOptions = ["Free Help", "Skill Exchange", "Paid"] as const;
+
+const requestServiceSchema = z.object({
+  title: z.string().trim().min(1, "Skill Needed is required."),
+  category: z.string(),
+  description: z
+    .string()
+    .trim()
+    .min(1, "Description is required.")
+    .refine(
+      (value) => value.split(/\s+/).filter(Boolean).length >= 10,
+      "Description must contain at least 10 words.",
+    ),
+  level: z.string(),
+  serviceType: z.enum(serviceTypeOptions),
+  time: z.string().trim().min(1, "Preferred Time is required."),
+  preferredUniv: z.string().trim().min(1, "Preferred University is required."),
+});
+
+type RequestServiceFormValues = z.infer<typeof requestServiceSchema>;
 
 type RequestServiceContentProps = {
   role?: Role;
@@ -175,35 +198,53 @@ function RequestForm({
   providerName: string;
   refreshProfile: () => Promise<void>;
 }) {
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState(skillCategories[0]);
-  const [description, setDescription] = useState("");
-  const [level, setLevel] = useState(levelOptions[0]);
-  const [serviceType, setServiceType] = useState("Skill Exchange");
-  const [time, setTime] = useState("");
-  const [preferredUniv, setPreferredUniv] = useState("");
-  const [budget, setBudget] = useState("");
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     msg: string;
   } | null>(null);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<RequestServiceFormValues>({
+    resolver: zodResolver(requestServiceSchema),
+    defaultValues: {
+      title: "",
+      category: skillCategories[0],
+      description: "",
+      level: levelOptions[0],
+      serviceType: "Skill Exchange",
+      time: "",
+      preferredUniv: "",
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !description.trim()) {
-      setFeedback({
-        type: "error",
-        msg: "Please fill out the Skill Needed and Description fields.",
-      });
-      return;
-    }
+  const getFieldClassName = (hasError: boolean) =>
+    `${fieldClassName} ${
+      hasError
+        ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100"
+        : ""
+    }`;
 
-    setIsSubmitting(true);
+  const selectedServiceType = watch("serviceType");
+
+  const onInvalidSubmit = () => {
+    setFeedback({
+      type: "error",
+      msg: "Please complete all required fields correctly before submitting.",
+    });
+  };
+
+  const onSubmit = async (data: RequestServiceFormValues) => {
     setFeedback(null);
+    setIsSubmitting(true);
 
     try {
+      const trimmedTitle = data.title.trim();
       await addDoc(collection(db, "requests"), {
         buyerId: buyerProfile.uid,
         buyerName: buyerProfile.name,
@@ -212,14 +253,14 @@ function RequestForm({
         buyerYearOfStudy: buyerProfile.yearOfStudy || "",
         providerId,
         providerName,
-        title: title.trim(),
-        category,
-        description: description.trim(),
-        level,
-        serviceType,
-        time: time.trim() || "Flexible",
-        university: preferredUniv.trim() || "Any University",
-        budget: budget.trim() || "Free Swap",
+        title: trimmedTitle,
+        category: data.category,
+        description: data.description.trim(),
+        level: data.level,
+        serviceType: data.serviceType,
+        time: data.time.trim(),
+        university: data.preferredUniv.trim(),
+        budget: "Free Swap",
         status: "pending",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -230,7 +271,7 @@ function RequestForm({
         await createNotification({
           userId: providerId,
           title: "New Swap Request",
-          description: `${buyerProfile.name} requested a swap for "${title.trim()}"`,
+          description: `${buyerProfile.name} requested a swap for "${trimmedTitle}"`,
           type: "request",
           icon: "◆",
           tone: "blue",
@@ -249,11 +290,15 @@ function RequestForm({
         type: "success",
         msg: "Your skill swap request has been submitted successfully!",
       });
-      setTitle("");
-      setDescription("");
-      setTime("");
-      setPreferredUniv("");
-      setBudget("");
+      reset({
+        title: "",
+        category: skillCategories[0],
+        description: "",
+        level: levelOptions[0],
+        serviceType: "Skill Exchange",
+        time: "",
+        preferredUniv: "",
+      });
     } catch (err) {
       console.error("Error submitting request:", err);
       const msg =
@@ -266,7 +311,10 @@ function RequestForm({
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <form onSubmit={handleSubmit} className="grid gap-4">
+      <form
+        onSubmit={handleSubmit(onSubmit, onInvalidSubmit)}
+        className="grid gap-4"
+      >
         {feedback && (
           <div
             className={`rounded-lg px-4 py-3 text-sm font-semibold border ${
@@ -283,15 +331,20 @@ function RequestForm({
         <div className="grid gap-4 md:grid-cols-2">
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">
-              Skill Needed
+              Skill Needed <span className="text-red-500">*</span>
             </span>
             <input
               type="text"
               placeholder="e.g., Python Data Analysis"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className={fieldClassName}
+              {...register("title")}
+              aria-invalid={Boolean(errors.title)}
+              className={getFieldClassName(Boolean(errors.title))}
             />
+            {errors.title && (
+              <p className="text-xs font-medium text-red-600">
+                {errors.title.message}
+              </p>
+            )}
           </label>
 
           <label className="grid min-w-0 gap-1.5">
@@ -299,8 +352,7 @@ function RequestForm({
               Skill Category
             </span>
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              {...register("category")}
               title="Skill Category"
               className={fieldClassName}
             >
@@ -315,15 +367,24 @@ function RequestForm({
 
         <label className="grid min-w-0 gap-1.5">
           <span className="text-xs font-semibold text-slate-600">
-            Description
+            Description <span className="text-red-500">*</span>
           </span>
           <textarea
             rows={4}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            {...register("description")}
             placeholder="Detail the specific tasks, project scope, or areas you need help with..."
-            className="w-full resize-none rounded-lg border border-slate-300 bg-[#f7f8ff] px-3 py-2 text-sm leading-relaxed text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+            aria-invalid={Boolean(errors.description)}
+            className={`w-full resize-none rounded-lg border px-3 py-2 text-sm leading-relaxed text-slate-700 outline-none transition placeholder:text-slate-400 focus:ring-4 ${
+              errors.description
+                ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100"
+                : "border-slate-300 bg-[#f7f8ff] focus:border-[#2f66e7] focus:ring-blue-100"
+            }`}
           />
+          {errors.description && (
+            <p className="text-xs font-medium text-red-600">
+              {errors.description.message}
+            </p>
+          )}
         </label>
 
         {/* Required Level and Service Type */}
@@ -333,8 +394,7 @@ function RequestForm({
               Required Level
             </span>
             <select
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
+              {...register("level")}
               title="Required Level"
               className={fieldClassName}
             >
@@ -350,14 +410,20 @@ function RequestForm({
             <span className="text-xs font-semibold text-slate-600">
               Service Type
             </span>
-            <div className="flex max-w-[280px] flex-wrap items-center gap-1.5 pt-1">
-              {["Free Help", "Skill Exchange", "Paid"].map((type) => (
+            <input type="hidden" {...register("serviceType")} />
+            <div className="grid max-w-[280px] grid-cols-3 gap-1.5 pt-1">
+              {serviceTypeOptions.map((type) => (
                 <button
                   type="button"
                   key={type}
-                  onClick={() => setServiceType(type)}
-                  className={`inline-flex h-7 items-center justify-center rounded-full border px-2.5 text-[10px] font-bold leading-none transition ${
-                    serviceType === type
+                  onClick={() =>
+                    setValue("serviceType", type, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  className={`inline-flex h-7 w-full items-center justify-center rounded-full border px-2 text-[10px] font-bold leading-none transition ${
+                    selectedServiceType === type
                       ? "border-[#2f66e7] bg-[#2f66e7] text-white"
                       : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
                   }`}
@@ -370,50 +436,47 @@ function RequestForm({
         </div>
 
         {/* Preferred Date/ Time, University, and Budget */}
-        <div className="grid items-end gap-3 md:grid-cols-3">
+        <div className="grid items-end gap-4 md:grid-cols-2">
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">
-              Preferred Date/ Time
+              Preferred Time <span className="text-red-500">*</span>
             </span>
             <input
               type="text"
-              placeholder="e.g., Weekends, Evenings"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className={fieldClassName}
+              placeholder="e.g., Evenings, 6 PM - 8 PM"
+              {...register("time")}
+              aria-invalid={Boolean(errors.time)}
+              className={getFieldClassName(Boolean(errors.time))}
             />
+            {errors.time && (
+              <p className="text-xs font-medium text-red-600">
+                {errors.time.message}
+              </p>
+            )}
           </label>
 
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">
-              Preferred University
+              Preferred University <span className="text-red-500">*</span>
             </span>
             <select
-              value={preferredUniv}
-              onChange={(e) => setPreferredUniv(e.target.value)}
+              {...register("preferredUniv")}
               title="Preferred University"
-              className={fieldClassName}
+              aria-invalid={Boolean(errors.preferredUniv)}
+              className={getFieldClassName(Boolean(errors.preferredUniv))}
             >
-              <option value="">Any University</option>
+              <option value="">Select University</option>
               {UNIVERSITIES.map((uni) => (
                 <option key={uni} value={uni}>
                   {uni}
                 </option>
               ))}
             </select>
-          </label>
-
-          <label className="grid min-w-0 gap-1.5">
-            <span className="text-xs font-semibold text-slate-600">
-              Budget (Optional)
-            </span>
-            <input
-              type="text"
-              placeholder="e.g., Free Swap"
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-              className={fieldClassName}
-            />
+            {errors.preferredUniv && (
+              <p className="text-xs font-medium text-red-600">
+                {errors.preferredUniv.message}
+              </p>
+            )}
           </label>
         </div>
 

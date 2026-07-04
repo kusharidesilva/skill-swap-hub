@@ -4,21 +4,24 @@ import ProfileShell from "@/components/profile-shell";
 import ReportProfilePage from "@/components/report-profile-page";
 import { isRole } from "@/lib/role-routes";
 
-type RolePageProps = {
-  params: Promise<{ role?: string | string[] }>;
+type TargetedReportPageProps = {
+  params: Promise<{
+    role?: string;
+    providerId?: string;
+  }>;
 };
 
-export default async function RoleReportIssuePage({ params }: RolePageProps) {
-  const { role } = await params;
+export default async function TargetedReportPage({ params }: TargetedReportPageProps) {
+  const { role, providerId } = await params;
 
-  if (!isRole(role)) {
+  if (!isRole(role) || !providerId) {
     notFound();
   }
 
   return (
     <ProfileShell role={role}>
       <div className="mx-auto w-full max-w-6xl">
-        <ReportProfilePage />
+        <ReportProfilePage providerId={providerId} />
       </div>
     </ProfileShell>
   );
