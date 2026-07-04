@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
+import { formatRatingLabel } from "@/lib/ratings";
 import { doc, updateDoc } from "firebase/firestore";
 
 type SavedSkill = {
@@ -14,7 +15,7 @@ type SavedSkill = {
   title: string;
   category: string;
   instructor: string;
-  rating: string;
+  rating: string | number;
   image: string;
   avatar: string;
   level: string;
@@ -243,6 +244,7 @@ function SavedSkillCard({
   listView?: boolean;
 }) {
   const profileHref = `/provider-profile/${skill.providerId}${role ? `?role=${role}` : ""}`;
+  const ratingLabel = formatRatingLabel(skill.rating);
 
   return (
     <article className={`group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md ${listView ? 'flex flex-row' : ''}`}>
@@ -280,7 +282,7 @@ function SavedSkillCard({
           </div>
           <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-sm font-bold text-amber-700">
             <StarIcon className="h-4 w-4" />
-            {skill.rating}
+            {ratingLabel}
           </div>
         </div>
 

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { formatRatingLabel } from "@/lib/ratings";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import { useAuth } from "@/context/AuthContext";
 
@@ -256,7 +257,7 @@ export default function ProviderProfilePublicPage({
               title: gig.title,
               category: gig.category,
               instructor: profile.name,
-              rating: gig.rating,
+              rating: formatRatingLabel(gig.rating),
               image: gig.image,
               avatar:
                 profile.image && profile.image.startsWith("/")
@@ -395,7 +396,12 @@ export default function ProviderProfilePublicPage({
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Trust Score" value={profile.trustScore} sub="Completion Rate" accent />
         <MetricCard title="Total Swaps" value={profile.totalSwaps} sub="Completed" />
-        <MetricCard title="Avg. Rating" value={profile.avgRating} sub={buildStars(profile.avgRating)} teal />
+        <MetricCard
+          title="Avg. Rating"
+          value={formatRatingLabel(profile.avgRating)}
+          sub={buildStars(profile.avgRating)}
+          teal
+        />
         <MetricCard title="Avg. Response" value={profile.avgResponse} sub="Highly Responsive" />
       </section>
 
@@ -477,7 +483,7 @@ export default function ProviderProfilePublicPage({
                         <span className="truncate">{gig.reviews} completed reviews</span>
                         <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-sm ring-1 ring-slate-200">
                           <StarIcon className="h-3.5 w-3.5 text-amber-400" />
-                          {gig.rating}
+                          {formatRatingLabel(gig.rating)}
                         </span>
                       </div>
                       <div className="mt-3 grid grid-cols-2 gap-2">
