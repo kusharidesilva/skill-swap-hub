@@ -225,48 +225,52 @@ export default function ProviderProfilePublicPage({
   const [loading, setLoading] = useState(true);
   const [isPrivateProfile, setIsPrivateProfile] = useState(false);
 
-  const isFavorited = userProfile?.favorites?.some((fav) => (fav as { providerId?: string }).providerId === providerId) || false;
+  const getGigFavoriteKey = (gigId: string) => `${providerId}-${gigId}`;
 
-  const handleToggleFavorite = async () => {
+  const isGigFavorited = (gigId: string) =>
+    userProfile?.favorites?.some(
+      (fav) => (fav as { gigId?: string }).gigId === getGigFavoriteKey(gigId),
+    ) || false;
+
+  const handleToggleGigFavorite = async (gig: GigData) => {
     if (!userProfile) {
       window.location.href = "/get-started";
       return;
     }
-    if (!profile) return;
 
     try {
       const favorites = (userProfile.favorites || []) as Record<string, unknown>[];
-      let updatedFavorites;
-
-      if (isFavorited) {
-        updatedFavorites = favorites.filter((fav) => (fav as { providerId?: string }).providerId !== providerId);
-      } else {
-        const now = new Date();
-        const savedAtStr = `Saved ${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
-        const newFav = {
-          id: providerId,
-          providerId: providerId,
-          title: profile.gigs[0]?.title || `Collaboration with ${profile.name}`,
-          category: profile.gigs[0]?.category || "General",
-          instructor: profile.name,
-          rating: profile.avgRating,
-          image: profile.image && profile.image.startsWith("/img/")
-            ? profile.image
-            : `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=2f66e7&color=fff&size=400`,
-          avatar: profile.name.charAt(0).toUpperCase(),
-          level: "Member",
-          savedAt: savedAtStr,
-          description: profile.gigs[0]?.title || `Collaborate on skill swaps with ${profile.name}`,
-        };
-        updatedFavorites = [...favorites, newFav];
-      }
+      const favoriteKey = getGigFavoriteKey(gig.id);
+      const saved = isGigFavorited(gig.id);
+      const updatedFavorites = saved
+        ? favorites.filter((fav) => (fav as { gigId?: string }).gigId !== favoriteKey)
+        : [
+            ...favorites,
+            {
+              id: favoriteKey,
+              gigId: favoriteKey,
+              providerId,
+              title: gig.title,
+              category: gig.category,
+              instructor: profile?.name || "Campus Student",
+              rating: gig.rating,
+              image: gig.image,
+              avatar:
+                profile?.image && profile.image.startsWith("/")
+                  ? profile.image
+                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.name || "Campus Student")}&background=2f66e7&color=fff&size=400`,
+              level: "Gig Card",
+              savedAt: `Saved ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+              description: `Gig card: ${gig.title}`,
+            },
+          ];
 
       await updateDoc(doc(db, "users", userProfile.uid), {
         favorites: updatedFavorites,
       });
       await refreshProfile();
     } catch (err) {
-      console.error("Error toggling favorite:", err);
+      console.error("Error toggling gig favorite:", err);
     }
   };
 
@@ -530,20 +534,6 @@ export default function ProviderProfilePublicPage({
               >
                 Message {firstName}
               </Link>
-              <button
-                type="button"
-                onClick={handleToggleFavorite}
-                className={`inline-flex h-8 items-center justify-center rounded-md border px-3 text-xs font-semibold transition ${
-                  isFavorited
-                    ? "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
-                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  <HeartIcon className="h-3.5 w-3.5" filled={isFavorited} />
-                  {isFavorited ? "Saved" : "Save"}
-                </span>
-              </button>
               <Link
                 href={reportHref}
                 className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-red-600 transition hover:text-red-700"
@@ -606,10 +596,28 @@ export default function ProviderProfilePublicPage({
                     <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-[#1453c4] shadow-sm">
                       {gig.category}
                     </span>
-                    <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
-                      <StarIcon className="h-3.5 w-3.5 text-amber-400" />
-                      {gig.rating}
-                    </span>
+                    <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleGigFavorite(gig)}
+                        aria-label={
+                          isGigFavorited(gig.id)
+                            ? "Remove this gig from favorites"
+                            : "Save this gig to favorites"
+                        }
+                        className={`flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${
+                          isGigFavorited(gig.id)
+                            ? "bg-red-500 text-white"
+                            : "bg-white/95 text-slate-700 hover:bg-red-50 hover:text-red-600"
+                        }`}
+                      >
+                        <HeartIcon className="h-4.5 w-4.5" filled={isGigFavorited(gig.id)} />
+                      </button>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
+                        <StarIcon className="h-3.5 w-3.5 text-amber-400" />
+                        {gig.rating}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex flex-col p-4">
                     <h3 className="line-clamp-2 text-[0.97rem] font-bold leading-6 text-slate-900">
