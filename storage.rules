@@ -1,0 +1,26 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    match /profile-images/{userId}/{allPaths=**} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /reports/{userId}/{allPaths=**} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Keep the bucket locked down by default. Add explicit matches for any
+    // new upload locations instead of opening the whole bucket.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
