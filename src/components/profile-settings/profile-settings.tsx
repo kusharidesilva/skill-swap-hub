@@ -722,7 +722,7 @@ function LoginSecurity() {
             </button>
           </div>
         </label>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+        <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
           <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
             New Password
             <div className="flex items-center justify-between rounded-md border border-slate-300 px-3 h-9 bg-white focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100 transition">
@@ -741,9 +741,6 @@ function LoginSecurity() {
                 {showNew ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
             </div>
-            <p className="text-[11px] font-medium text-slate-500">
-              {strongPasswordMessage}
-            </p>
           </label>
           <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
             Confirm New
@@ -765,6 +762,9 @@ function LoginSecurity() {
             </div>
           </label>
         </div>
+        <p className="text-[11px] font-medium leading-[1.45] text-slate-500">
+          {strongPasswordMessage}
+        </p>
         {passwordMessage && (
           <p
             className={`rounded-md px-3 py-2 text-xs font-semibold ${

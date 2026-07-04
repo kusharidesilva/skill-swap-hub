@@ -15,12 +15,16 @@ type MyGigsPageContentProps = {
 interface Gig {
   id: string;
   title: string;
+  shortTitle: string;
   rating: string;
   reviews: number;
   category: string;
   points: number;
   image: string;
   rawIndex: number;
+  summary: string;
+  availability: string;
+  proficiency: string;
 }
 
 interface RequestItem {
@@ -46,8 +50,6 @@ export default function MyGigsPageContent({
     avgResponse: "1h",
     reviewsCount: 0,
   });
-
-  // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const cardsPerPage = 4;
 
@@ -63,17 +65,15 @@ export default function MyGigsPageContent({
     if (!userProfile) {
       return;
     }
+
     const providerId = userProfile.uid;
 
     async function loadProviderData() {
       try {
-        // Fetch requests for this provider to calculate real stats
-        const q = query(
-          collection(db, "requests"),
-          where("providerId", "==", providerId)
-        );
+        const q = query(collection(db, "requests"), where("providerId", "==", providerId));
         const qSnap = await getDocs(q);
         const reqs: RequestItem[] = [];
+
         qSnap.forEach((docSnap) => {
           const data = docSnap.data();
           reqs.push({
@@ -86,21 +86,21 @@ export default function MyGigsPageContent({
 
         const completedRequests = reqs.filter((r) => r.status === "completed");
         const totalSwaps = completedRequests.length;
-        
-        // Calculate dynamic average rating
         const ratings = completedRequests
           .filter((r) => r.review && typeof r.review.rating === "number")
           .map((r) => r.review!.rating!);
-        const avgRating = ratings.length > 0 
-          ? parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1))
-          : 5.0;
 
-        // Calculate dynamic trust score
+        const avgRating =
+          ratings.length > 0
+            ? parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1))
+            : 5.0;
+
         const totalRequests = reqs.length;
         const totalRejected = reqs.filter((r) => r.status === "rejected").length;
-        const trustScore = totalRequests === 0 
-          ? "99%" 
-          : `${Math.min(100, Math.max(80, Math.round(((totalRequests - totalRejected) / totalRequests) * 100)))}%`;
+        const trustScore =
+          totalRequests === 0
+            ? "99%"
+            : `${Math.min(100, Math.max(80, Math.round(((totalRequests - totalRejected) / totalRequests) * 100)))}%`;
 
         setStats({
           trustScore,
@@ -110,9 +110,12 @@ export default function MyGigsPageContent({
           reviewsCount: completedRequests.length,
         });
 
-        // Generate actual offered gigs based on the skills stored in providerProfile
-        const skills: string[] = userProfile?.providerProfile?.skills || [];
-        const customImages: string[] = userProfile?.providerProfile?.gigImages || [];
+        const skills: string[] = userProfile.providerProfile?.skills || [];
+        const customImages: string[] = userProfile.providerProfile?.gigImages || [];
+        const providerBio = userProfile.providerProfile?.bio?.trim();
+        const providerAvailability = userProfile.providerProfile?.availability?.join(", ");
+        const providerProficiency = userProfile.providerProfile?.proficiency || "Intermediate";
+
         const dbGigs = skills.map((skill: string, index: number) => {
           let image = customImages[index];
           if (!image) {
@@ -120,15 +123,22 @@ export default function MyGigsPageContent({
             if (index % 3 === 1) image = "/img/package%202.jpg";
             if (index % 3 === 2) image = "/img/package%203.jpg";
           }
+
           return {
             id: `gig-${index}`,
             title: `Collaboration: ${skill}`,
+            shortTitle: skill.endsWith("Help") ? skill : `${skill} Help`,
             rating: avgRating.toFixed(1),
             reviews: completedRequests.length,
             category: skill,
-            points: 30 + (index * 5),
+            points: 30 + index * 5,
             image,
             rawIndex: index,
+            summary:
+              providerBio ||
+              `I offer ${skill.toLowerCase()} basics, guidance, and practical support for fellow university students.`,
+            availability: providerAvailability || "Flexible Schedule",
+            proficiency: providerProficiency,
           };
         });
 
@@ -143,10 +153,9 @@ export default function MyGigsPageContent({
     loadProviderData();
   }, [userProfile, authLoading]);
 
-  // Pagination is reset during render when activeTab changes
-
   const handleDeleteGig = async (rawIndex: number) => {
     if (!userProfile) return;
+
     const confirmDelete = window.confirm("Are you sure you want to delete this offered skill?");
     if (!confirmDelete) return;
 
@@ -185,13 +194,12 @@ export default function MyGigsPageContent({
 
   if (!userProfile) {
     return (
-      <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-slate-500">
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 text-slate-500 shadow-sm">
         Please sign in to view and manage your gigs.
       </div>
     );
   }
 
-  // Calculate pagination parameters
   const totalPages = Math.ceil(gigs.length / cardsPerPage);
   const indexOfLastCard = currentPage * cardsPerPage;
   const indexOfFirstCard = indexOfLastCard - cardsPerPage;
@@ -213,10 +221,10 @@ export default function MyGigsPageContent({
       </div>
 
       <section>
-        <div className="flex items-center gap-8 border-b border-slate-200">
+        <div className="flex items-center gap-6 border-b border-slate-200">
           <Link
             href="?tab=offered"
-            className={`border-b-2 pb-3 text-[1.15rem] font-semibold ${
+            className={`border-b-2 pb-3 text-[1rem] font-semibold sm:text-[1.05rem] ${
               !isManageTab ? "border-[#1453c4] text-[#1453c4]" : "border-transparent text-slate-600"
             }`}
           >
@@ -224,7 +232,7 @@ export default function MyGigsPageContent({
           </Link>
           <Link
             href="?tab=manage"
-            className={`border-b-2 pb-3 text-[1.15rem] font-semibold ${
+            className={`border-b-2 pb-3 text-[1rem] font-semibold sm:text-[1.05rem] ${
               isManageTab ? "border-[#1453c4] text-[#1453c4]" : "border-transparent text-slate-600"
             }`}
           >
@@ -233,71 +241,111 @@ export default function MyGigsPageContent({
         </div>
 
         {currentGigs.length > 0 ? (
-          <div className="mt-5 grid gap-6 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
             {currentGigs.map((gig) => (
               <article
                 key={gig.id}
-                className="flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+                className="mx-auto flex h-full w-full max-w-[320px] flex-col overflow-hidden rounded-[20px] border border-[#d9e3f1] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
-                <div>
+                <div className="relative">
+                  <div className="absolute left-3 top-3 z-10 rounded-full bg-white px-3.5 py-1 text-[12px] font-semibold text-[#1453c4] shadow-sm">
+                    {gig.category}
+                  </div>
+                  <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[12px] font-bold text-slate-800 shadow-sm">
+                    <RatingStarIcon className="h-3.5 w-3.5 text-amber-400" />
+                    <span>{gig.rating}</span>
+                  </div>
                   <Link
-                    href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile?.uid || "")}&skillIndex=${gig.rawIndex}`}
-                    className="relative block h-48 w-full overflow-hidden bg-slate-100 xl:h-52"
+                    href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile.uid)}&skillIndex=${gig.rawIndex}`}
+                    className="relative block h-36 w-full overflow-hidden bg-slate-100 sm:h-[150px]"
                   >
                     <Image
                       src={gig.image}
                       alt={gig.title}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 320px"
-                      className="h-full w-full object-cover hover:scale-105 transition duration-300"
+                      className="h-full w-full object-cover transition duration-300 hover:scale-105"
                     />
                   </Link>
-
-                  <div className="p-5">
-                    <h2 className="min-h-[3.75rem] text-[1.15rem] font-semibold leading-7 text-slate-900 line-clamp-2 transition hover:text-[#1453c4]">
-                      <Link href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile?.uid || "")}&skillIndex=${gig.rawIndex}`}>
-                        {gig.title}
-                      </Link>
-                    </h2>
-                    <p className="mt-2 text-sm font-semibold text-slate-700">
-                      <span className="text-teal-700">★</span> {gig.rating}{" "}
-                      <span className="font-normal text-slate-500">({gig.reviews} reviews)</span>
-                    </p>
-
-                    <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                      <span className="max-w-[60%] truncate rounded-full bg-teal-50 px-3.5 py-1.5 text-sm font-semibold text-teal-700">
-                        {gig.category}
-                      </span>
-                      <span className="shrink-0 text-base font-semibold text-[#1453c4]">{gig.points}</span>
-                    </div>
-                  </div>
                 </div>
 
-                {isManageTab && (
-                  <div className="p-5 pt-0">
-                    <div className="flex items-center gap-3 border-t border-slate-200 pt-4">
+                <div className="flex flex-1 flex-col p-4 sm:p-[18px]">
+                  <h2 className="text-[0.96rem] font-bold leading-[1.3] text-slate-900 transition hover:text-[#1453c4]">
+                    <Link
+                      href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile.uid)}&skillIndex=${gig.rawIndex}`}
+                    >
+                      {gig.shortTitle}
+                    </Link>
+                  </h2>
+
+                  <div className="mt-2.5">
+                    <p className="text-[13px] font-semibold leading-5 text-slate-700">
+                      {userProfile.name}
+                    </p>
+                    <p className="text-[12px] leading-5 text-slate-500">
+                      {userProfile.university || "Sri Lankan University"}
+                    </p>
+                  </div>
+
+                  <p className="mt-3 min-h-[3.75rem] text-[12.5px] leading-6 text-slate-600 line-clamp-3">
+                    {gig.summary}
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-[#dff7f5] px-3 py-1 text-[12px] font-semibold text-[#0d7f78]">
+                      {gig.category}
+                    </span>
+                    <span className="rounded-full bg-[#dff7f5] px-3 py-1 text-[12px] font-semibold text-[#0d7f78]">
+                      {gig.proficiency}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-2.5 border-t border-slate-200 pt-3">
+                    <span className="truncate text-[12px] text-slate-500">
+                      {gig.availability}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-[#dff7f5] px-2.5 py-1 text-[11px] font-semibold text-[#0d7f78]">
+                      Skill Exchange
+                    </span>
+                  </div>
+
+                  {!isManageTab ? (
+                    <div className="mt-3.5 grid grid-cols-2 gap-2.5">
+                      <Link
+                        href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile.uid)}&skillIndex=${gig.rawIndex}`}
+                        className="rounded-[13px] border border-[#cfd8e8] px-3.5 py-2.5 text-center text-[14px] font-semibold text-[#2f4c7f] transition hover:border-[#b8c6dc] hover:bg-slate-50"
+                      >
+                        View Gig
+                      </Link>
+                      <Link
+                        href="?tab=manage"
+                        className="rounded-[13px] bg-[#3568e6] px-3.5 py-2.5 text-center text-[14px] font-semibold text-white transition hover:bg-[#2458d8]"
+                      >
+                        Manage
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>
+
+                {isManageTab ? (
+                  <div className="px-4 pb-4 pt-0 sm:px-[18px] sm:pb-[18px]">
+                    <div className="grid grid-cols-[1fr_auto] items-center gap-2.5">
                       <Link
                         href={`/edit-gig/${role}/${gig.id}`}
-                        className="flex-1 rounded-xl bg-[#e5e7f2] px-3 py-2.5 text-center text-sm font-semibold text-slate-800 transition hover:bg-[#d9dbe6]"
+                        className="rounded-[13px] border border-[#cfd8e8] px-3.5 py-2.5 text-center text-[14px] font-semibold text-[#2f4c7f] transition hover:border-[#b8c6dc] hover:bg-slate-50"
                       >
                         Edit
                       </Link>
                       <button
-                        aria-label="Pause gig"
-                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-slate-500 transition hover:bg-slate-50"
-                      >
-                        ‖
-                      </button>
-                      <button
                         onClick={() => handleDeleteGig(gig.rawIndex)}
                         aria-label="Delete gig"
-                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-red-500 transition hover:bg-slate-50 hover:text-red-700"
+                        className="flex h-[44px] w-[44px] items-center justify-center rounded-[13px] border border-[#f0c8c8] text-red-500 transition hover:bg-red-50 hover:text-red-700"
                       >
-                        🗑
+                        <DeleteIcon className="h-[18px] w-[18px]" />
                       </button>
                     </div>
                   </div>
-                )}
+                ) : null}
               </article>
             ))}
           </div>
@@ -307,15 +355,14 @@ export default function MyGigsPageContent({
           </div>
         )}
 
-        {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-1.5 pt-6">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white cursor-pointer"
+              className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white"
             >
-              ‹
+              {"<"}
             </button>
             {Array.from({ length: totalPages }).map((_, i) => {
               const pageNum = i + 1;
@@ -323,7 +370,7 @@ export default function MyGigsPageContent({
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold transition cursor-pointer ${
+                  className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-xs font-bold transition ${
                     currentPage === pageNum
                       ? "bg-[#2f66e7] text-white"
                       : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
@@ -336,9 +383,9 @@ export default function MyGigsPageContent({
             <button
               onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white cursor-pointer"
+              className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white"
             >
-              ›
+              {">"}
             </button>
           </div>
         )}
@@ -348,11 +395,14 @@ export default function MyGigsPageContent({
             <Link
               href={`/post-gig/${role}`}
               aria-label="Post a New Gig"
-              className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-slate-400 hover:border-slate-600 text-xl text-slate-500 hover:text-slate-700 transition"
+              className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-slate-400 text-xl text-slate-500 transition hover:border-slate-600 hover:text-slate-700"
             >
               +
             </Link>
-            <Link href={`/post-gig/${role}`} className="mt-3 block text-xl font-bold text-slate-700 hover:text-[#1453c4] transition">
+            <Link
+              href={`/post-gig/${role}`}
+              className="mt-3 block text-xl font-bold text-slate-700 transition hover:text-[#1453c4]"
+            >
               Post a New Gig
             </Link>
             <p className="mt-1 text-xs text-slate-500">Offer your expertise to fellow students</p>
@@ -383,7 +433,11 @@ function MetricCard({
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{title}</p>
       <p className="mt-2.5 text-[2.45rem] font-bold leading-none text-slate-900">{value}</p>
       {stars ? <Stars className="mt-2 justify-center text-teal-700" /> : null}
-      {sub ? <p className={`mt-1.5 text-sm ${teal ? "text-teal-700 font-semibold" : "text-slate-500"}`}>{sub}</p> : null}
+      {sub ? (
+        <p className={`mt-1.5 text-sm ${teal ? "font-semibold text-teal-700" : "text-slate-500"}`}>
+          {sub}
+        </p>
+      ) : null}
       {accent ? <div className="mx-auto mt-3 h-1 w-full rounded-full bg-teal-500" /> : null}
     </article>
   );
@@ -403,5 +457,33 @@ function Stars({ className }: { className?: string }) {
         </svg>
       ))}
     </div>
+  );
+}
+
+function RatingStarIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path d="M10 1.7l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L2.2 7.4l5.4-.8L10 1.7z" />
+    </svg>
+  );
+}
+
+function DeleteIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.9}
+      aria-hidden="true"
+    >
+      <path
+        d="M9 4.75h6l.55 1.75H19a.75.75 0 0 1 0 1.5h-1l-.7 10.03a2 2 0 0 1-2 1.86h-6.6a2 2 0 0 1-2-1.86L6 8H5a.75.75 0 0 1 0-1.5h3.45L9 4.75z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M10 10.25v5.5M14 10.25v5.5" strokeLinecap="round" />
+    </svg>
   );
 }
