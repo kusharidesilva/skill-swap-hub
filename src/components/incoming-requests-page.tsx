@@ -18,6 +18,7 @@ import { scopedHref } from "@/lib/role-routes";
 import { UNIVERSITIES } from "@/lib/universities";
 import { createNotification } from "@/lib/notifications";
 import UniversityCombobox from "@/components/ui/university-combobox";
+import SelectField from "@/components/ui/select-field";
 
 type IncomingRequestsTab = "new" | "accepted" | "completed" | "declined";
 
@@ -914,19 +915,13 @@ function Field({
   }
 
   return (
-    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
-      {label}
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1.5 h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-[#1453c4] transition-colors"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
+    <SelectField
+      label={label}
+      value={value}
+      onChange={onChange}
+      options={options}
+      labelClassName="text-[11px] font-bold uppercase tracking-wider text-slate-500"
+      className="h-9 px-2.5 text-xs font-semibold text-slate-700"
+    />
   );
 }

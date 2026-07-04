@@ -12,6 +12,7 @@ import type { UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { UNIVERSITIES } from "@/lib/universities";
 import UniversityCombobox from "@/components/ui/university-combobox";
+import SelectField from "@/components/ui/select-field";
 
 type GigCardData = {
   id: string;
@@ -558,23 +559,15 @@ function FiltersSidebar(props: {
             }
 
             return (
-              <div key={filter.label} className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  {filter.label}
-                </span>
-                <select
-                  title={filter.label}
-                  value={selectValue}
-                  onChange={(e) => selectHandler(e.target.value)}
-                  className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-xs text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
-                >
-                  {filter.options.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <SelectField
+                key={filter.label}
+                label={filter.label}
+                value={selectValue}
+                onChange={selectHandler}
+                options={filter.options}
+                labelClassName="text-[10px] font-bold uppercase tracking-wider text-slate-400"
+                className="h-9 px-2.5 text-xs text-slate-700"
+              />
             );
           })}
         </div>

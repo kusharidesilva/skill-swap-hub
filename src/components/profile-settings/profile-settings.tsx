@@ -12,6 +12,7 @@ import {
 } from "firebase/auth";
 import type { UserProfile } from "@/lib/auth";
 import UniversityCombobox from "@/components/ui/university-combobox";
+import SelectField from "@/components/ui/select-field";
 
 export type Role = "buyer" | "provider" | "both";
 
@@ -386,19 +387,14 @@ function ProfileSettingsForm({
                   />
                 </label>
 
-                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
-                  Year of Study
-                  <select
-                    value={yearOfStudy}
-                    onChange={(e) => setYearOfStudy(e.target.value)}
-                    className="h-9 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
-                  >
-                    <option>1st Year</option>
-                    <option>2nd Year</option>
-                    <option>3rd Year</option>
-                    <option>4th Year</option>
-                  </select>
-                </label>
+                <SelectField
+                  label="Year of Study"
+                  value={yearOfStudy}
+                  onChange={setYearOfStudy}
+                  options={["1st Year", "2nd Year", "3rd Year", "4th Year"]}
+                  labelClassName="text-xs font-semibold text-slate-600"
+                  className="h-9 px-3 text-xs font-medium text-slate-800"
+                />
               </div>
 
               {showOffered && (

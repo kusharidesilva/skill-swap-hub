@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { isEmailAllowedForUniversity } from "@/lib/universities";
 import { dashboardHref } from "@/lib/role-routes";
 import UniversityCombobox from "@/components/ui/university-combobox";
+import SelectField from "@/components/ui/select-field";
 
 const ALL_SKILLS = [
   "Programming",
@@ -52,7 +53,6 @@ export default function ProviderRegisterPage() {
     handleSubmit,
     control,
     setValue,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<ProviderValues>({
     resolver: zodResolver(providerSchema),
@@ -100,7 +100,8 @@ export default function ProviderRegisterPage() {
   const selectedSkills = useWatch({ control, name: "skills" }) || [];
   const selectedProficiency = useWatch({ control, name: "proficiency" }) || "Intermediate";
   const selectedAvailability = useWatch({ control, name: "availability" }) || [];
-  const universityValue = watch("university") || "";
+  const universityValue = useWatch({ control, name: "university" }) || "";
+  const yearOfStudyValue = useWatch({ control, name: "yearOfStudy" }) || "1st Year";
 
   // ── Skill tag helpers ────────────────────────────────────────────────────────
 
@@ -311,20 +312,19 @@ export default function ProviderRegisterPage() {
                       </p>
                     )}
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-500">
-                      Year of Study
-                    </label>
-                    <select
-                      {...register("yearOfStudy")}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600 focus:outline-none focus:border-[#2b62e6]"
-                    >
-                      <option>1st Year</option>
-                      <option>2nd Year</option>
-                      <option>3rd Year</option>
-                      <option>4th Year</option>
-                    </select>
-                  </div>
+                  <SelectField
+                    label="Year of Study"
+                    value={yearOfStudyValue}
+                    onChange={(nextValue) =>
+                      setValue("yearOfStudy", nextValue, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                    options={["1st Year", "2nd Year", "3rd Year", "4th Year"]}
+                    labelClassName="text-[11px] font-semibold text-slate-500"
+                    className="text-xs"
+                  />
                 </div>
               </section>
 

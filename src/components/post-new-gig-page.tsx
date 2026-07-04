@@ -7,6 +7,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import type { ProviderGig } from "@/lib/auth";
+import SelectField from "@/components/ui/select-field";
 
 const CATEGORIES = [
   "Programming",
@@ -271,35 +272,23 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
 
             {/* Category */}
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-semibold text-slate-700">
-                Category (Optional)
-                <select
-                  className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-base text-slate-700 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SelectField
+                label="Category (Optional)"
+                value={category}
+                onChange={setCategory}
+                options={CATEGORIES}
+                labelClassName="text-sm font-semibold text-slate-700"
+                className="h-11 px-4 text-base text-slate-700"
+              />
 
-              <label className="block text-sm font-semibold text-slate-700">
-                Delivery Time (Optional)
-                <select
-                  className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-base text-slate-700 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100"
-                  value={delivery}
-                  onChange={(e) => setDelivery(e.target.value)}
-                >
-                  {DELIVERY_OPTIONS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SelectField
+                label="Delivery Time (Optional)"
+                value={delivery}
+                onChange={setDelivery}
+                options={DELIVERY_OPTIONS}
+                labelClassName="text-sm font-semibold text-slate-700"
+                className="h-11 px-4 text-base text-slate-700"
+              />
             </div>
 
             {/* Tags */}

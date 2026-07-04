@@ -33,24 +33,14 @@ export default function UniversityCombobox({
   const reactId = useId();
   const inputId = id || `university-combobox-${reactId}`;
   const menuId = `${inputId}-menu`;
-  const rootRef = useRef<HTMLLabelElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [isLocked, setIsLocked] = useState(Boolean(value && value !== emptyValue));
-  const [inputValue, setInputValue] = useState(value === emptyValue ? "" : value);
+  const [queryValue, setQueryValue] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
-
-  useEffect(() => {
-    if (!value || value === emptyValue) {
-      setInputValue("");
-      setIsLocked(false);
-      setActiveIndex(-1);
-      return;
-    }
-
-    setInputValue(value);
-    setIsLocked(true);
-  }, [emptyValue, value]);
+  const selectedValue = value && value !== emptyValue ? value : "";
+  const isLocked = Boolean(selectedValue);
+  const inputValue = isLocked ? selectedValue : queryValue;
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -75,19 +65,14 @@ export default function UniversityCombobox({
   const commitValue = (nextValue: string) => {
     const normalized = nextValue.trim();
     onSelect(normalized || emptyValue);
-    setInputValue(normalized);
-    setIsLocked(Boolean(normalized));
+    setQueryValue("");
     setIsOpen(false);
     setActiveIndex(-1);
-    requestAnimationFrame(() => {
-      inputRef.current?.focus();
-    });
   };
 
   const clearValue = () => {
     onSelect(emptyValue);
-    setInputValue("");
-    setIsLocked(false);
+    setQueryValue("");
     setIsOpen(true);
     setActiveIndex(-1);
     requestAnimationFrame(() => {
@@ -97,7 +82,7 @@ export default function UniversityCombobox({
 
   const handleChange = (nextValue: string) => {
     if (isLocked) return;
-    setInputValue(nextValue);
+    setQueryValue(nextValue);
     setIsOpen(true);
     setActiveIndex(-1);
   };
@@ -150,11 +135,16 @@ export default function UniversityCombobox({
     (university) => university.toLowerCase() === inputValue.trim().toLowerCase(),
   );
 
+  const renderedOptions = filteredUniversities.slice(0, 60);
+
   return (
-    <label className="grid min-w-0 gap-1.5" ref={rootRef}>
-      <span className={`text-xs font-semibold text-slate-600 ${labelClassName}`}>
+    <div className="grid min-w-0 gap-1.5" ref={rootRef}>
+      <label
+        htmlFor={inputId}
+        className={`text-xs font-semibold text-slate-600 ${labelClassName}`}
+      >
         {label}
-      </span>
+      </label>
 
       <div className="relative">
         <div
@@ -205,7 +195,19 @@ export default function UniversityCombobox({
               className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
               aria-label={`Clear ${label}`}
             >
-              <span className="text-sm leading-none">x</span>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 20 20"
+                fill="none"
+                className="h-3.5 w-3.5"
+              >
+                <path
+                  d="M5.5 5.5L14.5 14.5M14.5 5.5L5.5 14.5"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
             </button>
           )}
 
@@ -225,7 +227,20 @@ export default function UniversityCombobox({
             className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             aria-label={isLocked ? `Change ${label}` : `Open ${label} menu`}
           >
-            <span className="text-xs leading-none">v</span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              fill="none"
+              className="h-4 w-4"
+            >
+              <path
+                d="M5.5 7.5L10 12l4.5-4.5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
         </div>
 
@@ -237,10 +252,14 @@ export default function UniversityCombobox({
           >
             <div
               className="max-h-60 overflow-y-auto py-1"
-              style={{ maxHeight: `${MAX_VISIBLE_RESULTS * 2.5}rem` }}
+              style={{
+                maxHeight: `${MAX_VISIBLE_RESULTS * 2.5}rem`,
+                scrollbarWidth: "thin",
+                scrollbarColor: "#b6c5ef transparent",
+              }}
             >
-              {filteredUniversities.length > 0 ? (
-                filteredUniversities.map((university, index) => (
+              {renderedOptions.length > 0 ? (
+                renderedOptions.map((university, index) => (
                   <button
                     key={university}
                     type="button"
@@ -249,13 +268,29 @@ export default function UniversityCombobox({
                     onMouseEnter={() => setActiveIndex(index)}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => commitValue(university)}
-                    className={`block w-full px-3 py-2 text-left text-sm transition ${
+                    className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition ${
                       index === activeIndex
                         ? "bg-blue-50 text-[#1453c4]"
                         : "text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    {university}
+                    <span className="truncate">{university}</span>
+                    {value === university ? (
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        className="h-4 w-4 shrink-0 text-[#1453c4]"
+                      >
+                        <path
+                          d="M5.5 10.25L8.75 13.5L14.5 6.5"
+                          stroke="currentColor"
+                          strokeWidth="1.9"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : null}
                   </button>
                 ))
               ) : (
@@ -272,6 +307,6 @@ export default function UniversityCombobox({
         <p className="text-[11px] font-medium text-slate-500">{helperText}</p>
       )}
       {error && <p className="text-[11px] font-medium text-red-600">{error}</p>}
-    </label>
+    </div>
   );
 }

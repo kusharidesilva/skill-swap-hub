@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -23,6 +23,7 @@ import { scopedHref, type Role } from "@/lib/role-routes";
 import { type UserProfile } from "@/lib/auth";
 import { createNotification } from "@/lib/notifications";
 import UniversityCombobox from "@/components/ui/university-combobox";
+import SelectField from "@/components/ui/select-field";
 
 const skillCategories = [
   "Programming",
@@ -203,7 +204,7 @@ function RequestForm({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     reset,
     formState: { errors },
@@ -227,8 +228,10 @@ function RequestForm({
         : ""
     }`;
 
-  const selectedServiceType = watch("serviceType");
-  const preferredUniversity = watch("preferredUniv") || "";
+  const selectedServiceType = useWatch({ control, name: "serviceType" });
+  const preferredUniversity = useWatch({ control, name: "preferredUniv" }) || "";
+  const selectedCategory = useWatch({ control, name: "category" });
+  const selectedLevel = useWatch({ control, name: "level" });
 
   const onInvalidSubmit = () => {
     setFeedback({
@@ -345,22 +348,18 @@ function RequestForm({
             )}
           </label>
 
-          <label className="grid min-w-0 gap-1.5">
-            <span className="text-xs font-semibold text-slate-600">
-              Skill Category
-            </span>
-            <select
-              {...register("category")}
-              title="Skill Category"
-              className={fieldClassName}
-            >
-              {skillCategories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Skill Category"
+            value={selectedCategory}
+            onChange={(nextValue) =>
+              setValue("category", nextValue, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+            options={skillCategories}
+            className="text-sm"
+          />
         </div>
 
         <label className="grid min-w-0 gap-1.5">
@@ -391,22 +390,18 @@ function RequestForm({
 
         {/* Required Level and Preferred Time */}
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="grid min-w-0 gap-1.5">
-            <span className="text-xs font-semibold text-slate-600">
-              Required Level
-            </span>
-            <select
-              {...register("level")}
-              title="Required Level"
-              className={fieldClassName}
-            >
-              {levelOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Required Level"
+            value={selectedLevel}
+            onChange={(nextValue) =>
+              setValue("level", nextValue, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+            options={levelOptions}
+            className="text-sm"
+          />
 
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">

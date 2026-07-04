@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db, storage } from "@/lib/firebase";
+import SelectField from "@/components/ui/select-field";
 import {
   addDoc,
   collection,
@@ -481,7 +482,10 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
               </div>
             ) : null}
 
-            <Field label="Who are you reporting?">
+            <div>
+              <p className="mb-3 text-[14px] font-semibold text-[#42516b]">
+                Who are you reporting?
+              </p>
               {isLockedTarget ? (
                 <input
                   type="text"
@@ -494,35 +498,29 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
                   }`}
                 />
               ) : (
-                <div className="relative">
-                  <select
-                    value={targetUserId}
-                    onChange={(event) => {
-                      setTargetUserId(event.target.value);
-                      setFeedback(null);
-                    }}
-                    title="Who are you reporting?"
-                    aria-invalid={isTargetInvalid}
-                    disabled={isLoadingTargets || !hasEligibleTargets}
-                    className={`${inputClassName} ${isTargetInvalid ? invalidInputClassName : ""} appearance-none pr-12 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400`}
-                  >
-                    <option value="">
-                      {isLoadingTargets
-                        ? "Loading users..."
-                        : hasEligibleTargets
-                          ? "Select a user"
-                          : "No completed swaps yet"}
-                    </option>
-                    {usersList.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                    <ChevronIcon />
-                  </div>
-                </div>
+                <SelectField
+                  label="Who are you reporting?"
+                  value={targetUserId}
+                  onChange={(nextValue) => {
+                    setTargetUserId(nextValue);
+                    setFeedback(null);
+                  }}
+                  placeholder={
+                    isLoadingTargets
+                      ? "Loading users..."
+                      : hasEligibleTargets
+                        ? "Select a user"
+                        : "No completed swaps yet"
+                  }
+                  options={usersList.map((user) => ({
+                    value: user.id,
+                    label: user.name,
+                  }))}
+                  disabled={isLoadingTargets || !hasEligibleTargets}
+                  error={isTargetInvalid ? "Please select a valid user from your completed swaps." : undefined}
+                  className={inputClassName}
+                  labelClassName="hidden"
+                />
               )}
 
               {!isLockedTarget ? (
@@ -535,36 +533,33 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
                   Please select a valid user from your completed swaps.
                 </p>
               ) : null}
-            </Field>
+            </div>
 
-            <Field label="Reason for Report">
-              <div className="relative">
-                <select
-                  value={category}
-                  onChange={(event) => {
-                    setCategory(event.target.value);
-                    setFeedback(null);
-                  }}
-                  title="Reason for Report"
-                  aria-invalid={isCategoryInvalid}
-                  className={`${inputClassName} ${isCategoryInvalid ? invalidInputClassName : ""} appearance-none pr-12`}
-                >
-                  <option value="">Choose a category</option>
-                  <option value="No-show">No-show</option>
-                  <option value="Quality">Quality</option>
-                  <option value="Abusive Behavior">Abusive Behavior</option>
-                  <option value="Fraud Concern">Fraud Concern</option>
-                  <option value="Harassment">Harassment</option>
-                  <option value="Other">Other</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                  <ChevronIcon />
-                </div>
-              </div>
-              {isCategoryInvalid ? (
-                <p className="mt-2 text-[12px] text-red-500">Please choose a report category.</p>
-              ) : null}
-            </Field>
+            <div>
+              <p className="mb-3 text-[14px] font-semibold text-[#42516b]">
+                Reason for Report
+              </p>
+              <SelectField
+                label="Reason for Report"
+                value={category}
+                onChange={(nextValue) => {
+                  setCategory(nextValue);
+                  setFeedback(null);
+                }}
+                placeholder="Choose a category"
+                options={[
+                  "No-show",
+                  "Quality",
+                  "Abusive Behavior",
+                  "Fraud Concern",
+                  "Harassment",
+                  "Other",
+                ]}
+                error={isCategoryInvalid ? "Please choose a report category." : undefined}
+                className={inputClassName}
+                labelClassName="hidden"
+              />
+            </div>
 
             <Field label="Detailed Description">
               <textarea
@@ -775,10 +770,10 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="block">
+    <div className="block">
       <p className="mb-3 text-[14px] font-semibold text-[#42516b]">{label}</p>
       {children}
-    </label>
+    </div>
   );
 }
 
@@ -847,14 +842,6 @@ function AlertIcon({ className }: { className?: string }) {
         d="M12 7.2a1 1 0 0 1 1 1V12a1 1 0 1 1-2 0V8.2a1 1 0 0 1 1-1Zm0 9.5a1.15 1.15 0 1 1 0-2.3 1.15 1.15 0 0 1 0 2.3Z"
         fill="#fff"
       />
-    </svg>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

@@ -4,12 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { registerBuyer } from "@/lib/auth";
 import { isEmailAllowedForUniversity } from "@/lib/universities";
 import UniversityCombobox from "@/components/ui/university-combobox";
+import SelectField from "@/components/ui/select-field";
 
 const strongPasswordMessage =
   "Use a strong password with at least 6 characters, including uppercase, lowercase, a number, and a symbol.";
@@ -56,8 +57,8 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
+    control,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
@@ -89,7 +90,8 @@ export default function RegisterPage() {
     }
   };
 
-  const universityValue = watch("university") || "";
+  const universityValue = useWatch({ control, name: "university" }) || "";
+  const yearOfStudyValue = useWatch({ control, name: "yearOfStudy" }) || "1st Year";
 
   return (
     <main className="relative min-h-screen bg-white">
@@ -225,18 +227,18 @@ export default function RegisterPage() {
                     />
                     {errors.degree && <p className="mt-1 text-xs text-red-500">{errors.degree.message}</p>}
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600">Year of Study</label>
-                    <select
-                      {...register("yearOfStudy")}
-                      className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-[#2b62e6]"
-                    >
-                      <option>1st Year</option>
-                      <option>2nd Year</option>
-                      <option>3rd Year</option>
-                      <option>4th Year</option>
-                    </select>
-                  </div>
+                  <SelectField
+                    label="Year of Study"
+                    value={yearOfStudyValue}
+                    onChange={(nextValue) =>
+                      setValue("yearOfStudy", nextValue, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                    options={["1st Year", "2nd Year", "3rd Year", "4th Year"]}
+                    className="text-sm"
+                  />
                 </div>
 
                 <button
