@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { checkBuyerHistory } from "@/lib/auth";
+import { dashboardHref } from "@/lib/role-routes";
 
 export default function BecomeSellerModal() {
   const router = useRouter();
@@ -16,13 +17,13 @@ export default function BecomeSellerModal() {
       if (userProfile.role === "both") {
         checkBuyerHistory(userProfile.uid).then((hasHistory) => {
           if (hasHistory) {
-            router.replace("/home/both");
+            router.replace(dashboardHref("both"));
           } else {
-            router.replace("/home/provider");
+            router.replace(dashboardHref("provider"));
           }
         });
       } else if (userProfile.role === "provider") {
-        router.replace("/home/provider");
+        router.replace(dashboardHref("provider"));
       }
     }
   }, [userProfile, router]);
