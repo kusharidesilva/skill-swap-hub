@@ -92,6 +92,9 @@ export default function RegisterPage() {
 
   const universityValue = useWatch({ control, name: "university" }) || "";
   const yearOfStudyValue = useWatch({ control, name: "yearOfStudy" }) || "1st Year";
+  const passwordHintInErrorState =
+    errors.password?.message === strongPasswordMessage ||
+    errors.confirmPassword?.message === strongPasswordMessage;
 
   return (
     <main className="relative min-h-screen bg-white">
@@ -173,10 +176,9 @@ export default function RegisterPage() {
                         )}
                       </button>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {strongPasswordMessage}
-                    </p>
-                    {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
+                    {errors.password && errors.password.message !== strongPasswordMessage && (
+                      <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-slate-600">Confirm Password</label>
@@ -199,9 +201,15 @@ export default function RegisterPage() {
                         )}
                       </button>
                     </div>
-                    {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>}
+                    {errors.confirmPassword &&
+                      errors.confirmPassword.message !== strongPasswordMessage && (
+                        <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>
+                      )}
                   </div>
                 </div>
+                <p className={`text-xs ${passwordHintInErrorState ? "text-red-500" : "text-slate-500"}`}>
+                  {strongPasswordMessage}
+                </p>
 
                 <UniversityCombobox
                   label="University Name"

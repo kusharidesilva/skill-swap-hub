@@ -111,6 +111,9 @@ export default function VerifyEmailPage({ searchParams }: Props) {
                       <p className="mt-1 text-[11px] text-emerald-600">
                         Welcome to Skill Swap Hub! We have sent a verification link to your email. Click it to get started.
                       </p>
+                      <p className="mt-2 rounded-lg bg-[#ecf9ff] px-2.5 py-2 text-[11px] font-medium text-[#137c8a]">
+                        If you do not see the email in your inbox, please check your junk or spam folder too.
+                      </p>
                     </div>
                   </div>
                 </div>

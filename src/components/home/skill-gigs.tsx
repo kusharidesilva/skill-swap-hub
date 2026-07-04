@@ -46,7 +46,7 @@ export default function SkillGigsSection() {
   const viewAllHref = isBuyerHome
     ? "/find-services/buyer"
     : isProviderHome
-      ? "/explore-services?role=provider"
+      ? "/find-services/provider"
       : isBothHome
         ? "/find-services/both"
         : "/explore-services";
@@ -230,7 +230,7 @@ function GigCard({ gig }: { gig: LiveGig }) {
   const isProviderHome = pathname === "/home/provider";
   const isBothHome = pathname === "/home/both";
   const requestRole = isBuyerHome ? "buyer" : isProviderHome ? "provider" : isBothHome ? "both" : "buyer";
-  const previewHref = `/gig-preview/${requestRole}?providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0`;
+  const previewHref = `/gig-preview/${requestRole}?source=home&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0`;
   const requestHref = `${scopedHref("/request-service", requestRole)}?providerId=${encodeURIComponent(gig.providerId)}`;
   const isFavorited = Boolean(
     userProfile?.favorites?.some(

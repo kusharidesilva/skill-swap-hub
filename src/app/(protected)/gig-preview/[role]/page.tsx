@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 
+import SiteFooter from "@/components/footer";
 import GigPreviewPage from "@/components/gig-preview-page";
+import Navbar from "@/components/navbar";
 import ProfileShell from "@/components/profile-shell";
-import { isRole } from "@/lib/role-routes";
+import { homeHref, isRole } from "@/lib/role-routes";
 
 type GigPreviewByRolePageProps = {
   params: Promise<{ role?: string | string[] }>;
@@ -32,16 +34,34 @@ export default async function GigPreviewByRolePage({ params, searchParams }: Gig
       ? `/edit-gig/${role}/${gigId}`
       : source === "find"
         ? `/find-services/${role}`
+      : source === "home"
+        ? homeHref(role)
       : `/post-gig/${role}`;
+
+  const content = (
+    <GigPreviewPage
+      role={role}
+      backHref={backHref}
+      providerId={providerId}
+      skillIndex={Number.isFinite(skillIndex) ? skillIndex : undefined}
+    />
+  );
+
+  if (source === "home") {
+    return (
+      <div className="min-h-screen bg-[#f5f7ff] text-slate-900">
+        <Navbar role={role} />
+        <main className="mx-auto w-full max-w-6xl px-6 pb-10 pt-28">
+          {content}
+        </main>
+        <SiteFooter role={role} />
+      </div>
+    );
+  }
 
   return (
     <ProfileShell role={role}>
-      <GigPreviewPage
-        role={role}
-        backHref={backHref}
-        providerId={providerId}
-        skillIndex={Number.isFinite(skillIndex) ? skillIndex : undefined}
-      />
+      {content}
     </ProfileShell>
   );
 }

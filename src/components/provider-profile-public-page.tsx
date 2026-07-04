@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
@@ -33,53 +34,22 @@ type PublicReview = {
   avatarTone: string;
 };
 
-type BuyerActivityReview = {
-  id: string;
-  partnerName: string;
-  partnerUniversity: string;
-  skill: string;
-  rating: number;
-  comment: string;
-  direction: "received" | "given";
-  sourceRole: "provider" | "buyer";
-  dateLabel: string;
+type ProviderProfileData = {
+  name: string;
+  degree: string;
+  university: string;
+  yearOfStudy: string;
+  image: string;
+  verified: boolean;
+  topRated: boolean;
+  trustScore: string;
+  totalSwaps: string;
+  avgRating: string;
+  avgResponse: string;
+  bio: string;
+  gigs: PublicGig[];
+  reviews: PublicReview[];
 };
-
-type PublicMemberProfile =
-  | {
-      mode: "provider";
-      name: string;
-      degree: string;
-      university: string;
-      yearOfStudy: string;
-      image: string;
-      verified: boolean;
-      topRated: boolean;
-      rating: string;
-      reviewsCount: number;
-      trustScore: string;
-      totalSwaps: string;
-      avgRating: string;
-      avgResponse: string;
-      bio: string;
-      gigs: PublicGig[];
-      reviews: PublicReview[];
-    }
-  | {
-      mode: "buyer";
-      name: string;
-      degree: string;
-      university: string;
-      yearOfStudy: string;
-      image: string;
-      verified: boolean;
-      bio: string;
-      neededSkills: string[];
-      completedSwaps: number;
-      avgRatingReceived: string;
-      reviewsReceived: BuyerActivityReview[];
-      reviewsGiven: BuyerActivityReview[];
-    };
 
 type FirestoreReview = {
   rating: number;
@@ -92,11 +62,7 @@ type FirebaseRequestDoc = {
   status?: string;
   createdAt?: { toDate?: () => Date } | Date | string | number | null;
   buyerName?: string;
-  buyerUniversity?: string;
-  providerName?: string;
-  providerUniversity?: string;
   review?: FirestoreReview;
-  providerReview?: FirestoreReview;
 };
 
 type FirestoreUserProfile = {
@@ -108,7 +74,6 @@ type FirestoreUserProfile = {
   emailVerified?: boolean;
   role?: string;
   profileImageUrl?: string;
-  neededSkills?: string[];
   providerProfile?: {
     bio?: string;
     skills?: string[];
@@ -125,7 +90,8 @@ export default function ProviderProfilePublicPage({
   activeTab,
 }: ProviderProfilePublicPageProps) {
   const { userProfile, loading: authLoading, refreshProfile } = useAuth();
-  const [profile, setProfile] = useState<PublicMemberProfile | null>(null);
+  const router = useRouter();
+  const [profile, setProfile] = useState<ProviderProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPrivateProfile, setIsPrivateProfile] = useState(false);
 
@@ -175,39 +141,29 @@ export default function ProviderProfilePublicPage({
           member.role === "both" ||
           Boolean(member.providerProfile?.skills?.length);
 
-        const [providerRequestsSnap, buyerRequestsSnap] = await Promise.all([
-          getDocs(
-            query(
-              collection(db, "requests"),
-              where("providerId", "==", providerId),
-              where("status", "==", "completed")
-            )
-          ),
-          getDocs(
-            query(
-              collection(db, "requests"),
-              where("buyerId", "==", providerId),
-              where("status", "==", "completed")
-            )
-          ),
-        ]);
+        if (!isProviderMember) {
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+
+        const requestsSnap = await getDocs(
+          query(
+            collection(db, "requests"),
+            where("providerId", "==", providerId),
+            where("status", "==", "completed")
+          )
+        );
 
         if (!active) return;
 
-        const providerRequests = providerRequestsSnap.docs.map(
-          (requestDoc) => ({ id: requestDoc.id, ...requestDoc.data() }) as FirebaseRequestDoc
-        );
-        const buyerRequests = buyerRequestsSnap.docs.map(
+        const completedRequests = requestsSnap.docs.map(
           (requestDoc) => ({ id: requestDoc.id, ...requestDoc.data() }) as FirebaseRequestDoc
         );
 
-        if (isProviderMember) {
-          setProfile(buildProviderProfile(member, providerId, providerRequests));
-        } else {
-          setProfile(buildBuyerProfile(member, buyerRequests));
-        }
+        setProfile(buildProviderProfile(member, providerId, completedRequests));
       } catch (error) {
-        console.error("Error loading public member profile:", error);
+        console.error("Error loading provider public profile:", error);
         if (active) {
           setProfile(null);
         }
@@ -226,9 +182,9 @@ export default function ProviderProfilePublicPage({
   }, [providerId, userProfile?.uid]);
 
   const handleToggleFavorite = async () => {
-    if (!userProfile || !profile || profile.mode !== "provider") {
+    if (!userProfile || !profile) {
       if (!userProfile) {
-        window.location.href = "/get-started";
+        router.push("/get-started");
       }
       return;
     }
@@ -247,11 +203,6 @@ export default function ProviderProfilePublicPage({
         );
       } else {
         const now = new Date();
-        const savedAt = `Saved ${now.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })}`;
         updatedFavorites = [
           ...favorites,
           {
@@ -264,15 +215,12 @@ export default function ProviderProfilePublicPage({
             image:
               profile.image && profile.image.startsWith("/img/")
                 ? profile.image
-                : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    profile.name
-                  )}&background=2f66e7&color=fff&size=400`,
+                : `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=2f66e7&color=fff&size=400`,
             avatar: profile.name.charAt(0).toUpperCase(),
             level: "Member",
-            savedAt,
+            savedAt: `Saved ${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
             description:
-              profile.gigs[0]?.title ||
-              `Collaborate on skill swaps with ${profile.name}`,
+              profile.gigs[0]?.title || `Collaborate on skill swaps with ${profile.name}`,
           },
         ];
       }
@@ -282,14 +230,14 @@ export default function ProviderProfilePublicPage({
       });
       await refreshProfile();
     } catch (error) {
-      console.error("Error toggling favorite:", error);
+      console.error("Error toggling provider favorite:", error);
     }
   };
 
   const handleToggleGigFavorite = async (gig: PublicGig) => {
-    if (!userProfile || !profile || profile.mode !== "provider") {
+    if (!userProfile || !profile) {
       if (!userProfile) {
-        window.location.href = "/get-started";
+        router.push("/get-started");
       }
       return;
     }
@@ -297,8 +245,7 @@ export default function ProviderProfilePublicPage({
     try {
       const favorites = (userProfile.favorites || []) as Record<string, unknown>[];
       const favoriteKey = getGigFavoriteKey(gig.id);
-      const saved = isGigFavorited(gig.id);
-      const updatedFavorites = saved
+      const updatedFavorites = isGigFavorited(gig.id)
         ? favorites.filter((fav) => (fav as { gigId?: string }).gigId !== favoriteKey)
         : [
             ...favorites,
@@ -314,15 +261,9 @@ export default function ProviderProfilePublicPage({
               avatar:
                 profile.image && profile.image.startsWith("/")
                   ? profile.image
-                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                      profile.name
-                    )}&background=2f66e7&color=fff&size=400`,
+                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=2f66e7&color=fff&size=400`,
               level: "Gig Card",
-              savedAt: `Saved ${new Date().toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}`,
+              savedAt: `Saved ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
               description: `Gig card: ${gig.title}`,
             },
           ];
@@ -382,7 +323,7 @@ export default function ProviderProfilePublicPage({
   if (!profile) {
     return (
       <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">Member profile not found.</p>
+        <p className="text-sm text-slate-500">Provider profile not found.</p>
       </div>
     );
   }
@@ -401,16 +342,10 @@ export default function ProviderProfilePublicPage({
               <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-[#1453c4]">
                 {profile.verified ? "Verified Student" : "Student Member"}
               </span>
-              <span
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                  profile.mode === "provider"
-                    ? "bg-teal-100 text-teal-700"
-                    : "bg-amber-100 text-amber-700"
-                }`}
-              >
-                {profile.mode === "provider" ? "Provider Profile" : "Buyer Profile"}
+              <span className="rounded-full bg-teal-100 px-2.5 py-1 text-[11px] font-semibold text-teal-700">
+                Provider Profile
               </span>
-              {profile.mode === "provider" && profile.topRated ? (
+              {profile.topRated ? (
                 <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
                   Top Rated
                 </span>
@@ -432,24 +367,20 @@ export default function ProviderProfilePublicPage({
               >
                 Message {profile.name.split(" ")[0]}
               </Link>
-
-              {profile.mode === "provider" ? (
-                <button
-                  type="button"
-                  onClick={handleToggleFavorite}
-                  className={`inline-flex h-8 items-center justify-center rounded-md border px-3 text-xs font-semibold transition ${
-                    isFavorited
-                      ? "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <HeartIcon className="h-3.5 w-3.5" filled={isFavorited} />
-                    {isFavorited ? "Saved" : "Save"}
-                  </span>
-                </button>
-              ) : null}
-
+              <button
+                type="button"
+                onClick={handleToggleFavorite}
+                className={`inline-flex h-8 items-center justify-center rounded-md border px-3 text-xs font-semibold transition ${
+                  isFavorited
+                    ? "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <HeartIcon className="h-3.5 w-3.5" filled={isFavorited} />
+                  {isFavorited ? "Saved" : "Save"}
+                </span>
+              </button>
               <Link
                 href={reportHref}
                 className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-red-600 transition hover:text-red-700"
@@ -461,55 +392,11 @@ export default function ProviderProfilePublicPage({
         </div>
       </section>
 
-      {profile.mode === "provider" ? (
-        <ProviderSections
-          profile={profile}
-          activeTab={activeTab}
-          gigsHref={gigsHref}
-          reviewsHref={reviewsHref}
-          providerId={providerId}
-          role={role}
-          onToggleGigFavorite={handleToggleGigFavorite}
-          isGigFavorited={isGigFavorited}
-        />
-      ) : (
-        <BuyerSections profile={profile} />
-      )}
-    </div>
-  );
-}
-
-function ProviderSections({
-  profile,
-  activeTab,
-  gigsHref,
-  reviewsHref,
-  providerId,
-  role,
-  onToggleGigFavorite,
-  isGigFavorited,
-}: {
-  profile: Extract<PublicMemberProfile, { mode: "provider" }>;
-  activeTab: "gigs" | "reviews";
-  gigsHref: string;
-  reviewsHref: string;
-  providerId: string;
-  role?: Role;
-  onToggleGigFavorite: (gig: PublicGig) => Promise<void>;
-  isGigFavorited: (gigId: string) => boolean;
-}) {
-  return (
-    <>
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Trust Score" value={profile.trustScore} sub="Completion Rate" accent />
         <MetricCard title="Total Swaps" value={profile.totalSwaps} sub="Completed" />
         <MetricCard title="Avg. Rating" value={profile.avgRating} sub={buildStars(profile.avgRating)} teal />
         <MetricCard title="Avg. Response" value={profile.avgResponse} sub="Highly Responsive" />
-      </section>
-
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-700">About {profile.name.split(" ")[0]}</h2>
-        <p className="mt-3 text-sm leading-7 text-slate-600">{profile.bio}</p>
       </section>
 
       <section>
@@ -556,10 +443,10 @@ function ProviderSections({
                     <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-[#1453c4] shadow-sm">
                       {gig.category}
                     </span>
-                    <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">
+                    <div className="absolute right-3 top-3">
                       <button
                         type="button"
-                        onClick={() => void onToggleGigFavorite(gig)}
+                        onClick={() => void handleToggleGigFavorite(gig)}
                         aria-label={
                           isGigFavorited(gig.id)
                             ? "Remove this gig from favorites"
@@ -573,10 +460,6 @@ function ProviderSections({
                       >
                         <HeartIcon className="h-4.5 w-4.5" filled={isGigFavorited(gig.id)} />
                       </button>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
-                        <StarIcon className="h-3.5 w-3.5 text-amber-400" />
-                        {gig.rating}
-                      </span>
                     </div>
                   </div>
 
@@ -592,7 +475,7 @@ function ProviderSections({
                     <div className="mt-auto border-t border-slate-200 pt-3">
                       <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
                         <span className="truncate">{gig.reviews} completed reviews</span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-sm ring-1 ring-slate-200">
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-sm ring-1 ring-slate-200">
                           <StarIcon className="h-3.5 w-3.5 text-amber-400" />
                           {gig.rating}
                         </span>
@@ -630,108 +513,7 @@ function ProviderSections({
           </div>
         )}
       </section>
-    </>
-  );
-}
-
-function BuyerSections({
-  profile,
-}: {
-  profile: Extract<PublicMemberProfile, { mode: "buyer" }>;
-}) {
-  const recentReceived = useMemo(
-    () => profile.reviewsReceived.slice(0, 6),
-    [profile.reviewsReceived]
-  );
-  const recentGiven = useMemo(
-    () => profile.reviewsGiven.slice(0, 6),
-    [profile.reviewsGiven]
-  );
-
-  return (
-    <>
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Completed Swaps" value={String(profile.completedSwaps)} sub="Buyer activity" accent />
-        <MetricCard title="Avg. Rating" value={profile.avgRatingReceived} sub="Received from providers" teal />
-        <MetricCard title="Reviews Received" value={String(profile.reviewsReceived.length)} sub="Provider feedback" />
-        <MetricCard title="Reviews Given" value={String(profile.reviewsGiven.length)} sub="Shared by this buyer" />
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-700">About {profile.name.split(" ")[0]}</h2>
-          <p className="mt-3 text-sm leading-7 text-slate-600">{profile.bio}</p>
-        </article>
-
-        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-700">Skills Looking For</h2>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {profile.neededSkills.length > 0 ? (
-              profile.neededSkills.map((skill) => (
-                <span
-                  key={skill}
-                  className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700"
-                >
-                  {skill}
-                </span>
-              ))
-            ) : (
-              <p className="text-sm text-slate-400">No requested skills listed yet.</p>
-            )}
-          </div>
-        </article>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-2">
-        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-[#1453c4]">Reviews Received</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Feedback this buyer received from providers.
-              </p>
-            </div>
-            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-[#1453c4]">
-              {profile.reviewsReceived.length}
-            </span>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {recentReceived.length > 0 ? (
-              recentReceived.map((review) => (
-                <BuyerReviewCard key={review.id} review={review} badgeText="Received" />
-              ))
-            ) : (
-              <EmptyPanel message="No provider feedback received yet." compact />
-            )}
-          </div>
-        </article>
-
-        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-[#1453c4]">Reviews Given</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Ratings and comments this buyer shared with others.
-              </p>
-            </div>
-            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">
-              {profile.reviewsGiven.length}
-            </span>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {recentGiven.length > 0 ? (
-              recentGiven.map((review) => (
-                <BuyerReviewCard key={review.id} review={review} badgeText="Given" />
-              ))
-            ) : (
-              <EmptyPanel message="No public feedback shared yet." compact />
-            )}
-          </div>
-        </article>
-      </section>
-    </>
+    </div>
   );
 }
 
@@ -801,52 +583,9 @@ function FeedbackCard({ review }: { review: PublicReview }) {
   );
 }
 
-function BuyerReviewCard({
-  review,
-  badgeText,
-}: {
-  review: BuyerActivityReview;
-  badgeText: string;
-}) {
-  const badgeTone =
-    badgeText === "Received"
-      ? "bg-blue-50 text-[#1453c4]"
-      : "bg-amber-50 text-amber-700";
-
+function EmptyPanel({ message }: { message: string }) {
   return (
-    <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-sm font-semibold text-slate-900">{review.partnerName}</p>
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeTone}`}>
-              {badgeText}
-            </span>
-            <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
-              {review.sourceRole === "provider" ? "Provider" : "Buyer"}
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
-            {review.partnerUniversity || "Community Member"} | {review.dateLabel}
-          </p>
-          <p className="mt-1 text-xs font-semibold text-[#1453c4]">Service: {review.skill}</p>
-        </div>
-        <p className="shrink-0 text-sm font-bold text-amber-500">
-          {buildStars(String(review.rating))}
-        </p>
-      </div>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{review.comment}</p>
-    </article>
-  );
-}
-
-function EmptyPanel({ message, compact = false }: { message: string; compact?: boolean }) {
-  return (
-    <div
-      className={`rounded-xl border border-slate-200 bg-white text-center text-sm text-slate-500 ${
-        compact ? "p-6" : "p-8"
-      }`}
-    >
+    <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
       {message}
     </div>
   );
@@ -856,7 +595,7 @@ function buildProviderProfile(
   member: FirestoreUserProfile,
   providerId: string,
   completedRequests: FirebaseRequestDoc[]
-): Extract<PublicMemberProfile, { mode: "provider" }> {
+): ProviderProfileData {
   const ratings = completedRequests
     .filter((request) => request.review && typeof request.review.rating === "number")
     .map((request) => request.review!.rating);
@@ -908,7 +647,6 @@ function buildProviderProfile(
     });
 
   return {
-    mode: "provider",
     name: member.name || "Anonymous Member",
     degree: member.degree || "Undergraduate",
     university: member.university || "Sri Lankan University",
@@ -916,8 +654,6 @@ function buildProviderProfile(
     image: member.profileImageUrl || "",
     verified: member.emailVerified !== false,
     topRated: avgRating >= 4.8 && completedRequests.length >= 2,
-    rating: avgRating.toFixed(1),
-    reviewsCount: reviews.length,
     trustScore,
     totalSwaps: String(completedRequests.length),
     avgRating: avgRating.toFixed(1),
@@ -927,75 +663,6 @@ function buildProviderProfile(
       `Knowledge-sharing focused ${member.degree || "university"} student open to helping peers with practical skill swaps.`,
     gigs,
     reviews,
-  };
-}
-
-function buildBuyerProfile(
-  member: FirestoreUserProfile,
-  completedRequests: FirebaseRequestDoc[]
-): Extract<PublicMemberProfile, { mode: "buyer" }> {
-  const reviewsReceived: BuyerActivityReview[] = [];
-  const reviewsGiven: BuyerActivityReview[] = [];
-
-  completedRequests.forEach((request) => {
-    const skill = request.title || "Skill Swap";
-    const dateLabel = formatDateLabel(request.createdAt);
-    const providerName = request.providerName || "Anonymous Provider";
-    const providerUniversity = request.providerUniversity || "Swap Partner";
-
-    if (request.providerReview && typeof request.providerReview.rating === "number") {
-      reviewsReceived.push({
-        id: `received-${request.id}`,
-        partnerName: providerName,
-        partnerUniversity: providerUniversity,
-        skill,
-        rating: request.providerReview.rating,
-        comment: request.providerReview.comment || "Great learning experience.",
-        direction: "received",
-        sourceRole: "provider",
-        dateLabel,
-      });
-    }
-
-    if (request.review && typeof request.review.rating === "number") {
-      reviewsGiven.push({
-        id: `given-${request.id}`,
-        partnerName: providerName,
-        partnerUniversity: providerUniversity,
-        skill,
-        rating: request.review.rating,
-        comment: request.review.comment || "Helpful collaboration.",
-        direction: "given",
-        sourceRole: "provider",
-        dateLabel,
-      });
-    }
-  });
-
-  const avgRatingReceived =
-    reviewsReceived.length > 0
-      ? (
-          reviewsReceived.reduce((total, review) => total + review.rating, 0) /
-          reviewsReceived.length
-        ).toFixed(1)
-      : "New";
-
-  return {
-    mode: "buyer",
-    name: member.name || "Anonymous Member",
-    degree: member.degree || "Undergraduate",
-    university: member.university || "Sri Lankan University",
-    yearOfStudy: member.yearOfStudy || "",
-    image: member.profileImageUrl || "",
-    verified: member.emailVerified !== false,
-    bio:
-      member.providerProfile?.bio ||
-      `Student at ${member.university || "a Sri Lankan university"} using Skill Swap Hub to connect with helpful peers and complete meaningful collaborations.`,
-    neededSkills: member.neededSkills || [],
-    completedSwaps: completedRequests.length,
-    avgRatingReceived,
-    reviewsReceived,
-    reviewsGiven,
   };
 }
 

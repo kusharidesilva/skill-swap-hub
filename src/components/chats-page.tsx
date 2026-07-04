@@ -582,7 +582,10 @@ function ChatHeader({
   conversation: Conversation;
   role: Role;
 }) {
-  const peerProfileHref = `/provider-profile/${conversation.peerId}?role=${role}`;
+  const peerProfileHref =
+    conversation.peerRole === "buyer"
+      ? `/buyer-profile/${conversation.peerId}?role=${role}`
+      : `/provider-profile/${conversation.peerId}?role=${role}`;
   const reportPeerHref = `/report-issue/${role}/${conversation.peerId}`;
   const initials = conversation.name
     .split(" ")
