@@ -20,6 +20,7 @@ interface GigData {
   rating: string;
   reviews: number;
   category: string;
+  points: number;
   image: string;
 }
 
@@ -331,6 +332,7 @@ export default function ProviderProfilePublicPage({
                 rating: avgRating.toFixed(1),
                 reviews: completedRequests.length,
                 category: skill,
+                points: 0,
                 image,
               };
             });
