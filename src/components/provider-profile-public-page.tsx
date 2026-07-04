@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
-import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
+import { collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import { useAuth } from "@/context/AuthContext";
@@ -14,206 +14,110 @@ type ProviderProfilePublicPageProps = {
   activeTab: "gigs" | "reviews";
 };
 
-interface GigData {
+type PublicGig = {
   id: string;
   title: string;
   rating: string;
   reviews: number;
   category: string;
-  points: number;
   image: string;
-}
+};
 
-interface ReviewData {
+type PublicReview = {
   id: string;
-  initials: string;
-  avatarTone: string;
   name: string;
+  initials: string;
   meta: string;
   quote: string;
   rating: number;
-}
-
-interface PublicProviderProfile {
-  name: string;
-  degree: string;
-  university: string;
-  rating: string;
-  reviewsCount: number;
-  image: string;
-  verified: boolean;
-  topRated: boolean;
-  trustScore: string;
-  totalSwaps: string;
-  avgRating: string;
-  avgResponse: string;
-  gigs: GigData[];
-  reviews: ReviewData[];
-}
-
-interface FirebaseRequestDoc {
-  id: string;
-  buyerName?: string;
-  title?: string;
-  status?: string;
-  createdAt?: { toDate?: () => Date } | Date | null;
-  review?: {
-    rating: number;
-    comment: string;
-  };
-}
-
-// Fallback/Mock data for unregistered/demo providers
-const providersData: Record<string, {
-  name: string;
-  degree: string;
-  university: string;
-  rating: string;
-  reviewsCount: number;
-  image: string;
-  verified: boolean;
-  topRated: boolean;
-  trustScore: string;
-  totalSwaps: string;
-  avgRating: string;
-  avgResponse: string;
-  gigs: GigData[];
-}> = {
-  "sarah-jenkins": {
-    name: "Sarah Jenkins",
-    degree: "BSc Computer Science",
-    university: "Univ of Colombo",
-    rating: "4.9",
-    reviewsCount: 42,
-    image: "/img/favorites/sofia.jpg",
-    verified: true,
-    topRated: true,
-    trustScore: "98%",
-    totalSwaps: "42",
-    avgRating: "4.9",
-    avgResponse: "2h",
-    gigs: [
-      {
-        id: "react-web",
-        title: "Modern React Web Development",
-        rating: "4.9",
-        reviews: 30,
-        category: "Programming",
-        points: 40,
-        image: "/img/package%201.jpg",
-      },
-      {
-        id: "node-api",
-        title: "RESTful API with Node.js & Express",
-        rating: "4.8",
-        reviews: 12,
-        category: "Backend Development",
-        points: 50,
-        image: "/img/package%202.jpg",
-      },
-    ]
-  },
-  "michael-chen": {
-    name: "Michael Chen",
-    degree: "BA Graphic Design",
-    university: "Univ of Moratuwa",
-    rating: "4.7",
-    reviewsCount: 28,
-    image: "/img/favorites/david.jpg",
-    verified: true,
-    topRated: false,
-    trustScore: "95%",
-    totalSwaps: "28",
-    avgRating: "4.7",
-    avgResponse: "1h",
-    gigs: [
-      {
-        id: "figma-design",
-        title: "High-Fidelity UI/UX Design in Figma",
-        rating: "4.8",
-        reviews: 18,
-        category: "UI/UX Design",
-        points: 35,
-        image: "/img/package%203.jpg",
-      },
-      {
-        id: "logo-brand",
-        title: "Modern Minimalist Logo Design",
-        rating: "4.6",
-        reviews: 10,
-        category: "Branding",
-        points: 25,
-        image: "/img/package%201.jpg",
-      },
-    ]
-  },
-  "alex-rivera": {
-    name: "Alex Rivera",
-    degree: "BSc Design",
-    university: "University of Moratuwa",
-    rating: "5.0",
-    reviewsCount: 68,
-    image: "/img/favorites/alex.jpg",
-    verified: true,
-    topRated: true,
-    trustScore: "99%",
-    totalSwaps: "68",
-    avgRating: "5.0",
-    avgResponse: "1h",
-    gigs: [
-      {
-        id: "book-cover",
-        title: "Creative Book Cover Design",
-        rating: "5.0",
-        reviews: 12,
-        category: "Graphic Design",
-        points: 20,
-        image: "/img/package%201.jpg",
-      },
-      {
-        id: "arch-viz",
-        title: "3D Architectural Visualization",
-        rating: "5.0",
-        reviews: 8,
-        category: "Architecture",
-        points: 45,
-        image: "/img/package%202.jpg",
-      },
-      {
-        id: "logo-design",
-        title: "Minimalist Logo Design",
-        rating: "4.9",
-        reviews: 22,
-        category: "Branding",
-        points: 30,
-        image: "/img/package%203.jpg",
-      },
-    ]
-  }
+  avatarTone: string;
 };
 
-const allReviewsMock: ReviewData[] = [
-  {
-    id: "r1",
-    initials: "KP",
-    avatarTone: "bg-[#2f66e7] text-white",
-    name: "Kasun Perera",
-    meta: "2 days ago • Swap: Creative Book Cover",
-    quote:
-      "Amara is incredibly talented! She took my vague ideas and turned them into a stunning book cover that perfectly matches the tone of my thesis. Highly recommend her for any design work.",
-    rating: 5,
-  },
-  {
-    id: "r2",
-    initials: "NR",
-    avatarTone: "bg-teal-300 text-teal-900",
-    name: "Nimani Ratnayake",
-    meta: "1 week ago • Swap: 3D Arch Viz",
-    quote:
-      "Excellent communication and the technical quality of the 3D renders was beyond my expectations. She is a real pro at the University of Moratuwa.",
-    rating: 5,
-  },
-];
+type BuyerActivityReview = {
+  id: string;
+  partnerName: string;
+  partnerUniversity: string;
+  skill: string;
+  rating: number;
+  comment: string;
+  direction: "received" | "given";
+  sourceRole: "provider" | "buyer";
+  dateLabel: string;
+};
+
+type PublicMemberProfile =
+  | {
+      mode: "provider";
+      name: string;
+      degree: string;
+      university: string;
+      yearOfStudy: string;
+      image: string;
+      verified: boolean;
+      topRated: boolean;
+      rating: string;
+      reviewsCount: number;
+      trustScore: string;
+      totalSwaps: string;
+      avgRating: string;
+      avgResponse: string;
+      bio: string;
+      gigs: PublicGig[];
+      reviews: PublicReview[];
+    }
+  | {
+      mode: "buyer";
+      name: string;
+      degree: string;
+      university: string;
+      yearOfStudy: string;
+      image: string;
+      verified: boolean;
+      bio: string;
+      neededSkills: string[];
+      completedSwaps: number;
+      avgRatingReceived: string;
+      reviewsReceived: BuyerActivityReview[];
+      reviewsGiven: BuyerActivityReview[];
+    };
+
+type FirestoreReview = {
+  rating: number;
+  comment: string;
+};
+
+type FirebaseRequestDoc = {
+  id: string;
+  title?: string;
+  status?: string;
+  createdAt?: { toDate?: () => Date } | Date | string | number | null;
+  buyerName?: string;
+  buyerUniversity?: string;
+  providerName?: string;
+  providerUniversity?: string;
+  review?: FirestoreReview;
+  providerReview?: FirestoreReview;
+};
+
+type FirestoreUserProfile = {
+  uid?: string;
+  name?: string;
+  degree?: string;
+  university?: string;
+  yearOfStudy?: string;
+  emailVerified?: boolean;
+  role?: string;
+  profileImageUrl?: string;
+  neededSkills?: string[];
+  providerProfile?: {
+    bio?: string;
+    skills?: string[];
+    gigImages?: string[];
+  };
+  settings?: {
+    profileVisibility?: boolean;
+  };
+};
 
 export default function ProviderProfilePublicPage({
   providerId,
@@ -221,20 +125,172 @@ export default function ProviderProfilePublicPage({
   activeTab,
 }: ProviderProfilePublicPageProps) {
   const { userProfile, loading: authLoading, refreshProfile } = useAuth();
-  const [profile, setProfile] = useState<PublicProviderProfile | null>(null);
+  const [profile, setProfile] = useState<PublicMemberProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPrivateProfile, setIsPrivateProfile] = useState(false);
 
   const getGigFavoriteKey = (gigId: string) => `${providerId}-${gigId}`;
 
-  const isGigFavorited = (gigId: string) =>
+  const isFavorited =
     userProfile?.favorites?.some(
-      (fav) => (fav as { gigId?: string }).gigId === getGigFavoriteKey(gigId),
+      (fav) =>
+        (fav as { providerId?: string; gigId?: string }).providerId === providerId &&
+        !(fav as { gigId?: string }).gigId
     ) || false;
 
-  const handleToggleGigFavorite = async (gig: GigData) => {
-    if (!userProfile) {
-      window.location.href = "/get-started";
+  const isGigFavorited = (gigId: string) =>
+    userProfile?.favorites?.some(
+      (fav) => (fav as { gigId?: string }).gigId === getGigFavoriteKey(gigId)
+    ) || false;
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProfile() {
+      setLoading(true);
+
+      try {
+        const userSnap = await getDoc(doc(db, "users", providerId));
+        if (!active) return;
+
+        if (!userSnap.exists()) {
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+
+        const member = userSnap.data() as FirestoreUserProfile;
+        const isOwnerViewing = userProfile?.uid === providerId;
+        if (member.settings?.profileVisibility === false && !isOwnerViewing) {
+          setIsPrivateProfile(true);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+
+        setIsPrivateProfile(false);
+
+        const isProviderMember =
+          member.role === "provider" ||
+          member.role === "both" ||
+          Boolean(member.providerProfile?.skills?.length);
+
+        const [providerRequestsSnap, buyerRequestsSnap] = await Promise.all([
+          getDocs(
+            query(
+              collection(db, "requests"),
+              where("providerId", "==", providerId),
+              where("status", "==", "completed")
+            )
+          ),
+          getDocs(
+            query(
+              collection(db, "requests"),
+              where("buyerId", "==", providerId),
+              where("status", "==", "completed")
+            )
+          ),
+        ]);
+
+        if (!active) return;
+
+        const providerRequests = providerRequestsSnap.docs.map(
+          (requestDoc) => ({ id: requestDoc.id, ...requestDoc.data() }) as FirebaseRequestDoc
+        );
+        const buyerRequests = buyerRequestsSnap.docs.map(
+          (requestDoc) => ({ id: requestDoc.id, ...requestDoc.data() }) as FirebaseRequestDoc
+        );
+
+        if (isProviderMember) {
+          setProfile(buildProviderProfile(member, providerId, providerRequests));
+        } else {
+          setProfile(buildBuyerProfile(member, buyerRequests));
+        }
+      } catch (error) {
+        console.error("Error loading public member profile:", error);
+        if (active) {
+          setProfile(null);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [providerId, userProfile?.uid]);
+
+  const handleToggleFavorite = async () => {
+    if (!userProfile || !profile || profile.mode !== "provider") {
+      if (!userProfile) {
+        window.location.href = "/get-started";
+      }
+      return;
+    }
+
+    try {
+      const favorites = (userProfile.favorites || []) as Record<string, unknown>[];
+      let updatedFavorites;
+
+      if (isFavorited) {
+        updatedFavorites = favorites.filter(
+          (fav) =>
+            !(
+              (fav as { providerId?: string; gigId?: string }).providerId === providerId &&
+              !(fav as { gigId?: string }).gigId
+            )
+        );
+      } else {
+        const now = new Date();
+        const savedAt = `Saved ${now.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })}`;
+        updatedFavorites = [
+          ...favorites,
+          {
+            id: providerId,
+            providerId,
+            title: profile.gigs[0]?.title || `Collaboration with ${profile.name}`,
+            category: profile.gigs[0]?.category || "General",
+            instructor: profile.name,
+            rating: profile.avgRating,
+            image:
+              profile.image && profile.image.startsWith("/img/")
+                ? profile.image
+                : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    profile.name
+                  )}&background=2f66e7&color=fff&size=400`,
+            avatar: profile.name.charAt(0).toUpperCase(),
+            level: "Member",
+            savedAt,
+            description:
+              profile.gigs[0]?.title ||
+              `Collaborate on skill swaps with ${profile.name}`,
+          },
+        ];
+      }
+
+      await updateDoc(doc(db, "users", userProfile.uid), {
+        favorites: updatedFavorites,
+      });
+      await refreshProfile();
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    }
+  };
+
+  const handleToggleGigFavorite = async (gig: PublicGig) => {
+    if (!userProfile || !profile || profile.mode !== "provider") {
+      if (!userProfile) {
+        window.location.href = "/get-started";
+      }
       return;
     }
 
@@ -252,15 +308,21 @@ export default function ProviderProfilePublicPage({
               providerId,
               title: gig.title,
               category: gig.category,
-              instructor: profile?.name || "Campus Student",
+              instructor: profile.name,
               rating: gig.rating,
               image: gig.image,
               avatar:
-                profile?.image && profile.image.startsWith("/")
+                profile.image && profile.image.startsWith("/")
                   ? profile.image
-                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.name || "Campus Student")}&background=2f66e7&color=fff&size=400`,
+                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                      profile.name
+                    )}&background=2f66e7&color=fff&size=400`,
               level: "Gig Card",
-              savedAt: `Saved ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+              savedAt: `Saved ${new Date().toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}`,
               description: `Gig card: ${gig.title}`,
             },
           ];
@@ -269,154 +331,22 @@ export default function ProviderProfilePublicPage({
         favorites: updatedFavorites,
       });
       await refreshProfile();
-    } catch (err) {
-      console.error("Error toggling gig favorite:", err);
+    } catch (error) {
+      console.error("Error toggling gig favorite:", error);
     }
   };
 
-  useEffect(() => {
-    let active = true;
-    const userRef = doc(db, "users", providerId);
-    const requestsQuery = query(
-      collection(db, "requests"),
-      where("providerId", "==", providerId),
-      where("status", "==", "completed")
-    );
-
-    const unsubscribe = onSnapshot(
-      requestsQuery,
-      async (qSnap) => {
-        try {
-          const userDoc = await getDoc(userRef);
-          if (!active) return;
-
-          const reqs: FirebaseRequestDoc[] = [];
-          qSnap.forEach((docSnap) => {
-            reqs.push({ id: docSnap.id, ...docSnap.data() } as FirebaseRequestDoc);
-          });
-
-          if (userDoc.exists()) {
-            const u = userDoc.data();
-
-            if (u.settings?.profileVisibility === false && (!userProfile || userProfile.uid !== providerId)) {
-              setIsPrivateProfile(true);
-              setLoading(false);
-              return;
-            }
-            setIsPrivateProfile(false);
-
-            const completedRequests = reqs.filter((r) => r.status === "completed");
-            const totalSwaps = completedRequests.length;
-
-            const ratings = completedRequests
-              .filter((r) => r.review && typeof r.review.rating === "number")
-              .map((r) => r.review!.rating);
-            const avgRating = ratings.length > 0
-              ? parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1))
-              : 5.0;
-
-            const totalRequests = reqs.length;
-            const totalRejected = reqs.filter((r) => r.status === "rejected").length;
-            const trustScore = totalRequests === 0
-              ? "99%"
-              : `${Math.min(100, Math.max(80, Math.round(((totalRequests - totalRejected) / totalRequests) * 100)))}%`;
-
-            const skills: string[] = u.providerProfile?.skills || [];
-            const customImages: string[] = u.providerProfile?.gigImages || [];
-            const gigs: GigData[] = skills.map((skill: string, index: number) => {
-              let image = customImages[index];
-              if (!image) {
-                image = "/img/package%201.jpg";
-                if (index % 3 === 1) image = "/img/package%202.jpg";
-                if (index % 3 === 2) image = "/img/package%203.jpg";
-              }
-              return {
-                id: `gig-${index}`,
-                title: `I will do ${skill}`,
-                rating: avgRating.toFixed(1),
-                reviews: completedRequests.length,
-                category: skill,
-                points: 0,
-                image,
-              };
-            });
-
-            const reviews: ReviewData[] = completedRequests
-              .filter((r) => r.review && typeof r.review.rating === "number")
-              .map((r) => {
-                const rating = r.review!.rating;
-                const comment = r.review!.comment || "Outstanding swap session!";
-                const buyerName = r.buyerName || "Anonymous Student";
-                const initials = buyerName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || "US";
-
-                let dateStr = "Recently";
-                if (r.createdAt) {
-                  const rawDate = r.createdAt as { toDate?: () => Date } | Date | string | number;
-                  let d: Date;
-                  if (rawDate && typeof (rawDate as { toDate?: () => Date }).toDate === "function") {
-                    d = (rawDate as { toDate: () => Date }).toDate();
-                  } else {
-                    d = new Date(rawDate as Date | string | number);
-                  }
-                  dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-                }
-
-                return {
-                  id: r.id,
-                  initials,
-                  avatarTone: "bg-[#2f66e7] text-white",
-                  name: buyerName,
-                  meta: `${dateStr} • Swap: ${r.title}`,
-                  quote: comment,
-                  rating,
-                };
-              });
-
-            setProfile({
-              name: u.name || "Anonymous Member",
-              degree: u.degree || "Undergraduate",
-              university: u.university || "Sri Lankan University",
-              rating: avgRating.toFixed(1),
-              reviewsCount: completedRequests.length,
-              image: u.profileImageUrl || "",
-              verified: true,
-              topRated: avgRating >= 4.8 && completedRequests.length >= 2,
-              trustScore,
-              totalSwaps: String(totalSwaps),
-              avgRating: avgRating.toFixed(1),
-              avgResponse: "1h",
-              gigs,
-              reviews,
-            });
-          } else {
-            const mock = providersData[providerId] || providersData["alex-rivera"];
-            setProfile({
-              ...mock,
-              reviews: allReviewsMock,
-            });
-          }
-        } catch (err) {
-          console.error("Error fetching provider profile from db:", err);
-          const mock = providersData[providerId] || providersData["alex-rivera"];
-          setProfile({
-            ...mock,
-            reviews: allReviewsMock,
-          });
-        } finally {
-          setLoading(false);
-        }
-      },
-      (err) => {
-        console.error("Error subscribing to provider profile ratings:", err);
-        setLoading(false);
-      },
-    );
-
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [providerId, userProfile]);
+  const messageHref = role
+    ? `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(providerId)}`
+    : "/get-started";
+  const reportHref = role
+    ? `${scopedHref("/report-issue", role)}/${providerId}`
+    : "/get-started";
+  const baseProfileHref = role
+    ? `/provider-profile/${providerId}?role=${role}`
+    : `/provider-profile/${providerId}`;
+  const gigsHref = `${baseProfileHref}${role ? "&" : "?"}tab=gigs`;
+  const reviewsHref = `${baseProfileHref}${role ? "&" : "?"}tab=reviews`;
 
   if (loading || authLoading) {
     return (
@@ -432,30 +362,18 @@ export default function ProviderProfilePublicPage({
   if (isPrivateProfile) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-        <div className="rounded-full bg-slate-105 p-5 text-slate-450 bg-slate-100 text-slate-400">
-          <svg
-            className="h-12 w-12"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-            />
-          </svg>
+        <div className="rounded-full bg-slate-100 p-5 text-slate-400">
+          <LockIcon className="h-12 w-12" />
         </div>
         <h2 className="mt-6 text-2xl font-bold text-slate-800">Private Profile</h2>
-        <p className="mt-2 text-base text-slate-500 max-w-sm">
-          This member has set their profile visibility to private. Only they can view their profile details and listings.
+        <p className="mt-2 max-w-sm text-base text-slate-500">
+          This member has hidden their public profile details.
         </p>
         <Link
           href={role ? scopedHref("/find-services", role) : "/"}
           className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-[#2f66e7] px-6 text-sm font-semibold text-white transition hover:bg-[#2051ca]"
         >
-          Back to Find Services
+          Back
         </Link>
       </div>
     );
@@ -464,76 +382,74 @@ export default function ProviderProfilePublicPage({
   if (!profile) {
     return (
       <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">Provider profile not found.</p>
+        <p className="text-sm text-slate-500">Member profile not found.</p>
       </div>
     );
   }
-
-  const firstName = profile.name.split(" ")[0];
-  const messageHref = role ? `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(providerId)}` : "/get-started";
-  const reportHref = role
-    ? `${scopedHref("/report-issue", role)}/${providerId}`
-    : "/get-started";
-
-  const baseProfileHref = role
-    ? `/provider-profile/${providerId}?role=${role}`
-    : `/provider-profile/${providerId}`;
-  const gigsHref = `${baseProfileHref}${role ? "&" : "?"}tab=gigs`;
-  const reviewsHref = `${baseProfileHref}${role ? "&" : "?"}tab=reviews`;
-
-  // Render rating stars string dynamically
-  const starsString = () => {
-    const num = Math.round(parseFloat(profile.avgRating) || 5);
-    return "★".repeat(num) + "☆".repeat(Math.max(0, 5 - num));
-  };
 
   return (
     <div className="flex w-full flex-col gap-4 pb-6">
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-[96px_minmax(0,1fr)]">
-          {profile.image && profile.image.startsWith("/") ? (
-            <div className="relative h-20 w-20 overflow-hidden rounded-lg sm:h-24 sm:w-24">
-              <Image
-                src={profile.image}
-                alt={profile.name}
-                fill
-                className="object-cover"
-                sizes="96px"
-                priority
-              />
-            </div>
-          ) : (
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-xl font-bold text-white shadow-md sm:h-24 sm:w-24 sm:text-2xl">
-              {profile.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
-            </div>
-          )}
+          <MemberAvatar image={profile.image} name={profile.name} />
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="break-words text-xl font-bold leading-tight text-[#1453c4] sm:text-2xl">
                 {profile.name}
               </h1>
-              {profile.verified && (
-                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-[#1453c4]">
-                  Verified Student
-                </span>
-              )}
-              {profile.topRated && (
-                <span className="rounded-full bg-teal-100 px-2.5 py-1 text-[11px] font-semibold text-teal-700">
+              <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-[#1453c4]">
+                {profile.verified ? "Verified Student" : "Student Member"}
+              </span>
+              <span
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  profile.mode === "provider"
+                    ? "bg-teal-100 text-teal-700"
+                    : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {profile.mode === "provider" ? "Provider Profile" : "Buyer Profile"}
+              </span>
+              {profile.mode === "provider" && profile.topRated ? (
+                <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
                   Top Rated
                 </span>
-              )}
+              ) : null}
             </div>
-            <p className="mt-1 break-words text-sm font-semibold text-slate-700 sm:text-base">{profile.university}</p>
-            <p className="mt-0.5 break-words text-xs font-semibold text-slate-500">{profile.degree}</p>
+
+            <p className="mt-1 break-words text-sm font-semibold text-slate-700 sm:text-base">
+              {profile.university}
+            </p>
+            <p className="mt-0.5 break-words text-xs font-semibold text-slate-500">
+              {profile.degree}
+              {profile.yearOfStudy ? ` | ${profile.yearOfStudy}` : ""}
+            </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Link
                 href={messageHref}
                 className="inline-flex h-8 items-center justify-center rounded-md bg-[#1453c4] px-3 text-xs font-semibold text-white transition hover:bg-[#0f43a1]"
               >
-                Message {firstName}
+                Message {profile.name.split(" ")[0]}
               </Link>
+
+              {profile.mode === "provider" ? (
+                <button
+                  type="button"
+                  onClick={handleToggleFavorite}
+                  className={`inline-flex h-8 items-center justify-center rounded-md border px-3 text-xs font-semibold transition ${
+                    isFavorited
+                      ? "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <HeartIcon className="h-3.5 w-3.5" filled={isFavorited} />
+                    {isFavorited ? "Saved" : "Save"}
+                  </span>
+                </button>
+              ) : null}
+
               <Link
                 href={reportHref}
                 className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-red-600 transition hover:text-red-700"
@@ -545,11 +461,55 @@ export default function ProviderProfilePublicPage({
         </div>
       </section>
 
+      {profile.mode === "provider" ? (
+        <ProviderSections
+          profile={profile}
+          activeTab={activeTab}
+          gigsHref={gigsHref}
+          reviewsHref={reviewsHref}
+          providerId={providerId}
+          role={role}
+          onToggleGigFavorite={handleToggleGigFavorite}
+          isGigFavorited={isGigFavorited}
+        />
+      ) : (
+        <BuyerSections profile={profile} />
+      )}
+    </div>
+  );
+}
+
+function ProviderSections({
+  profile,
+  activeTab,
+  gigsHref,
+  reviewsHref,
+  providerId,
+  role,
+  onToggleGigFavorite,
+  isGigFavorited,
+}: {
+  profile: Extract<PublicMemberProfile, { mode: "provider" }>;
+  activeTab: "gigs" | "reviews";
+  gigsHref: string;
+  reviewsHref: string;
+  providerId: string;
+  role?: Role;
+  onToggleGigFavorite: (gig: PublicGig) => Promise<void>;
+  isGigFavorited: (gigId: string) => boolean;
+}) {
+  return (
+    <>
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Trust Score" value={profile.trustScore} sub="Completion Rate" accent />
         <MetricCard title="Total Swaps" value={profile.totalSwaps} sub="Completed" />
-        <MetricCard title="Avg. Rating" value={profile.avgRating} sub={starsString()} teal />
+        <MetricCard title="Avg. Rating" value={profile.avgRating} sub={buildStars(profile.avgRating)} teal />
         <MetricCard title="Avg. Response" value={profile.avgResponse} sub="Highly Responsive" />
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-700">About {profile.name.split(" ")[0]}</h2>
+        <p className="mt-3 text-sm leading-7 text-slate-600">{profile.bio}</p>
       </section>
 
       <section>
@@ -579,7 +539,7 @@ export default function ProviderProfilePublicPage({
         {activeTab === "gigs" ? (
           profile.gigs.length > 0 ? (
             <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {profile.gigs.map((gig: GigData, index: number) => (
+              {profile.gigs.map((gig, index) => (
                 <article
                   key={gig.id}
                   className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md"
@@ -599,7 +559,7 @@ export default function ProviderProfilePublicPage({
                     <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">
                       <button
                         type="button"
-                        onClick={() => handleToggleGigFavorite(gig)}
+                        onClick={() => void onToggleGigFavorite(gig)}
                         aria-label={
                           isGigFavorited(gig.id)
                             ? "Remove this gig from favorites"
@@ -619,27 +579,11 @@ export default function ProviderProfilePublicPage({
                       </span>
                     </div>
                   </div>
+
                   <div className="flex flex-col p-4">
                     <h3 className="line-clamp-2 text-[0.97rem] font-bold leading-6 text-slate-900">
                       {gig.title}
                     </h3>
-
-                    <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-[10px] font-bold text-white ring-2 ring-white">
-                        {profile.name
-                          .split(" ")
-                          .map((part: string) => part[0])
-                          .join("")
-                          .toUpperCase()
-                          .slice(0, 2)}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-[13px] font-semibold leading-5 text-slate-700">{profile.name}</p>
-                        <p className="truncate text-[12px] leading-4 text-slate-500">
-                          {profile.university} student
-                        </p>
-                      </div>
-                    </div>
 
                     <p className="mt-3 line-clamp-2 text-[12.5px] leading-5 text-slate-600">
                       Practical {gig.category.toLowerCase()} support from a verified university student.
@@ -647,7 +591,7 @@ export default function ProviderProfilePublicPage({
 
                     <div className="mt-auto border-t border-slate-200 pt-3">
                       <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
-                        <span className="truncate">Skill Exchange</span>
+                        <span className="truncate">{gig.reviews} completed reviews</span>
                         <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-sm ring-1 ring-slate-200">
                           <StarIcon className="h-3.5 w-3.5 text-amber-400" />
                           {gig.rating}
@@ -673,33 +617,141 @@ export default function ProviderProfilePublicPage({
               ))}
             </div>
           ) : (
-            <div className="mt-5 rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-              No offered gigs or services listed yet.
-            </div>
+            <EmptyPanel message="No offered gigs or services listed yet." />
           )
         ) : (
           <div className="mt-5 space-y-4">
             <h2 className="text-lg font-semibold text-[#1453c4]">Recent Feedback</h2>
             {profile.reviews.length > 0 ? (
-              profile.reviews.map((review: ReviewData) => (
-                <FeedbackCard
-                  key={review.id}
-                  initials={review.initials}
-                  avatarTone={review.avatarTone}
-                  name={review.name}
-                  meta={review.meta}
-                  quote={review.quote}
-                  rating={review.rating}
-                />
-              ))
+              profile.reviews.map((review) => <FeedbackCard key={review.id} review={review} />)
             ) : (
-              <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-                No reviews received yet.
-              </div>
+              <EmptyPanel message="No reviews received yet." />
             )}
           </div>
         )}
       </section>
+    </>
+  );
+}
+
+function BuyerSections({
+  profile,
+}: {
+  profile: Extract<PublicMemberProfile, { mode: "buyer" }>;
+}) {
+  const recentReceived = useMemo(
+    () => profile.reviewsReceived.slice(0, 6),
+    [profile.reviewsReceived]
+  );
+  const recentGiven = useMemo(
+    () => profile.reviewsGiven.slice(0, 6),
+    [profile.reviewsGiven]
+  );
+
+  return (
+    <>
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard title="Completed Swaps" value={String(profile.completedSwaps)} sub="Buyer activity" accent />
+        <MetricCard title="Avg. Rating" value={profile.avgRatingReceived} sub="Received from providers" teal />
+        <MetricCard title="Reviews Received" value={String(profile.reviewsReceived.length)} sub="Provider feedback" />
+        <MetricCard title="Reviews Given" value={String(profile.reviewsGiven.length)} sub="Shared by this buyer" />
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
+        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-700">About {profile.name.split(" ")[0]}</h2>
+          <p className="mt-3 text-sm leading-7 text-slate-600">{profile.bio}</p>
+        </article>
+
+        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-700">Skills Looking For</h2>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {profile.neededSkills.length > 0 ? (
+              profile.neededSkills.map((skill) => (
+                <span
+                  key={skill}
+                  className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700"
+                >
+                  {skill}
+                </span>
+              ))
+            ) : (
+              <p className="text-sm text-slate-400">No requested skills listed yet.</p>
+            )}
+          </div>
+        </article>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-[#1453c4]">Reviews Received</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Feedback this buyer received from providers.
+              </p>
+            </div>
+            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-[#1453c4]">
+              {profile.reviewsReceived.length}
+            </span>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {recentReceived.length > 0 ? (
+              recentReceived.map((review) => (
+                <BuyerReviewCard key={review.id} review={review} badgeText="Received" />
+              ))
+            ) : (
+              <EmptyPanel message="No provider feedback received yet." compact />
+            )}
+          </div>
+        </article>
+
+        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-[#1453c4]">Reviews Given</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Ratings and comments this buyer shared with others.
+              </p>
+            </div>
+            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">
+              {profile.reviewsGiven.length}
+            </span>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {recentGiven.length > 0 ? (
+              recentGiven.map((review) => (
+                <BuyerReviewCard key={review.id} review={review} badgeText="Given" />
+              ))
+            ) : (
+              <EmptyPanel message="No public feedback shared yet." compact />
+            )}
+          </div>
+        </article>
+      </section>
+    </>
+  );
+}
+
+function MemberAvatar({ image, name }: { image: string; name: string }) {
+  if (image) {
+    return (
+      <div className="relative h-20 w-20 overflow-hidden rounded-lg sm:h-24 sm:w-24">
+        <Image src={image} alt={name} fill className="object-cover" sizes="96px" priority />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-xl font-bold text-white shadow-md sm:h-24 sm:w-24 sm:text-2xl">
+      {name
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)}
     </div>
   );
 }
@@ -727,6 +779,266 @@ function MetricCard({
   );
 }
 
+function FeedbackCard({ review }: { review: PublicReview }) {
+  return (
+    <article className="rounded-lg border border-slate-200 bg-[#f7f8ff] p-3 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span
+            className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${review.avatarTone}`}
+          >
+            {review.initials}
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">{review.name}</p>
+            <p className="break-words text-xs text-slate-500">{review.meta}</p>
+          </div>
+        </div>
+        <p className="text-lg text-teal-700">{buildStars(String(review.rating))}</p>
+      </div>
+      <p className="mt-2 break-words text-xs leading-5 text-slate-700">{review.quote}</p>
+    </article>
+  );
+}
+
+function BuyerReviewCard({
+  review,
+  badgeText,
+}: {
+  review: BuyerActivityReview;
+  badgeText: string;
+}) {
+  const badgeTone =
+    badgeText === "Received"
+      ? "bg-blue-50 text-[#1453c4]"
+      : "bg-amber-50 text-amber-700";
+
+  return (
+    <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate text-sm font-semibold text-slate-900">{review.partnerName}</p>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeTone}`}>
+              {badgeText}
+            </span>
+            <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+              {review.sourceRole === "provider" ? "Provider" : "Buyer"}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            {review.partnerUniversity || "Community Member"} | {review.dateLabel}
+          </p>
+          <p className="mt-1 text-xs font-semibold text-[#1453c4]">Service: {review.skill}</p>
+        </div>
+        <p className="shrink-0 text-sm font-bold text-amber-500">
+          {buildStars(String(review.rating))}
+        </p>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-slate-600">{review.comment}</p>
+    </article>
+  );
+}
+
+function EmptyPanel({ message, compact = false }: { message: string; compact?: boolean }) {
+  return (
+    <div
+      className={`rounded-xl border border-slate-200 bg-white text-center text-sm text-slate-500 ${
+        compact ? "p-6" : "p-8"
+      }`}
+    >
+      {message}
+    </div>
+  );
+}
+
+function buildProviderProfile(
+  member: FirestoreUserProfile,
+  providerId: string,
+  completedRequests: FirebaseRequestDoc[]
+): Extract<PublicMemberProfile, { mode: "provider" }> {
+  const ratings = completedRequests
+    .filter((request) => request.review && typeof request.review.rating === "number")
+    .map((request) => request.review!.rating);
+  const avgRating =
+    ratings.length > 0
+      ? parseFloat(
+          (ratings.reduce((total, rating) => total + rating, 0) / ratings.length).toFixed(1)
+        )
+      : 5;
+
+  const totalRejected = completedRequests.filter((request) => request.status === "rejected").length;
+  const trustScore =
+    completedRequests.length === 0
+      ? "99%"
+      : `${Math.min(
+          100,
+          Math.max(
+            80,
+            Math.round(
+              ((completedRequests.length - totalRejected) / completedRequests.length) * 100
+            )
+          )
+        )}%`;
+
+  const skills = member.providerProfile?.skills || [];
+  const customImages = member.providerProfile?.gigImages || [];
+  const gigs: PublicGig[] = skills.map((skill, index) => ({
+    id: `${providerId}-${index}`,
+    title: `I will do ${skill}`,
+    rating: avgRating.toFixed(1),
+    reviews: completedRequests.length,
+    category: skill,
+    image: customImages[index] || fallbackGigImage(index),
+  }));
+
+  const reviews: PublicReview[] = completedRequests
+    .filter((request) => request.review && typeof request.review.rating === "number")
+    .map((request) => {
+      const buyerName = request.buyerName || "Anonymous Buyer";
+      return {
+        id: request.id,
+        name: buyerName,
+        initials: buildInitials(buyerName),
+        meta: `${formatDateLabel(request.createdAt)} | Swap: ${request.title || "Skill Swap"}`,
+        quote: request.review?.comment || "Outstanding swap session!",
+        rating: request.review?.rating || 5,
+        avatarTone: "bg-[#2f66e7] text-white",
+      };
+    });
+
+  return {
+    mode: "provider",
+    name: member.name || "Anonymous Member",
+    degree: member.degree || "Undergraduate",
+    university: member.university || "Sri Lankan University",
+    yearOfStudy: member.yearOfStudy || "",
+    image: member.profileImageUrl || "",
+    verified: member.emailVerified !== false,
+    topRated: avgRating >= 4.8 && completedRequests.length >= 2,
+    rating: avgRating.toFixed(1),
+    reviewsCount: reviews.length,
+    trustScore,
+    totalSwaps: String(completedRequests.length),
+    avgRating: avgRating.toFixed(1),
+    avgResponse: "1h",
+    bio:
+      member.providerProfile?.bio ||
+      `Knowledge-sharing focused ${member.degree || "university"} student open to helping peers with practical skill swaps.`,
+    gigs,
+    reviews,
+  };
+}
+
+function buildBuyerProfile(
+  member: FirestoreUserProfile,
+  completedRequests: FirebaseRequestDoc[]
+): Extract<PublicMemberProfile, { mode: "buyer" }> {
+  const reviewsReceived: BuyerActivityReview[] = [];
+  const reviewsGiven: BuyerActivityReview[] = [];
+
+  completedRequests.forEach((request) => {
+    const skill = request.title || "Skill Swap";
+    const dateLabel = formatDateLabel(request.createdAt);
+    const providerName = request.providerName || "Anonymous Provider";
+    const providerUniversity = request.providerUniversity || "Swap Partner";
+
+    if (request.providerReview && typeof request.providerReview.rating === "number") {
+      reviewsReceived.push({
+        id: `received-${request.id}`,
+        partnerName: providerName,
+        partnerUniversity: providerUniversity,
+        skill,
+        rating: request.providerReview.rating,
+        comment: request.providerReview.comment || "Great learning experience.",
+        direction: "received",
+        sourceRole: "provider",
+        dateLabel,
+      });
+    }
+
+    if (request.review && typeof request.review.rating === "number") {
+      reviewsGiven.push({
+        id: `given-${request.id}`,
+        partnerName: providerName,
+        partnerUniversity: providerUniversity,
+        skill,
+        rating: request.review.rating,
+        comment: request.review.comment || "Helpful collaboration.",
+        direction: "given",
+        sourceRole: "provider",
+        dateLabel,
+      });
+    }
+  });
+
+  const avgRatingReceived =
+    reviewsReceived.length > 0
+      ? (
+          reviewsReceived.reduce((total, review) => total + review.rating, 0) /
+          reviewsReceived.length
+        ).toFixed(1)
+      : "New";
+
+  return {
+    mode: "buyer",
+    name: member.name || "Anonymous Member",
+    degree: member.degree || "Undergraduate",
+    university: member.university || "Sri Lankan University",
+    yearOfStudy: member.yearOfStudy || "",
+    image: member.profileImageUrl || "",
+    verified: member.emailVerified !== false,
+    bio:
+      member.providerProfile?.bio ||
+      `Student at ${member.university || "a Sri Lankan university"} using Skill Swap Hub to connect with helpful peers and complete meaningful collaborations.`,
+    neededSkills: member.neededSkills || [],
+    completedSwaps: completedRequests.length,
+    avgRatingReceived,
+    reviewsReceived,
+    reviewsGiven,
+  };
+}
+
+function buildInitials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function fallbackGigImage(index: number) {
+  if (index % 3 === 1) return "/img/package%202.jpg";
+  if (index % 3 === 2) return "/img/package%203.jpg";
+  return "/img/package%201.jpg";
+}
+
+function formatDateLabel(value: FirebaseRequestDoc["createdAt"]) {
+  if (!value) return "Recently";
+
+  const rawDate = value as { toDate?: () => Date } | Date | string | number;
+  const date =
+    typeof (rawDate as { toDate?: () => Date }).toDate === "function"
+      ? (rawDate as { toDate: () => Date }).toDate()
+      : new Date(rawDate as string | number | Date);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Recently";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function buildStars(value: string) {
+  const rating = Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
+  return `${"★".repeat(rating)}${"☆".repeat(5 - rating)}`;
+}
+
 function HeartIcon({
   className,
   filled = false,
@@ -750,49 +1062,21 @@ function HeartIcon({
 
 function StarIcon({ className }: { className?: string }) {
   return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 17.3 6.8 20l1-5.7L3.6 10l5.7-.8L12 3.9l2.7 5.3 5.7.8-4.2 4.3 1 5.7z" />
     </svg>
   );
 }
 
-function FeedbackCard({
-  initials,
-  avatarTone,
-  name,
-  meta,
-  quote,
-  rating = 5,
-}: {
-  initials: string;
-  avatarTone: string;
-  name: string;
-  meta: string;
-  quote: string;
-  rating?: number;
-}) {
+function LockIcon({ className }: { className?: string }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-[#f7f8ff] p-3 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span
-            className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${avatarTone}`}
-          >
-            {initials}
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-slate-900">{name}</p>
-            <p className="break-words text-xs text-slate-500">{meta}</p>
-          </div>
-        </div>
-        <p className="text-lg text-teal-700">{"★".repeat(rating)}</p>
-      </div>
-      <p className="mt-2 break-words text-xs leading-5 text-slate-700">{quote}</p>
-    </article>
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2Zm10-10V7a4 4 0 0 0-8 0v4h8Z"
+      />
+    </svg>
   );
 }

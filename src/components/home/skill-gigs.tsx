@@ -127,7 +127,12 @@ export default function SkillGigsSection() {
                     gigImages[skillIndex % gigImages.length],
                 }));
 
-          gigEntries.slice(0, 1).forEach((gigEntry, skillIndex) => {
+          gigEntries.slice(0, 1).forEach((gigEntry: {
+            title: string;
+            category: string;
+            summary: string;
+            image: string;
+          }, skillIndex: number) => {
             if (liveGigs.length >= 4) return;
             liveGigs.push({
               id: `${userDoc.id}-${skillIndex}`,
