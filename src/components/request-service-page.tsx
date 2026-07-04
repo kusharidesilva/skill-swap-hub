@@ -368,8 +368,9 @@ function RequestForm({
           </span>
           <textarea
             rows={4}
+            minLength={10}
             {...register("description")}
-            placeholder="Detail the specific tasks, project scope, or areas you need help with..."
+            placeholder="Describe your need in 10+ characters..."
             aria-invalid={Boolean(errors.description)}
             className={`w-full resize-none rounded-lg border px-3 py-2 text-sm leading-relaxed text-slate-700 outline-none transition placeholder:text-slate-400 focus:ring-4 ${
               errors.description
@@ -377,6 +378,9 @@ function RequestForm({
                 : "border-slate-300 bg-[#f7f8ff] focus:border-[#2f66e7] focus:ring-blue-100"
             }`}
           />
+          <p className="text-[11px] font-medium text-slate-500">
+            Minimum 10 characters.
+          </p>
           {errors.description && (
             <p className="text-xs font-medium text-red-600">
               {errors.description.message}
@@ -423,13 +427,13 @@ function RequestForm({
         </div>
 
         {/* Service Type and Preferred University */}
-        <div className="grid items-end gap-4 md:grid-cols-2">
+        <div className="grid gap-4">
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">
               Service Type
             </span>
             <input type="hidden" {...register("serviceType")} />
-            <div className="grid w-full grid-cols-3 gap-1.5 pt-1">
+            <div className="grid w-full grid-cols-3 gap-2 pt-1">
               {serviceTypeOptions.map((type) => (
                 <button
                   type="button"
@@ -440,7 +444,7 @@ function RequestForm({
                       shouldValidate: true,
                     })
                   }
-                  className={`inline-flex h-7 w-full items-center justify-center rounded-full border px-2 text-[10px] font-bold leading-none transition ${
+                  className={`inline-flex min-h-11 w-full items-center justify-center rounded-xl border px-2 text-center text-[11px] font-bold leading-tight transition sm:text-xs ${
                     selectedServiceType === type
                       ? "border-[#2f66e7] bg-[#2f66e7] text-white"
                       : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
