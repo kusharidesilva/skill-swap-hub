@@ -17,6 +17,7 @@ type ProviderProfilePublicPageProps = {
 };
 
 type PublicGig = {
+type PublicGig = {
   id: string;
   title: string;
   rating: string;
@@ -24,7 +25,9 @@ type PublicGig = {
   category: string;
   image: string;
 };
+};
 
+type PublicReview = {
 type PublicReview = {
   id: string;
   name: string;
@@ -306,8 +309,12 @@ export default function ProviderProfilePublicPage({
       <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
         <div className="rounded-full bg-slate-100 p-5 text-slate-400">
           <LockIcon className="h-12 w-12" />
+        <div className="rounded-full bg-slate-100 p-5 text-slate-400">
+          <LockIcon className="h-12 w-12" />
         </div>
         <h2 className="mt-6 text-2xl font-bold text-slate-800">Private Profile</h2>
+        <p className="mt-2 max-w-sm text-base text-slate-500">
+          This member has hidden their public profile details.
         <p className="mt-2 max-w-sm text-base text-slate-500">
           This member has hidden their public profile details.
         </p>
@@ -315,6 +322,7 @@ export default function ProviderProfilePublicPage({
           href={role ? scopedHref("/find-services", role) : "/"}
           className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-[#2f66e7] px-6 text-sm font-semibold text-white transition hover:bg-[#2051ca]"
         >
+          Back
           Back
         </Link>
       </div>
@@ -324,7 +332,7 @@ export default function ProviderProfilePublicPage({
   if (!profile) {
     return (
       <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">Provider profile not found.</p>
+        <p className="text-sm text-slate-500">Member profile not found.</p>
       </div>
     );
   }
@@ -333,6 +341,7 @@ export default function ProviderProfilePublicPage({
     <div className="flex w-full flex-col gap-4 pb-6">
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-[96px_minmax(0,1fr)]">
+          <MemberAvatar image={profile.image} name={profile.name} />
           <MemberAvatar image={profile.image} name={profile.name} />
 
           <div className="min-w-0">
@@ -351,7 +360,16 @@ export default function ProviderProfilePublicPage({
                   Top Rated
                 </span>
               ) : null}
+              ) : null}
             </div>
+
+            <p className="mt-1 break-words text-sm font-semibold text-slate-700 sm:text-base">
+              {profile.university}
+            </p>
+            <p className="mt-0.5 break-words text-xs font-semibold text-slate-500">
+              {profile.degree}
+              {profile.yearOfStudy ? ` | ${profile.yearOfStudy}` : ""}
+            </p>
 
             <p className="mt-1 break-words text-sm font-semibold text-slate-700 sm:text-base">
               {profile.university}
@@ -367,21 +385,26 @@ export default function ProviderProfilePublicPage({
                 className="inline-flex h-8 items-center justify-center rounded-md bg-[#1453c4] px-3 text-xs font-semibold text-white transition hover:bg-[#0f43a1]"
               >
                 Message {profile.name.split(" ")[0]}
+                Message {profile.name.split(" ")[0]}
               </Link>
-              <button
-                type="button"
-                onClick={handleToggleFavorite}
-                className={`inline-flex h-8 items-center justify-center rounded-md border px-3 text-xs font-semibold transition ${
-                  isFavorited
-                    ? "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
-                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  <HeartIcon className="h-3.5 w-3.5" filled={isFavorited} />
-                  {isFavorited ? "Saved" : "Save"}
-                </span>
-              </button>
+
+              {profile.mode === "provider" ? (
+                <button
+                  type="button"
+                  onClick={handleToggleFavorite}
+                  className={`inline-flex h-8 items-center justify-center rounded-md border px-3 text-xs font-semibold transition ${
+                    isFavorited
+                      ? "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <HeartIcon className="h-3.5 w-3.5" filled={isFavorited} />
+                    {isFavorited ? "Saved" : "Save"}
+                  </span>
+                </button>
+              ) : null}
+
               <Link
                 href={reportHref}
                 className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-red-600 transition hover:text-red-700"
@@ -393,6 +416,39 @@ export default function ProviderProfilePublicPage({
         </div>
       </section>
 
+      {profile.mode === "provider" ? (
+        <ProviderSections
+          profile={profile}
+          activeTab={activeTab}
+          gigsHref={gigsHref}
+          reviewsHref={reviewsHref}
+          providerId={providerId}
+          role={role}
+        />
+      ) : (
+        <BuyerSections profile={profile} />
+      )}
+    </div>
+  );
+}
+
+function ProviderSections({
+  profile,
+  activeTab,
+  gigsHref,
+  reviewsHref,
+  providerId,
+  role,
+}: {
+  profile: Extract<PublicMemberProfile, { mode: "provider" }>;
+  activeTab: "gigs" | "reviews";
+  gigsHref: string;
+  reviewsHref: string;
+  providerId: string;
+  role?: Role;
+}) {
+  return (
+    <>
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Trust Score" value={profile.trustScore} sub="Completion Rate" accent />
         <MetricCard title="Total Swaps" value={profile.totalSwaps} sub="Completed" />
@@ -403,6 +459,11 @@ export default function ProviderProfilePublicPage({
           teal
         />
         <MetricCard title="Avg. Response" value={profile.avgResponse} sub="Highly Responsive" />
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-700">About {profile.name.split(" ")[0]}</h2>
+        <p className="mt-3 text-sm leading-7 text-slate-600">{profile.bio}</p>
       </section>
 
       <section>
@@ -432,6 +493,7 @@ export default function ProviderProfilePublicPage({
         {activeTab === "gigs" ? (
           profile.gigs.length > 0 ? (
             <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {profile.gigs.map((gig, index) => (
               {profile.gigs.map((gig, index) => (
                 <article
                   key={gig.id}
@@ -468,6 +530,7 @@ export default function ProviderProfilePublicPage({
                       </button>
                     </div>
                   </div>
+
 
                   <div className="flex flex-col p-4">
                     <h3 className="line-clamp-2 text-[0.97rem] font-bold leading-6 text-slate-900">
@@ -507,6 +570,7 @@ export default function ProviderProfilePublicPage({
             </div>
           ) : (
             <EmptyPanel message="No offered gigs or services listed yet." />
+            <EmptyPanel message="No offered gigs or services listed yet." />
           )
         ) : (
           <div className="mt-5 space-y-4">
@@ -517,7 +581,31 @@ export default function ProviderProfilePublicPage({
               <EmptyPanel message="No reviews received yet." />
             )}
           </div>
-        )}
+        </article>
+
+        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-[#1453c4]">Reviews Given</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Ratings and comments this buyer shared with others.
+              </p>
+            </div>
+            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">
+              {profile.reviewsGiven.length}
+            </span>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {recentGiven.length > 0 ? (
+              recentGiven.map((review) => (
+                <BuyerReviewCard key={review.id} review={review} badgeText="Given" />
+              ))
+            ) : (
+              <EmptyPanel message="No public feedback shared yet." compact />
+            )}
+          </div>
+        </article>
       </section>
     </div>
   );
@@ -736,13 +824,23 @@ function HeartIcon({
 function StarIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 17.3 6.8 20l1-5.7L3.6 10l5.7-.8L12 3.9l2.7 5.3 5.7.8-4.2 4.3 1 5.7z" />
     </svg>
   );
 }
 
 function LockIcon({ className }: { className?: string }) {
+function LockIcon({ className }: { className?: string }) {
   return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2Zm10-10V7a4 4 0 0 0-8 0v4h8Z"
+      />
+    </svg>
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
