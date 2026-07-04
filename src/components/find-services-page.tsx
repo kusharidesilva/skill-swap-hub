@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
@@ -19,6 +19,7 @@ type GigCardData = {
   providerName: string;
   providerDegree: string;
   university: string;
+  providerImage?: string;
   title: string;
   category: string;
   summary: string;
@@ -112,10 +113,11 @@ type FindServicesPageContentProps = {
 };
 
 export default function FindServicesPageContent({ role }: FindServicesPageContentProps) {
-  const { userProfile } = useAuth();
+  const { userProfile, refreshProfile } = useAuth();
   const searchParams = useSearchParams();
   const [gigs, setGigs] = useState<GigCardData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ratingsVersion, setRatingsVersion] = useState(0);
 
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get("query") || "");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
@@ -123,6 +125,16 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
   const [ratingFilter, setRatingFilter] = useState("Any Rating");
   const [availabilityFilter, setAvailabilityFilter] = useState("Any Time");
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      query(collection(db, "requests"), where("status", "==", "completed")),
+      () => setRatingsVersion((value) => value + 1),
+      (err) => console.error("Error subscribing to live ratings in find services:", err),
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     async function fetchGigs() {
@@ -171,7 +183,8 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
               providerName: user.name || "Anonymous Member",
               providerDegree: user.degree || "Undergraduate",
               university: user.university || "Sri Lankan University",
-              title: `${skill} Help`,
+              providerImage: user.profileImageUrl || "",
+              title: `I will do ${skill}`,
               category,
               summary:
                 profile.bio ||
@@ -199,7 +212,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
     }
 
     fetchGigs();
-  }, [userProfile]);
+  }, [userProfile, ratingsVersion]);
 
   const updateFilters = (update: () => void) => {
     update();
@@ -335,44 +348,107 @@ function GigCard({
   requestHref: string;
   previewHref: string;
 }) {
+  const { userProfile, refreshProfile } = useAuth();
   const availability = Array.isArray(gig.availability) ? gig.availability.join(", ") : gig.availability;
+  const isFavorited = Boolean(
+    userProfile?.favorites?.some((fav) => (fav as { providerId?: string }).providerId === gig.providerId),
+  );
+
+  const handleToggleFavorite = async () => {
+    if (!userProfile) {
+      window.location.href = "/get-started";
+      return;
+    }
+
+    try {
+      const favorites = (userProfile.favorites || []) as Record<string, unknown>[];
+      let updatedFavorites;
+
+      if (isFavorited) {
+        updatedFavorites = favorites.filter((fav) => (fav as { providerId?: string }).providerId !== gig.providerId);
+      } else {
+        const now = new Date();
+        updatedFavorites = [
+          ...favorites,
+          {
+            id: gig.providerId,
+            providerId: gig.providerId,
+            title: gig.title,
+            category: gig.category,
+            instructor: gig.providerName,
+            rating: gig.rating.toFixed(1),
+            image: gig.image,
+            avatar:
+              gig.providerImage ||
+              `https://ui-avatars.com/api/?name=${encodeURIComponent(gig.providerName)}&background=2f66e7&color=fff&size=400`,
+            level: gig.providerDegree,
+            savedAt: `Saved ${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+            description: gig.summary,
+          },
+        ];
+      }
+
+      await updateDoc(doc(db, "users", userProfile.uid), {
+        favorites: updatedFavorites,
+      });
+      await refreshProfile();
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
+    }
+  };
 
   return (
-    <article className="flex min-h-[330px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
-      <div className="relative h-32 bg-slate-100">
+    <article className="flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
+      <div className="relative h-40 bg-slate-100">
         <Image src={gig.image} alt={gig.title} fill className="object-cover" sizes="(min-width: 1024px) 320px, 100vw" />
         <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-[#1453c4] shadow-sm">
           {gig.category}
         </span>
-        <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
-          <span className="text-amber-400">★</span>
-          {gig.rating.toFixed(1)}
-        </span>
+        <div className="absolute right-3 top-3 flex flex-col items-end gap-2">
+          <button
+            type="button"
+            onClick={handleToggleFavorite}
+            aria-label={isFavorited ? "Remove from favorites" : "Save to favorites"}
+            className={`flex h-9 w-9 items-center justify-center rounded-full shadow-sm transition ${
+              isFavorited ? "bg-red-500 text-white" : "bg-white/95 text-slate-700 hover:bg-red-50 hover:text-red-600"
+            }`}
+          >
+            <HeartIcon className="h-4.5 w-4.5" filled={isFavorited} />
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col p-4">
-        <h2 className="line-clamp-2 text-base font-semibold leading-6 text-slate-900">
+        <h2 className="line-clamp-2 text-[0.97rem] font-bold leading-6 text-slate-900">
           {gig.title}
         </h2>
 
-        <p className="mt-2.5 text-xs font-semibold text-slate-600">
-          {gig.providerName}
-        </p>
-        <p className="text-xs text-slate-500">{gig.university}</p>
+        <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-sm ring-1 ring-slate-200">
+            <StarIcon className="h-3.5 w-3.5 text-amber-400" />
+            {gig.rating.toFixed(1)}
+          </span>
+        </div>
 
-        <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-600">
+        <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#2f66e7] text-[10px] font-bold text-white ring-2 ring-white">
+            {gig.providerImage && gig.providerImage.startsWith("/") ? (
+              <Image src={gig.providerImage} alt={gig.providerName} width={32} height={32} className="h-full w-full object-cover" />
+            ) : (
+              gig.providerName.charAt(0).toUpperCase()
+            )}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-semibold leading-5 text-slate-700">{gig.providerName}</p>
+            <p className="truncate text-[12px] leading-4 text-slate-500">{gig.university}</p>
+          </div>
+        </div>
+
+        <p className="mt-3 line-clamp-2 text-[12.5px] leading-5 text-slate-600">
           {gig.summary}
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-1">
-          {gig.tags.slice(0, 3).map((tag) => (
-            <span key={tag} className="rounded-full bg-[#dff2f4] px-2.5 py-0.5 text-xs font-medium text-teal-800">
-              {tag}
-            </span>
-          ))}
-        </div>
-
-        <div className="mt-4 border-t border-slate-200 pt-3">
+        <div className="mt-auto border-t border-slate-200 pt-3">
           <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
             <span className="truncate">{availability}</span>
             <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-[#dff2f4] px-2 py-0.5 text-[10px] font-semibold leading-none text-teal-800">
@@ -384,7 +460,7 @@ function GigCard({
               href={previewHref}
               className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
             >
-              View Gig
+              View More
             </Link>
             <Link
               href={requestHref}
@@ -396,6 +472,22 @@ function GigCard({
         </div>
       </div>
     </article>
+  );
+}
+
+function HeartIcon({ className, filled = false }: { className?: string; filled?: boolean }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={filled ? 0 : 2} aria-hidden="true">
+      <path d="M12 21s-6.4-4.1-9-8.1C1 9.8 2.4 6.2 5.8 5.6c2.1-.4 3.8.6 5 2.3.2.3.3.4.4.4s.2-.1.4-.4c1.2-1.7 2.9-2.7 5-2.3 3.4.6 4.8 4.2 2.8 7.3C18.4 16.9 12 21 12 21z" />
+    </svg>
+  );
+}
+
+function StarIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 3l2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.8-5.4 2.8 1-6-4.3-4.2 6-.9L12 3z" />
+    </svg>
   );
 }
 

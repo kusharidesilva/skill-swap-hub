@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { doc, getDoc, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import { useAuth } from "@/context/AuthContext";
@@ -20,7 +20,6 @@ interface GigData {
   rating: string;
   reviews: number;
   category: string;
-  points: number;
   image: string;
 }
 
@@ -271,142 +270,146 @@ export default function ProviderProfilePublicPage({
   };
 
   useEffect(() => {
-    async function loadProviderProfile() {
-      try {
-        // 1. Fetch user document
-        const userDoc = await getDoc(doc(db, "users", providerId));
-        
-        // 2. Fetch only COMPLETED requests for this provider
-        //    (used to compute avg rating, total swaps, trust score, and public reviews)
-        const q = query(
-          collection(db, "requests"),
-          where("providerId", "==", providerId),
-          where("status", "==", "completed")
-        );
-        const qSnap = await getDocs(q);
-        const reqs: FirebaseRequestDoc[] = [];
-        qSnap.forEach((docSnap) => {
-          reqs.push({ id: docSnap.id, ...docSnap.data() } as FirebaseRequestDoc);
-        });
+    let active = true;
+    const userRef = doc(db, "users", providerId);
+    const requestsQuery = query(
+      collection(db, "requests"),
+      where("providerId", "==", providerId),
+      where("status", "==", "completed")
+    );
 
-        if (userDoc.exists()) {
-          const u = userDoc.data();
+    const unsubscribe = onSnapshot(
+      requestsQuery,
+      async (qSnap) => {
+        try {
+          const userDoc = await getDoc(userRef);
+          if (!active) return;
 
-          if (u.settings?.profileVisibility === false && (!userProfile || userProfile.uid !== providerId)) {
-            setIsPrivateProfile(true);
-            setLoading(false);
-            return;
-          }
-          setIsPrivateProfile(false);
-
-          const completedRequests = reqs.filter((r) => r.status === "completed");
-          const totalSwaps = completedRequests.length;
-          
-          // Calculate dynamic average rating
-          const ratings = completedRequests
-            .filter((r) => r.review && typeof r.review.rating === "number")
-            .map((r) => r.review!.rating);
-          const avgRating = ratings.length > 0 
-            ? parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1))
-            : 5.0;
-
-          // Calculate dynamic trust score
-          const totalRequests = reqs.length;
-          const totalRejected = reqs.filter((r) => r.status === "rejected").length;
-          const trustScore = totalRequests === 0 
-            ? "99%" 
-            : `${Math.min(100, Math.max(80, Math.round(((totalRequests - totalRejected) / totalRequests) * 100)))}%`;
-
-          // Generate offered gigs based on the skills stored in providerProfile
-          const skills: string[] = u.providerProfile?.skills || [];
-          const customImages: string[] = u.providerProfile?.gigImages || [];
-          const gigs: GigData[] = skills.map((skill: string, index: number) => {
-            let image = customImages[index];
-            if (!image) {
-              image = "/img/package%201.jpg";
-              if (index % 3 === 1) image = "/img/package%202.jpg";
-              if (index % 3 === 2) image = "/img/package%203.jpg";
-            }
-            return {
-              id: `gig-${index}`,
-              title: `Collaboration: ${skill}`,
-              rating: avgRating.toFixed(1),
-              reviews: completedRequests.length,
-              category: skill,
-              points: 30 + (index * 5),
-              image,
-            };
+          const reqs: FirebaseRequestDoc[] = [];
+          qSnap.forEach((docSnap) => {
+            reqs.push({ id: docSnap.id, ...docSnap.data() } as FirebaseRequestDoc);
           });
 
-          // Generate dynamic reviews list from completed requests reviews
-          const reviews: ReviewData[] = completedRequests
-            .filter((r) => r.review && typeof r.review.rating === "number")
-            .map((r) => {
-              const rating = r.review!.rating;
-              const comment = r.review!.comment || "Outstanding swap session!";
-              const buyerName = r.buyerName || "Anonymous Student";
-              const initials = buyerName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || "US";
-              
-              let dateStr = "Recently";
-              if (r.createdAt) {
-                const rawDate = r.createdAt as { toDate?: () => Date } | Date | string | number;
-                let d: Date;
-                if (rawDate && typeof (rawDate as { toDate?: () => Date }).toDate === "function") {
-                  d = (rawDate as { toDate: () => Date }).toDate();
-                } else {
-                  d = new Date(rawDate as Date | string | number);
-                }
-                dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-              }
+          if (userDoc.exists()) {
+            const u = userDoc.data();
 
+            if (u.settings?.profileVisibility === false && (!userProfile || userProfile.uid !== providerId)) {
+              setIsPrivateProfile(true);
+              setLoading(false);
+              return;
+            }
+            setIsPrivateProfile(false);
+
+            const completedRequests = reqs.filter((r) => r.status === "completed");
+            const totalSwaps = completedRequests.length;
+
+            const ratings = completedRequests
+              .filter((r) => r.review && typeof r.review.rating === "number")
+              .map((r) => r.review!.rating);
+            const avgRating = ratings.length > 0
+              ? parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1))
+              : 5.0;
+
+            const totalRequests = reqs.length;
+            const totalRejected = reqs.filter((r) => r.status === "rejected").length;
+            const trustScore = totalRequests === 0
+              ? "99%"
+              : `${Math.min(100, Math.max(80, Math.round(((totalRequests - totalRejected) / totalRequests) * 100)))}%`;
+
+            const skills: string[] = u.providerProfile?.skills || [];
+            const customImages: string[] = u.providerProfile?.gigImages || [];
+            const gigs: GigData[] = skills.map((skill: string, index: number) => {
+              let image = customImages[index];
+              if (!image) {
+                image = "/img/package%201.jpg";
+                if (index % 3 === 1) image = "/img/package%202.jpg";
+                if (index % 3 === 2) image = "/img/package%203.jpg";
+              }
               return {
-                id: r.id,
-                initials,
-                avatarTone: "bg-[#2f66e7] text-white",
-                name: buyerName,
-                meta: `${dateStr} • Swap: ${r.title}`,
-                quote: comment,
-                rating,
+                id: `gig-${index}`,
+                title: `I will do ${skill}`,
+                rating: avgRating.toFixed(1),
+                reviews: completedRequests.length,
+                category: skill,
+                image,
               };
             });
 
-          setProfile({
-            name: u.name || "Anonymous Member",
-            degree: u.degree || "Undergraduate",
-            university: u.university || "Sri Lankan University",
-            rating: avgRating.toFixed(1),
-            reviewsCount: completedRequests.length,
-            image: "", // empty so it renders initials fallback
-            verified: true,
-            topRated: avgRating >= 4.8 && completedRequests.length >= 2,
-            trustScore,
-            totalSwaps: String(totalSwaps),
-            avgRating: avgRating.toFixed(1),
-            avgResponse: "1h",
-            gigs,
-            reviews,
-          });
-        } else {
-          // Fallback to mock data if it matches a hardcoded provider ID
+            const reviews: ReviewData[] = completedRequests
+              .filter((r) => r.review && typeof r.review.rating === "number")
+              .map((r) => {
+                const rating = r.review!.rating;
+                const comment = r.review!.comment || "Outstanding swap session!";
+                const buyerName = r.buyerName || "Anonymous Student";
+                const initials = buyerName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || "US";
+
+                let dateStr = "Recently";
+                if (r.createdAt) {
+                  const rawDate = r.createdAt as { toDate?: () => Date } | Date | string | number;
+                  let d: Date;
+                  if (rawDate && typeof (rawDate as { toDate?: () => Date }).toDate === "function") {
+                    d = (rawDate as { toDate: () => Date }).toDate();
+                  } else {
+                    d = new Date(rawDate as Date | string | number);
+                  }
+                  dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                }
+
+                return {
+                  id: r.id,
+                  initials,
+                  avatarTone: "bg-[#2f66e7] text-white",
+                  name: buyerName,
+                  meta: `${dateStr} • Swap: ${r.title}`,
+                  quote: comment,
+                  rating,
+                };
+              });
+
+            setProfile({
+              name: u.name || "Anonymous Member",
+              degree: u.degree || "Undergraduate",
+              university: u.university || "Sri Lankan University",
+              rating: avgRating.toFixed(1),
+              reviewsCount: completedRequests.length,
+              image: u.profileImageUrl || "",
+              verified: true,
+              topRated: avgRating >= 4.8 && completedRequests.length >= 2,
+              trustScore,
+              totalSwaps: String(totalSwaps),
+              avgRating: avgRating.toFixed(1),
+              avgResponse: "1h",
+              gigs,
+              reviews,
+            });
+          } else {
+            const mock = providersData[providerId] || providersData["alex-rivera"];
+            setProfile({
+              ...mock,
+              reviews: allReviewsMock,
+            });
+          }
+        } catch (err) {
+          console.error("Error fetching provider profile from db:", err);
           const mock = providersData[providerId] || providersData["alex-rivera"];
           setProfile({
             ...mock,
             reviews: allReviewsMock,
           });
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        console.error("Error fetching provider profile from db:", err);
-        const mock = providersData[providerId] || providersData["alex-rivera"];
-        setProfile({
-          ...mock,
-          reviews: allReviewsMock,
-        });
-      } finally {
+      },
+      (err) => {
+        console.error("Error subscribing to provider profile ratings:", err);
         setLoading(false);
-      }
-    }
+      },
+    );
 
-    loadProviderProfile();
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [providerId, userProfile]);
 
   if (loading || authLoading) {
@@ -534,9 +537,19 @@ export default function ProviderProfilePublicPage({
                     : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                {isFavorited ? "❤️ Saved" : "Save to Favorites"}
+                <span className="inline-flex items-center gap-1.5">
+                  <HeartIcon className="h-3.5 w-3.5" filled={isFavorited} />
+                  {isFavorited ? "Saved" : "Save"}
+                </span>
               </button>
               <Link
+                function HeartIcon({ className, filled = false }: { className?: string; filled?: boolean }) {
+                  return (
+                    <svg className={className} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={filled ? 0 : 2} aria-hidden="true">
+                      <path d="M12 21s-6.4-4.1-9-8.1C1 9.8 2.4 6.2 5.8 5.6c2.1-.4 3.8.6 5 2.3.2.3.3.4.4.4s.2-.1.4-.4c1.2-1.7 2.9-2.7 5-2.3 3.4.6 4.8 4.2 2.8 7.3C18.4 16.9 12 21 12 21z" />
+                    </svg>
+                  );
+                }
                 href={reportHref}
                 className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-red-600 transition hover:text-red-700"
               >
@@ -580,13 +593,13 @@ export default function ProviderProfilePublicPage({
 
         {activeTab === "gigs" ? (
           profile.gigs.length > 0 ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {profile.gigs.map((gig: GigData) => (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {profile.gigs.map((gig: GigData, index: number) => (
                 <article
                   key={gig.id}
-                  className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md"
                 >
-                  <div className="relative h-28 w-full">
+                  <div className="relative h-40 w-full bg-slate-100">
                     <Image
                       src={gig.image}
                       alt={gig.title}
@@ -594,20 +607,63 @@ export default function ProviderProfilePublicPage({
                       className="object-cover"
                       sizes="(min-width: 1024px) 30vw, 100vw"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/35 via-slate-900/10 to-transparent" />
+                    <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-[#1453c4] shadow-sm">
+                      {gig.category}
+                    </span>
+                    <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
+                      <StarIcon className="h-3.5 w-3.5 text-amber-400" />
+                      {gig.rating}
+                    </span>
                   </div>
-                  <div className="p-3">
-                    <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-slate-900">{gig.title}</h3>
-                    <p className="mt-1 text-xs font-semibold text-slate-700">
-                      ★ {gig.rating}{" "}
-                      <span className="font-normal text-slate-500">({gig.reviews} reviews)</span>
+                  <div className="flex flex-col p-4">
+                    <h3 className="line-clamp-2 text-[0.97rem] font-bold leading-6 text-slate-900">
+                      {gig.title}
+                    </h3>
+
+                    <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-[10px] font-bold text-white ring-2 ring-white">
+                        {profile.name
+                          .split(" ")
+                          .map((part: string) => part[0])
+                          .join("")
+                          .toUpperCase()
+                          .slice(0, 2)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-semibold leading-5 text-slate-700">{profile.name}</p>
+                        <p className="truncate text-[12px] leading-4 text-slate-500">
+                          {profile.university} student
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="mt-3 line-clamp-2 text-[12.5px] leading-5 text-slate-600">
+                      Practical {gig.category.toLowerCase()} support from a verified university student.
                     </p>
-                    <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
-                      <span className="truncate rounded-md bg-teal-50 px-2 py-1 text-[11px] font-semibold text-teal-700">
-                        {gig.category}
-                      </span>
-                      <span className="shrink-0 text-xs font-semibold text-[#1453c4]">
-                        {gig.points}
-                      </span>
+
+                    <div className="mt-auto border-t border-slate-200 pt-3">
+                      <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                        <span className="truncate">Skill Exchange</span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-sm ring-1 ring-slate-200">
+                          <StarIcon className="h-3.5 w-3.5 text-amber-400" />
+                          {gig.rating}
+                        </span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <Link
+                          href={`/gig-preview/${role}?providerId=${encodeURIComponent(providerId)}&skillIndex=${index}`}
+                          className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          View Gig
+                        </Link>
+                        <Link
+                          href={`/request-service/${role}?providerId=${encodeURIComponent(providerId)}`}
+                          className="inline-flex h-9 items-center justify-center rounded-lg bg-[#2f66e7] px-2 text-xs font-semibold text-white transition hover:bg-[#2557cf]"
+                        >
+                          Request
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </article>

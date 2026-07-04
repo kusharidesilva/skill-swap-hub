@@ -3,9 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
+import type { ProviderGig, UserProfile } from "@/lib/auth";
 
 type MyGigsPageContentProps = {
   activeTab?: "offered" | "manage";
@@ -16,10 +17,7 @@ interface Gig {
   id: string;
   title: string;
   shortTitle: string;
-  rating: string;
-  reviews: number;
   category: string;
-  points: number;
   image: string;
   rawIndex: number;
   summary: string;
@@ -36,6 +34,54 @@ interface RequestItem {
   };
 }
 
+function getFallbackImage(index: number) {
+  if (index % 3 === 1) return "/img/package%202.jpg";
+  if (index % 3 === 2) return "/img/package%203.jpg";
+  return "/img/package%201.jpg";
+}
+
+function buildGigs(profile: UserProfile): Gig[] {
+  const providerProfile = profile.providerProfile;
+  const storedGigs = providerProfile?.gigs || [];
+  const legacySkills = providerProfile?.skills || [];
+  const customImages = providerProfile?.gigImages || [];
+  const providerBio = providerProfile?.bio?.trim();
+  const providerAvailability = providerProfile?.availability?.join(", ");
+  const providerProficiency = providerProfile?.proficiency || "Intermediate";
+
+  if (storedGigs.length > 0) {
+    return storedGigs.map((gig: ProviderGig, index: number) => ({
+      id: `gig-${index}`,
+      title: gig.title,
+      shortTitle: gig.title,
+      category: gig.category || legacySkills[index] || "General",
+      image: gig.image || customImages[index] || getFallbackImage(index),
+      rawIndex: index,
+      summary:
+        gig.summary ||
+        gig.description ||
+        providerBio ||
+        `I offer ${gig.title.toLowerCase()} basics, guidance, and practical support for fellow university students.`,
+      availability: gig.availability?.join(", ") || providerAvailability || "Flexible Schedule",
+      proficiency: providerProfile?.proficiency || providerProficiency,
+    }));
+  }
+
+  return legacySkills.map((skill: string, index: number) => ({
+    id: `gig-${index}`,
+    title: skill,
+    shortTitle: skill.endsWith("Help") ? skill : `${skill} Help`,
+    category: skill,
+    image: customImages[index] || getFallbackImage(index),
+    rawIndex: index,
+    summary:
+      providerBio ||
+      `I offer ${skill.toLowerCase()} basics, guidance, and practical support for fellow university students.`,
+    availability: providerAvailability || "Flexible Schedule",
+    proficiency: providerProficiency,
+  }));
+}
+
 export default function MyGigsPageContent({
   activeTab = "offered",
   role = "provider",
@@ -43,6 +89,8 @@ export default function MyGigsPageContent({
   const { userProfile, loading: authLoading, refreshProfile } = useAuth();
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [dbLoading, setDbLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<Gig | null>(null);
+  const [deleteNotice, setDeleteNotice] = useState("");
   const [stats, setStats] = useState({
     trustScore: "99%",
     totalSwaps: "0",
@@ -53,11 +101,12 @@ export default function MyGigsPageContent({
   const [currentPage, setCurrentPage] = useState(1);
   const cardsPerPage = 4;
 
-  const [prevActiveTab, setPrevActiveTab] = useState(activeTab);
-  if (activeTab !== prevActiveTab) {
-    setPrevActiveTab(activeTab);
-    setCurrentPage(1);
-  }
+  useEffect(() => {
+    if (!deleteNotice) return;
+
+    const timer = window.setTimeout(() => setDeleteNotice(""), 2600);
+    return () => window.clearTimeout(timer);
+  }, [deleteNotice]);
 
   const loading = authLoading || (userProfile ? dbLoading : false);
 
@@ -67,11 +116,11 @@ export default function MyGigsPageContent({
     }
 
     const providerId = userProfile.uid;
+    const requestsQuery = query(collection(db, "requests"), where("providerId", "==", providerId));
 
-    async function loadProviderData() {
-      try {
-        const q = query(collection(db, "requests"), where("providerId", "==", providerId));
-        const qSnap = await getDocs(q);
+    const unsubscribeRequests = onSnapshot(
+      requestsQuery,
+      (qSnap) => {
         const reqs: RequestItem[] = [];
 
         qSnap.forEach((docSnap) => {
@@ -85,7 +134,6 @@ export default function MyGigsPageContent({
         });
 
         const completedRequests = reqs.filter((r) => r.status === "completed");
-        const totalSwaps = completedRequests.length;
         const ratings = completedRequests
           .filter((r) => r.review && typeof r.review.rating === "number")
           .map((r) => r.review!.rating!);
@@ -104,78 +152,68 @@ export default function MyGigsPageContent({
 
         setStats({
           trustScore,
-          totalSwaps: String(totalSwaps),
+          totalSwaps: String(completedRequests.length),
           avgRating: avgRating.toFixed(1),
           avgResponse: "1h",
           reviewsCount: completedRequests.length,
         });
 
-        const skills: string[] = userProfile.providerProfile?.skills || [];
-        const customImages: string[] = userProfile.providerProfile?.gigImages || [];
-        const providerBio = userProfile.providerProfile?.bio?.trim();
-        const providerAvailability = userProfile.providerProfile?.availability?.join(", ");
-        const providerProficiency = userProfile.providerProfile?.proficiency || "Intermediate";
-
-        const dbGigs = skills.map((skill: string, index: number) => {
-          let image = customImages[index];
-          if (!image) {
-            image = "/img/package%201.jpg";
-            if (index % 3 === 1) image = "/img/package%202.jpg";
-            if (index % 3 === 2) image = "/img/package%203.jpg";
-          }
-
-          return {
-            id: `gig-${index}`,
-            title: `Collaboration: ${skill}`,
-            shortTitle: skill.endsWith("Help") ? skill : `${skill} Help`,
-            rating: avgRating.toFixed(1),
-            reviews: completedRequests.length,
-            category: skill,
-            points: 30 + index * 5,
-            image,
-            rawIndex: index,
-            summary:
-              providerBio ||
-              `I offer ${skill.toLowerCase()} basics, guidance, and practical support for fellow university students.`,
-            availability: providerAvailability || "Flexible Schedule",
-            proficiency: providerProficiency,
-          };
-        });
-
-        setGigs(dbGigs);
-      } catch (err) {
-        console.error("Error loading provider data in my gigs page:", err);
-      } finally {
         setDbLoading(false);
-      }
-    }
+      },
+      (err) => {
+        console.error("Error loading provider ratings in my gigs page:", err);
+        setDbLoading(false);
+      },
+    );
 
-    loadProviderData();
+    const unsubscribeUser = onSnapshot(
+      doc(db, "users", providerId),
+      (userSnap) => {
+        if (!userSnap.exists()) {
+          setGigs([]);
+          setDbLoading(false);
+          return;
+        }
+
+        setGigs(buildGigs(userSnap.data() as UserProfile));
+        setDbLoading(false);
+      },
+      (err) => {
+        console.error("Error loading provider data in my gigs page:", err);
+        setDbLoading(false);
+      },
+    );
+
+    return () => {
+      unsubscribeRequests();
+      unsubscribeUser();
+    };
   }, [userProfile, authLoading]);
 
   const handleDeleteGig = async (rawIndex: number) => {
     if (!userProfile) return;
 
-    const confirmDelete = window.confirm("Are you sure you want to delete this offered skill?");
-    if (!confirmDelete) return;
-
     try {
       const userRef = doc(db, "users", userProfile.uid);
       const existingSkills = (userProfile.providerProfile?.skills || []) as string[];
       const existingImages = (userProfile.providerProfile?.gigImages || []) as string[];
+      const existingGigs = [...(userProfile.providerProfile?.gigs || [])];
       const updatedSkills = existingSkills.filter((_, idx) => idx !== rawIndex);
       const updatedImages = existingImages.filter((_, idx) => idx !== rawIndex);
+      const updatedGigs = existingGigs.filter((_, idx) => idx !== rawIndex);
 
       await updateDoc(userRef, {
         "providerProfile.skills": updatedSkills,
         "providerProfile.gigImages": updatedImages,
+        "providerProfile.gigs": updatedGigs,
       });
 
       await refreshProfile();
-      alert("Offered skill removed successfully.");
+      setDeleteTarget(null);
+      setDeleteNotice("Gig deleted successfully.");
     } catch (err) {
       console.error("Error removing skill gig:", err);
-      alert("Failed to delete the skill. Please try again.");
+      setDeleteNotice("Failed to delete the gig. Please try again.");
     }
   };
 
@@ -201,12 +239,20 @@ export default function MyGigsPageContent({
   }
 
   const totalPages = Math.ceil(gigs.length / cardsPerPage);
-  const indexOfLastCard = currentPage * cardsPerPage;
-  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
-  const currentGigs = gigs.slice(indexOfFirstCard, indexOfLastCard);
+  const safeCurrentPage = Math.min(currentPage, Math.max(1, totalPages));
+  const currentGigs = gigs.slice((safeCurrentPage - 1) * cardsPerPage, safeCurrentPage * cardsPerPage);
 
   return (
     <section className="space-y-6 pb-10">
+      {deleteNotice ? (
+        <div className="fixed right-5 top-5 z-50 w-[min(92vw,360px)] rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_18px_50px_-24px_rgba(15,23,42,0.45)]">
+          <p className="text-sm font-semibold text-slate-900">{deleteNotice}</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {deleteNotice.includes("Failed") ? "Nothing was removed." : "The list has been updated."}
+          </p>
+        </div>
+      ) : null}
+
       <header>
         <h1 className="text-xl font-bold text-slate-900">
           {isManageTab ? "Manage Gigs" : "View All Gigs"}
@@ -253,7 +299,7 @@ export default function MyGigsPageContent({
                   </div>
                   <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[12px] font-bold text-slate-800 shadow-sm">
                     <RatingStarIcon className="h-3.5 w-3.5 text-amber-400" />
-                    <span>{gig.rating}</span>
+                    <span>{stats.avgRating}</span>
                   </div>
                   <Link
                     href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile.uid)}&skillIndex=${gig.rawIndex}`}
@@ -269,16 +315,16 @@ export default function MyGigsPageContent({
                   </Link>
                 </div>
 
-                <div className="flex flex-1 flex-col p-4 sm:p-[18px]">
-                  <h2 className="text-[0.96rem] font-bold leading-[1.3] text-slate-900 transition hover:text-[#1453c4]">
+                <div className="flex flex-1 flex-col p-4 sm:p-[16px]">
+                  <h2 className="text-[0.95rem] font-bold leading-[1.22] text-slate-900 transition hover:text-[#1453c4]">
                     <Link
                       href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile.uid)}&skillIndex=${gig.rawIndex}`}
                     >
-                      {gig.shortTitle}
+                      {gig.title}
                     </Link>
                   </h2>
 
-                  <div className="mt-2.5">
+                  <div className="mt-2">
                     <p className="text-[13px] font-semibold leading-5 text-slate-700">
                       {userProfile.name}
                     </p>
@@ -287,9 +333,11 @@ export default function MyGigsPageContent({
                     </p>
                   </div>
 
-                  <p className="mt-3 min-h-[3.75rem] text-[12.5px] leading-6 text-slate-600 line-clamp-3">
-                    {gig.summary}
-                  </p>
+                  <div className="mt-2">
+                    <p className="text-[12.5px] leading-5 text-slate-600 line-clamp-2">
+                      {gig.summary}
+                    </p>
+                  </div>
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     <span className="rounded-full bg-[#dff7f5] px-3 py-1 text-[12px] font-semibold text-[#0d7f78]">
@@ -300,7 +348,7 @@ export default function MyGigsPageContent({
                     </span>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between gap-2.5 border-t border-slate-200 pt-3">
+                  <div className="mt-3 flex items-center justify-between gap-2.5 border-t border-slate-200 pt-2.5">
                     <span className="truncate text-[12px] text-slate-500">
                       {gig.availability}
                     </span>
@@ -337,7 +385,7 @@ export default function MyGigsPageContent({
                         Edit
                       </Link>
                       <button
-                        onClick={() => handleDeleteGig(gig.rawIndex)}
+                        onClick={() => setDeleteTarget(gig)}
                         aria-label="Delete gig"
                         className="flex h-[44px] w-[44px] items-center justify-center rounded-[13px] border border-[#f0c8c8] text-red-500 transition hover:bg-red-50 hover:text-red-700"
                       >
@@ -359,7 +407,7 @@ export default function MyGigsPageContent({
           <div className="flex items-center justify-center gap-1.5 pt-6">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
+              disabled={safeCurrentPage === 1}
               className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white"
             >
               {"<"}
@@ -371,7 +419,7 @@ export default function MyGigsPageContent({
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
                   className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-xs font-bold transition ${
-                    currentPage === pageNum
+                    safeCurrentPage === pageNum
                       ? "bg-[#2f66e7] text-white"
                       : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
@@ -381,8 +429,8 @@ export default function MyGigsPageContent({
               );
             })}
             <button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Math.max(1, totalPages)))}
+              disabled={safeCurrentPage === totalPages || totalPages === 0}
               className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white"
             >
               {">"}
@@ -409,6 +457,43 @@ export default function MyGigsPageContent({
           </div>
         )}
       </section>
+
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 py-6 backdrop-blur-[2px]">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.55)]">
+            <div className="flex items-start gap-3">
+              <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500">
+                <DeleteIcon className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-red-500">Delete Gig</p>
+                <h2 className="text-base font-semibold text-slate-900">
+                  Delete this gig from your profile?
+                </h2>
+              </div>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-500">
+              This will remove <span className="font-semibold text-slate-700">{deleteTarget.shortTitle}</span> from your public gigs list.
+            </p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteGig(deleteTarget.rawIndex)}
+                className="rounded-xl bg-red-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

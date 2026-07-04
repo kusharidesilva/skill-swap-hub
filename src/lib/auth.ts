@@ -40,6 +40,7 @@ export interface UserProfile {
     availability: string[];
     bio: string;
     gigImages?: string[];
+    gigs?: ProviderGig[];
   };
   settings?: {
     emailNotifications: boolean;
@@ -47,6 +48,17 @@ export interface UserProfile {
     profileVisibility: boolean;
   };
   favorites?: Record<string, unknown>[];
+}
+
+export interface ProviderGig {
+  title: string;
+  category: string;
+  summary: string;
+  description: string;
+  delivery: string;
+  availability: string[];
+  tags: string[];
+  image: string;
 }
 
 // ─── Register Buyer ───────────────────────────────────────────────────────────

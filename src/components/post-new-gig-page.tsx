@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
+import type { ProviderGig } from "@/lib/auth";
 
 const CATEGORIES = [
   "Programming",
@@ -21,6 +22,7 @@ const CATEGORIES = [
 ];
 
 const DELIVERY_OPTIONS = ["1 Day", "2 Days", "3 Days", "5 Days", "7 Days", "14 Days"];
+const AVAILABILITY_OPTIONS = ["Weekdays", "Evenings", "Weekends"];
 
 type PostNewGigPageProps = {
   role: "provider" | "both";
@@ -42,9 +44,9 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
-  const [points, setPoints] = useState(50);
   const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0]);
   const [selectedImage, setSelectedImage] = useState("/img/package%201.jpg");
+  const [availability, setAvailability] = useState<string[]>([]);
 
   // Tags state
   const [tagInput, setTagInput] = useState("");
@@ -52,6 +54,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
 
   // UI state
   const [isSaving, setIsSaving] = useState(false);
+  const [didAttemptSubmit, setDidAttemptSubmit] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   const backHref =
@@ -60,22 +63,37 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   // Pre-fill form in edit mode from current userProfile data
   useEffect(() => {
     if (!isEditMode || !userProfile || skillIndex < 0) return;
+    const gigs = userProfile.providerProfile?.gigs || [];
+    const existingGig = gigs[skillIndex];
     const skills = userProfile.providerProfile?.skills || [];
-    const skill = skills[skillIndex];
-    if (!skill) return;
+    const legacySkill = skills[skillIndex];
+    const resolvedTitle = existingGig?.title || legacySkill;
+    if (!resolvedTitle) return;
     
     const timer = setTimeout(() => {
-      setTitle(skill.startsWith("Collaboration: ") ? skill : `Collaboration: ${skill}`);
-      setCategory(CATEGORIES.includes(skill) ? skill : CATEGORIES[0]);
+      setTitle(resolvedTitle);
+      setCategory(existingGig?.category || CATEGORIES[0]);
+      setSummary(existingGig?.summary || "");
+      setDescription(existingGig?.description || "");
+      setDelivery(existingGig?.delivery || DELIVERY_OPTIONS[0]);
+      setTags(existingGig?.tags || []);
+      setAvailability(existingGig?.availability || userProfile.providerProfile?.availability || []);
       
       const gigImages = userProfile.providerProfile?.gigImages || [];
-      if (gigImages[skillIndex]) {
+      if (existingGig?.image) {
+        setSelectedImage(existingGig.image);
+      } else if (gigImages[skillIndex]) {
         setSelectedImage(gigImages[skillIndex]);
       }
     }, 0);
 
     return () => clearTimeout(timer);
   }, [isEditMode, userProfile, skillIndex]);
+
+  useEffect(() => {
+    if (!userProfile) return;
+    setAvailability((current) => current.length ? current : (userProfile.providerProfile?.availability || []));
+  }, [userProfile]);
 
   const addTag = () => {
     const trimmed = tagInput.trim();
@@ -87,36 +105,72 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
 
   const removeTag = (tag: string) => setTags(tags.filter((t) => t !== tag));
 
+  const toggleAvailability = (slot: string) => {
+    setAvailability((current) =>
+      current.includes(slot) ? current.filter((value) => value !== slot) : [...current, slot],
+    );
+  };
+
+  const isTitleInvalid = didAttemptSubmit && !title.trim();
+  const isSummaryInvalid = didAttemptSubmit && !summary.trim();
+
   const handlePublish = async () => {
     if (!userProfile) return;
-    if (!title.trim()) {
-      setFeedback({ type: "error", msg: "Please enter a gig title." });
-      return;
-    }
-    if (!summary.trim()) {
-      setFeedback({ type: "error", msg: "Please enter a short summary." });
+
+    setDidAttemptSubmit(true);
+
+    if (!title.trim() || !summary.trim()) {
+      setFeedback({
+        type: "error",
+        msg: "Please fill in the required fields highlighted in red.",
+      });
       return;
     }
 
     setIsSaving(true);
     setFeedback(null);
+    setDidAttemptSubmit(false);
 
     try {
       const userRef = doc(db, "users", userProfile.uid);
       const existingSkills: string[] = [...(userProfile.providerProfile?.skills || [])];
       const existingImages: string[] = [...(userProfile.providerProfile?.gigImages || [])];
+      const existingGigs: ProviderGig[] = [...(userProfile.providerProfile?.gigs || [])];
 
       const gigLabel = title.trim();
+      const gigData: ProviderGig = {
+        title: gigLabel,
+        category,
+        summary: summary.trim(),
+        description: description.trim(),
+        delivery,
+        availability,
+        tags,
+        image: selectedImage,
+      };
 
       // Ensure existingImages length matches existingSkills length to prevent index misalignment
       while (existingImages.length < existingSkills.length) {
         existingImages.push("/img/package%201.jpg");
+      }
+      while (existingGigs.length < existingSkills.length) {
+        existingGigs.push({
+          title: existingSkills[existingGigs.length] || gigLabel,
+          category,
+          summary: summary.trim(),
+          description: description.trim(),
+          delivery,
+          availability,
+          tags,
+          image: selectedImage,
+        });
       }
 
       if (isEditMode && skillIndex >= 0) {
         // Replace the skill and image at the specific index
         existingSkills[skillIndex] = gigLabel;
         existingImages[skillIndex] = selectedImage;
+        existingGigs[skillIndex] = gigData;
       } else {
         // Add a new skill
         if (existingSkills.includes(gigLabel)) {
@@ -126,11 +180,14 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
         }
         existingSkills.push(gigLabel);
         existingImages.push(selectedImage);
+        existingGigs.push(gigData);
       }
 
       await updateDoc(userRef, {
         "providerProfile.skills": existingSkills,
         "providerProfile.gigImages": existingImages,
+        "providerProfile.availability": availability,
+        "providerProfile.gigs": existingGigs,
       });
 
       await refreshProfile();
@@ -198,22 +255,26 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
             <label className="block text-sm font-semibold text-slate-700">
               Gig Title *
               <input
-                className="mt-2 h-11 w-full rounded-lg border border-slate-200 px-4 text-base text-slate-700 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100"
+                className={`mt-2 h-11 w-full rounded-lg border px-4 text-base outline-none transition focus:ring-2 ${
+                  isTitleInvalid
+                    ? "border-red-400 bg-red-50 text-slate-700 focus:border-red-500 focus:ring-red-100"
+                    : "border-slate-200 text-slate-700 focus:border-[#1453c4] focus:ring-blue-100"
+                }`}
                 placeholder="e.g., I will help you with Web Development projects"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
             </label>
-            <p className="-mt-3 text-xs font-medium text-slate-400">
+            <p className={`-mt-3 text-xs font-medium ${isTitleInvalid ? "text-red-500" : "text-slate-400"}`}>
               Create a catchy title starting with &apos;I will...&apos;
             </p>
 
             {/* Category */}
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-semibold text-slate-700">
-                Category
+                Category (Optional)
                 <select
-                  className="mt-2 h-11 w-full rounded-lg border border-slate-200 px-4 text-base text-slate-700 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100 bg-white"
+                  className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-base text-slate-700 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                 >
@@ -226,9 +287,9 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
               </label>
 
               <label className="block text-sm font-semibold text-slate-700">
-                Delivery Time
+                Delivery Time (Optional)
                 <select
-                  className="mt-2 h-11 w-full rounded-lg border border-slate-200 px-4 text-base text-slate-700 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100 bg-white"
+                  className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-base text-slate-700 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100"
                   value={delivery}
                   onChange={(e) => setDelivery(e.target.value)}
                 >
@@ -244,7 +305,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
             {/* Tags */}
             <div>
               <label className="block text-sm font-semibold text-slate-700">
-                Search Tags / Keywords (Max 5)
+                Search Tags / Keywords (Optional, Max 5)
               </label>
               <div className="mt-2 flex min-h-11 items-center gap-2 flex-wrap rounded-lg border border-slate-200 bg-[#f6f7ff] px-3 py-2">
                 {tags.map((tag) => (
@@ -287,12 +348,19 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
             <label className="block text-sm font-semibold text-slate-700">
               Short Summary *
               <input
-                className="mt-2 h-11 w-full rounded-lg border border-slate-200 px-4 text-base text-slate-600 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100"
+                className={`mt-2 h-11 w-full rounded-lg border px-4 text-base outline-none transition focus:ring-2 ${
+                  isSummaryInvalid
+                    ? "border-red-400 bg-red-50 text-slate-600 focus:border-red-500 focus:ring-red-100"
+                    : "border-slate-200 text-slate-600 focus:border-[#1453c4] focus:ring-blue-100"
+                }`}
                 placeholder="A one-sentence pitch for your gig"
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
               />
             </label>
+            <p className={`-mt-2 text-xs font-medium ${isSummaryInvalid ? "text-red-500" : "text-slate-400"}`}>
+              Add a short summary so buyers know what you offer.
+            </p>
 
             <label className="block text-sm font-semibold text-slate-700">
               Detailed Description
@@ -305,35 +373,34 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
             </label>
           </div>
 
-          {/* Swap Terms */}
-          <SectionTitle title="Swap Terms" className="mt-8" />
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm font-semibold text-slate-700">
-              Value (Price)
-              <div className="mt-2 flex h-11 items-center rounded-lg border border-slate-200 overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setPoints((p) => Math.max(10, p - 5))}
-                  className="h-full px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-lg transition"
-                >
-                  −
-                </button>
-                <div className="flex-1 flex items-center justify-center gap-2">
-                  <span className="text-slate-800 font-semibold text-lg">{points}</span>
-                  <span className="text-xs font-bold text-teal-700">PTS</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPoints((p) => Math.min(500, p + 5))}
-                  className="h-full px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-lg transition"
-                >
-                  +
-                </button>
-              </div>
-              <span className="mt-1 block text-xs font-medium text-slate-400">
-                How much is this swap worth? (10–500)
-              </span>
-            </label>
+          {/* Availability */}
+          <SectionTitle title="Available Time" className="mt-8" />
+          <div className="mt-5 space-y-3">
+            <p className="text-sm text-slate-500">
+              Select when students can expect you to be available for this gig. This is optional.
+            </p>
+            <div className="flex flex-wrap gap-3 rounded-2xl border border-transparent bg-transparent p-3">
+              {AVAILABILITY_OPTIONS.map((slot) => {
+                const isSelected = availability.includes(slot);
+                return (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => toggleAvailability(slot)}
+                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                      isSelected
+                        ? "border-[#1453c4] bg-[#e8efff] text-[#1453c4]"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    {slot}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs font-medium text-slate-400">
+              Leave this empty if you do not want to publish availability.
+            </p>
           </div>
 
           {/* Gig Poster Section */}

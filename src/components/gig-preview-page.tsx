@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
 import { scopedHref } from "@/lib/role-routes";
@@ -96,15 +96,61 @@ export default function GigPreviewPage({
   providerId,
   skillIndex = 0,
 }: GigPreviewPageProps) {
-  const { userProfile } = useAuth();
+  const { userProfile, refreshProfile } = useAuth();
   const [gig, setGig] = useState<GigPreviewData>(fallbackGig);
   const [loading, setLoading] = useState(Boolean(providerId));
+  const isFavorited = Boolean(
+    userProfile?.favorites?.some((fav) => (fav as { providerId?: string }).providerId === gig.providerId),
+  );
+
+  const handleToggleFavorite = async () => {
+    if (!userProfile) {
+      window.location.href = "/get-started";
+      return;
+    }
+
+    try {
+      const favorites = (userProfile.favorites || []) as Record<string, unknown>[];
+      let updatedFavorites;
+
+      if (isFavorited) {
+        updatedFavorites = favorites.filter((fav) => (fav as { providerId?: string }).providerId !== gig.providerId);
+      } else {
+        const now = new Date();
+        updatedFavorites = [
+          ...favorites,
+          {
+            id: gig.providerId,
+            providerId: gig.providerId,
+            title: gig.title,
+            category: gig.category,
+            instructor: gig.providerName,
+            rating: gig.rating.toFixed(1),
+            image: gig.image,
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(gig.providerName)}&background=2f66e7&color=fff&size=400`,
+            level: gig.proficiency,
+            savedAt: `Saved ${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+            description: gig.summary,
+          },
+        ];
+      }
+
+      await updateDoc(doc(db, "users", userProfile.uid), {
+        favorites: updatedFavorites,
+      });
+      await refreshProfile();
+    } catch (err) {
+      console.error("Error toggling favorite from gig preview:", err);
+    }
+  };
 
   useEffect(() => {
     if (!providerId) return;
 
     const selectedProviderId = providerId;
     let active = true;
+    let unsubscribeRatings: (() => void) | null = null;
+
     async function loadGig() {
       try {
         const providerSnap = await getDoc(doc(db, "users", selectedProviderId));
@@ -115,41 +161,41 @@ export default function GigPreviewPage({
         const skills = profile?.skills?.length ? profile.skills : ["Student Support"];
         const safeSkillIndex = Math.min(Math.max(skillIndex, 0), skills.length - 1);
         const skill = skills[safeSkillIndex] || skills[0];
+        const storedGig = profile?.gigs?.[safeSkillIndex];
 
-        const completedSnap = await getDocs(
-          query(
-            collection(db, "requests"),
-            where("providerId", "==", selectedProviderId),
-            where("status", "==", "completed"),
-          ),
+        const requestsQuery = query(
+          collection(db, "requests"),
+          where("providerId", "==", selectedProviderId),
+          where("status", "==", "completed"),
         );
 
-        const reviewCards: ReviewData[] = [];
-        let totalRating = 0;
-        let reviewCount = 0;
+        unsubscribeRatings = onSnapshot(requestsQuery, (completedSnap) => {
+          const reviewCards: ReviewData[] = [];
+          let totalRating = 0;
+          let reviewCount = 0;
 
-        completedSnap.forEach((requestDoc) => {
-          const request = requestDoc.data();
-          const rating =
-            request.review && typeof request.review.rating === "number"
-              ? request.review.rating
-              : undefined;
-          if (!rating) return;
+          completedSnap.forEach((requestDoc) => {
+            const request = requestDoc.data();
+            const rating =
+              request.review && typeof request.review.rating === "number"
+                ? request.review.rating
+                : undefined;
+            if (!rating) return;
 
-          totalRating += rating;
-          reviewCount += 1;
-          if (reviewCards.length < 2) {
-            reviewCards.push({
-              name: request.buyerName || "Student buyer",
-              rating,
-              quote:
-                request.review.comment ||
-                "Helpful, clear, and reliable support throughout the swap.",
-            });
-          }
-        });
+            totalRating += rating;
+            reviewCount += 1;
+            if (reviewCards.length < 2) {
+              reviewCards.push({
+                name: request.buyerName || "Student buyer",
+                rating,
+                quote:
+                  request.review.comment ||
+                  "Helpful, clear, and reliable support throughout the swap.",
+              });
+            }
+          });
 
-        const nextGig: GigPreviewData = {
+          const nextGig: GigPreviewData = {
           providerId: user.uid,
           providerName: user.name || "Anonymous Member",
           providerDegree: user.degree || "Undergraduate",
@@ -157,24 +203,35 @@ export default function GigPreviewPage({
           proficiency: profile?.proficiency || "Skilled",
           skill,
           skills,
-          title: `I will help you with ${skill}`,
-          category: inferCategory(skill),
+          title: storedGig?.title || `I will do ${skill}`,
+          category: storedGig?.category || inferCategory(skill),
           summary:
+            storedGig?.summary ||
+            storedGig?.description ||
             normalizeSummary(profile?.bio) ||
             `Practical ${skill} support from a verified student skill swap provider.`,
-          availability: formatAvailability(profile?.availability),
+          availability:
+            (storedGig?.availability && storedGig.availability.join(", ")) ||
+            formatAvailability(profile?.availability),
           rating: reviewCount > 0 ? Number((totalRating / reviewCount).toFixed(1)) : 5,
           reviews: reviewCount,
           reviewCards,
-          image: (profile?.gigImages && profile.gigImages[safeSkillIndex]) || gigImages[safeSkillIndex % gigImages.length],
+          image:
+            storedGig?.image ||
+            (profile?.gigImages && profile.gigImages[safeSkillIndex]) ||
+            gigImages[safeSkillIndex % gigImages.length],
           value: `${20 + (safeSkillIndex % 3) * 5}`,
-          delivery: formatAvailability(profile?.availability) || "Flexible",
+          delivery:
+            storedGig?.delivery || formatAvailability(profile?.availability) || "Flexible",
           match: 95,
         };
 
-        if (active) setGig(nextGig);
+          if (active) setGig(nextGig);
+          if (active) setLoading(false);
+        });
       } catch (err) {
         console.error("Error loading gig preview:", err);
+        if (active) setLoading(false);
       } finally {
         if (active) setLoading(false);
       }
@@ -183,6 +240,7 @@ export default function GigPreviewPage({
     loadGig();
     return () => {
       active = false;
+      if (unsubscribeRatings) unsubscribeRatings();
     };
   }, [providerId, skillIndex]);
 
@@ -241,6 +299,22 @@ export default function GigPreviewPage({
                 className="object-contain p-5 md:p-8"
                 sizes="(min-width: 1280px) 620px, 100vw"
               />
+              <div className="absolute right-4 top-4 flex flex-col items-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleToggleFavorite}
+                  aria-label={isFavorited ? "Remove from favorites" : "Save to favorites"}
+                  className={`flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${
+                    isFavorited ? "bg-red-500 text-white" : "bg-white/95 text-slate-700 hover:bg-red-50 hover:text-red-600"
+                  }`}
+                >
+                  <HeartIcon className="h-5 w-5" filled={isFavorited} />
+                </button>
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
+                  <StarIcon className="h-3.5 w-3.5 text-amber-400" />
+                  {gig.rating.toFixed(1)}
+                </span>
+              </div>
             </div>
           </section>
 
@@ -567,6 +641,14 @@ function getInitials(name: string) {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+}
+
+function HeartIcon({ className, filled = false }: { className?: string; filled?: boolean }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={filled ? 0 : 2} aria-hidden="true">
+      <path d="M12 21s-6.4-4.1-9-8.1C1 9.8 2.4 6.2 5.8 5.6c2.1-.4 3.8.6 5 2.3.2.3.3.4.4.4s.2-.1.4-.4c1.2-1.7 2.9-2.7 5-2.3 3.4.6 4.8 4.2 2.8 7.3C18.4 16.9 12 21 12 21z" />
+    </svg>
+  );
 }
 
 

@@ -47,14 +47,11 @@ const requestServiceSchema = z.object({
     .string()
     .trim()
     .min(1, "Description is required.")
-    .refine(
-      (value) => value.split(/\s+/).filter(Boolean).length >= 10,
-      "Description must contain at least 10 words.",
-    ),
+    .refine((value) => value.length >= 10, "Description must contain at least 10 characters."),
   level: z.string(),
   serviceType: z.enum(serviceTypeOptions),
   time: z.string().trim().min(1, "Preferred Time is required."),
-  preferredUniv: z.string().trim().min(1, "Preferred University is required."),
+  preferredUniv: z.string().trim().optional(),
 });
 
 type RequestServiceFormValues = z.infer<typeof requestServiceSchema>;
@@ -259,7 +256,7 @@ function RequestForm({
         level: data.level,
         serviceType: data.serviceType,
         time: data.time.trim(),
-        university: data.preferredUniv.trim(),
+        university: data.preferredUniv?.trim() || "",
         budget: "Free Swap",
         status: "pending",
         createdAt: serverTimestamp(),
@@ -387,7 +384,7 @@ function RequestForm({
           )}
         </label>
 
-        {/* Required Level and Service Type */}
+        {/* Required Level and Preferred Time */}
         <div className="grid gap-4 md:grid-cols-2">
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">
@@ -408,10 +405,31 @@ function RequestForm({
 
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">
+              Preferred Time <span className="text-red-500">*</span>
+            </span>
+            <input
+              type="text"
+              placeholder="e.g., Evenings, 6 PM - 8 PM"
+              {...register("time")}
+              aria-invalid={Boolean(errors.time)}
+              className={getFieldClassName(Boolean(errors.time))}
+            />
+            {errors.time && (
+              <p className="text-xs font-medium text-red-600">
+                {errors.time.message}
+              </p>
+            )}
+          </label>
+        </div>
+
+        {/* Service Type and Preferred University */}
+        <div className="grid items-end gap-4 md:grid-cols-2">
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-semibold text-slate-600">
               Service Type
             </span>
             <input type="hidden" {...register("serviceType")} />
-            <div className="grid max-w-[280px] grid-cols-3 gap-1.5 pt-1">
+            <div className="grid w-full grid-cols-3 gap-1.5 pt-1">
               {serviceTypeOptions.map((type) => (
                 <button
                   type="button"
@@ -433,65 +451,35 @@ function RequestForm({
               ))}
             </div>
           </label>
-        </div>
-
-        {/* Preferred Date/ Time, University, and Budget */}
-        <div className="grid items-end gap-4 md:grid-cols-2">
-          <label className="grid min-w-0 gap-1.5">
-            <span className="text-xs font-semibold text-slate-600">
-              Preferred Time <span className="text-red-500">*</span>
-            </span>
-            <input
-              type="text"
-              placeholder="e.g., Evenings, 6 PM - 8 PM"
-              {...register("time")}
-              aria-invalid={Boolean(errors.time)}
-              className={getFieldClassName(Boolean(errors.time))}
-            />
-            {errors.time && (
-              <p className="text-xs font-medium text-red-600">
-                {errors.time.message}
-              </p>
-            )}
-          </label>
 
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">
-              Preferred University <span className="text-red-500">*</span>
+              Preferred University
             </span>
             <select
               {...register("preferredUniv")}
               title="Preferred University"
-              aria-invalid={Boolean(errors.preferredUniv)}
-              className={getFieldClassName(Boolean(errors.preferredUniv))}
+              className={fieldClassName}
             >
-              <option value="">Select University</option>
+              <option value="">Any University</option>
               {UNIVERSITIES.map((uni) => (
                 <option key={uni} value={uni}>
                   {uni}
                 </option>
               ))}
             </select>
-            {errors.preferredUniv && (
-              <p className="text-xs font-medium text-red-600">
-                {errors.preferredUniv.message}
-              </p>
-            )}
           </label>
         </div>
 
         {/* Submit Button */}
         <div className="border-t border-slate-200 pt-4">
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#2f66e7] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2557cf] disabled:opacity-60 sm:w-auto sm:min-w-44"
-            >
-              {isSubmitting ? "Submitting..." : "Submit Request"}
-              <SendIcon className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#2f66e7] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2557cf] disabled:opacity-60"
+          >
+            {isSubmitting ? "Submitting..." : "Submit Request"}
+          </button>
         </div>
       </form>
     </section>
@@ -972,17 +960,3 @@ function ChatIcon({ className }: { className?: string }) {
   );
 }
 
-function SendIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path d="M4 12h14" />
-      <path d="M13 5l7 7-7 7" />
-    </svg>
-  );
-}
