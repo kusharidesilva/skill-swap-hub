@@ -42,6 +42,8 @@ interface RequestData {
   time: string;
   budget: string;
   status: string;
+  providerId?: string;
+  providerName?: string;
   revisionNotes?: string;
   review?: {
     rating: number;
@@ -276,7 +278,8 @@ function NewRequestsView({
     });
   }, [requests, category, university]);
 
-  const activeRequest = filteredRequests[0] ?? requests[0];
+  const activeRequest = filteredRequests[0] ?? null;
+  const isGeneralRequest = activeRequest?.providerId === "general";
 
   const handleDecision = async (
     reqId: string,
@@ -406,12 +409,14 @@ function NewRequestsView({
               >
                 Accept Swap
               </button>
-              <button
-                onClick={() => handleDecision(activeRequest.id, "rejected")}
-                className="rounded-lg border border-red-300 hover:bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700"
-              >
-                Decline
-              </button>
+              {!isGeneralRequest && (
+                <button
+                  onClick={() => handleDecision(activeRequest.id, "rejected")}
+                  className="rounded-lg border border-red-300 hover:bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700"
+                >
+                  Decline
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-3 text-xs font-semibold">
               <Link
@@ -425,7 +430,7 @@ function NewRequestsView({
         </article>
       ) : (
         <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500 shadow-sm">
-          No new incoming skill swap requests found.
+          No incoming skill swap requests match the current filters.
         </div>
       )}
     </div>

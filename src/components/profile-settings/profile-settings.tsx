@@ -2,9 +2,8 @@
 
 import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -31,6 +30,63 @@ const ALL_SKILLS_SUGGESTIONS = [
 ];
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const PROFILE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+function compressImageToBase64(
+  file: File,
+  maxDimension = 300,
+  quality = 0.7,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+
+    img.onload = () => {
+      let { width, height } = img;
+
+      if (width > height && width > maxDimension) {
+        height = Math.round((height * maxDimension) / width);
+        width = maxDimension;
+      } else if (height > maxDimension) {
+        width = Math.round((width * maxDimension) / height);
+        height = maxDimension;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        reject(new Error("Canvas not supported"));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+
+      // Firestore document limit is 1MB; keep this safely below it.
+      if (dataUrl.length > 700_000) {
+        reject(
+          new Error(
+            "Image is too large even after compression. Try a smaller image.",
+          ),
+        );
+        return;
+      }
+
+      resolve(dataUrl);
+    };
+
+    img.onerror = () => reject(new Error("Failed to load image"));
+
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function ProfileSettings({ role }: { role: Role }) {
   const { userProfile, loading, refreshProfile } = useAuth();
@@ -148,19 +204,9 @@ function ProfileSettingsForm({
       let nextProfileImageUrl = profileImageUrl;
 
       if (selectedProfileImageFile) {
-        const safeFileName = selectedProfileImageFile.name.replace(
-          /[^a-zA-Z0-9.-]/g,
-          "_",
+        nextProfileImageUrl = await compressImageToBase64(
+          selectedProfileImageFile,
         );
-        const storageRef = ref(
-          storage,
-          `profile-images/${userProfile.uid}/${Date.now()}-${safeFileName}`,
-        );
-
-        await uploadBytes(storageRef, selectedProfileImageFile, {
-          contentType: selectedProfileImageFile.type,
-        });
-        nextProfileImageUrl = await getDownloadURL(storageRef);
       }
 
       const updates: Record<string, unknown> = {
@@ -195,9 +241,8 @@ function ProfileSettingsForm({
       setTimeout(() => setSaveStatus(""), 3000);
     } catch (err: unknown) {
       setSaveStatus("error");
-      setErrorMessage(
-        err instanceof Error ? err.message : "Failed to update profile.",
-      );
+      const message = err instanceof Error ? err.message : "";
+      setErrorMessage(message || "Failed to update profile.");
     } finally {
       setIsSaving(false);
     }

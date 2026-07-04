@@ -20,6 +20,14 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Firebase Storage CORS
+
+If profile photo uploads fail in the browser with a CORS error, the Firebase Storage bucket needs an allowed origin entry for your local app.
+
+Use the template in [`storage-cors.json`](C:\Users\DELL\Desktop\skill-swap-hub\storage-cors.json) and apply it to the bucket configured in your Firebase env, for example with `gsutil cors set`.
+
+For local development, `http://localhost:3000` must be allowed. Add your deployed domain too before shipping.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

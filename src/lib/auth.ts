@@ -18,7 +18,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
-import { dashboardHref, type Role } from "./role-routes";
+import { dashboardHref, homeHref, type Role } from "./role-routes";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -138,11 +138,16 @@ export async function loginUser(
     const hasBuyerHistory = await checkBuyerHistory(user.uid);
     return {
       user,
-      redirectPath: dashboardHref(hasBuyerHistory ? "both" : "provider"),
+      redirectPath: hasBuyerHistory
+        ? dashboardHref("both")
+        : homeHref("provider"),
     };
   }
 
-  return { user, redirectPath: dashboardHref(role) };
+  return {
+    user,
+    redirectPath: role === "provider" ? homeHref("provider") : dashboardHref(role),
+  };
 }
 
 // ─── Upgrade Buyer → Provider ─────────────────────────────────────────────────
@@ -186,7 +191,7 @@ export async function upgradeToProvider(
     },
   });
 
-  return dashboardHref(hasBuyerHistory ? "both" : "provider");
+  return hasBuyerHistory ? homeHref("both") : homeHref("provider");
 }
 
 // ─── Forgot Password ──────────────────────────────────────────────────────────

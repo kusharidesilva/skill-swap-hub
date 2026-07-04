@@ -35,6 +35,7 @@ type LiveGig = {
 
 export default function SkillGigsSection() {
   const pathname = usePathname();
+  const { userProfile } = useAuth();
   const [gigs, setGigs] = useState<LiveGig[]>([]);
   const [loading, setLoading] = useState(true);
   const [ratingsVersion, setRatingsVersion] = useState(0);
@@ -78,11 +79,13 @@ export default function SkillGigsSection() {
         });
 
         const liveGigs: LiveGig[] = [];
-        let userIndex = 0;
 
         usersSnap.forEach((userDoc) => {
+          if (userProfile && userDoc.id === userProfile.uid) return;
+
           const user = userDoc.data();
           const skills: string[] = user.providerProfile?.skills || [];
+          const storedGigs = user.providerProfile?.gigs || [];
           const providerName: string = user.name || "Campus Student";
           const university: string = user.university || "Campus";
           const providerImage: string = user.profileImageUrl || "";
@@ -95,39 +98,61 @@ export default function SkillGigsSection() {
           const ratingData = ratingsMap[userDoc.id];
           const rating = ratingData
             ? Number((ratingData.totalStars / ratingData.count).toFixed(1))
-            : 5.0;
+            : 0;
 
-          skills.slice(0, 1).forEach((skill, skillIndex) => {
+          const gigEntries =
+            storedGigs.length > 0
+              ? storedGigs.map((gig: { title?: string; category?: string; summary?: string; image?: string }, skillIndex: number) => ({
+                  title: gig.title || skills[skillIndex] || "Student Skill",
+                  category: gig.category || skills[skillIndex] || "Skill",
+                  summary:
+                    gig.summary ||
+                    `Practical support from a verified university student.`,
+                  image:
+                    gig.image ||
+                    user.providerProfile?.gigImages?.[skillIndex] ||
+                    gigImages[skillIndex % gigImages.length],
+                }))
+              : skills.map((skill, skillIndex) => ({
+                  title: `I will do ${skill}`,
+                  category: skill,
+                  summary: `Practical ${skill.toLowerCase()} support from a verified university student.`,
+                  image:
+                    user.providerProfile?.gigImages?.[skillIndex] ||
+                    gigImages[skillIndex % gigImages.length],
+                }));
+
+          gigEntries.slice(0, 1).forEach((gigEntry, skillIndex) => {
             if (liveGigs.length >= 4) return;
             liveGigs.push({
               id: `${userDoc.id}-${skillIndex}`,
               providerId: userDoc.id,
-              title: `I will do ${skill}`,
-              category: skill,
+              title: gigEntry.title,
+              category: gigEntry.category,
               rating,
               providerName,
               university,
               providerImage,
-              summary: `Practical ${skill.toLowerCase()} support from a verified university student.`,
+              summary: gigEntry.summary,
               availability,
-              image: gigImages[(userIndex + skillIndex) % gigImages.length],
+              image: gigEntry.image,
               serviceType: "Skill Exchange",
-              tags: [skill, "Skill Exchange", availability],
+              tags: [gigEntry.category, "Skill Exchange", availability],
             });
           });
-          userIndex++;
         });
 
         setGigs(liveGigs.slice(0, 4));
       } catch (err) {
         console.error("Error fetching live gigs for home section:", err);
+        setGigs([]);
       } finally {
         setLoading(false);
       }
     }
 
     fetchGigs();
-  }, [ratingsVersion]);
+  }, [ratingsVersion, userProfile]);
 
   return (
     <section id="explore-skills" className="bg-white scroll-mt-20">
@@ -170,21 +195,16 @@ export default function SkillGigsSection() {
             ))}
           </div>
         ) : gigs.length === 0 ? (
-          // Fallback static cards if no providers have skills yet
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { id: "graphic-design-social-posts", providerId: "graphic-design-social-posts", title: "Graphic Design for Social Media Posts", category: "Design", rating: 4.8, providerName: "Campus student", university: "Rajini Campus", availability: "Weekends", image: "/img/package%201.jpg", serviceType: "Skill Exchange / Paid", summary: "Creative design support for polished social content and branding assets.", tags: ["Design", "Skill Exchange / Paid", "Weekends"] },
-              { id: "python-programming-help", providerId: "python-programming-help", title: "Python Programming Help", category: "Programming", rating: 4.7, providerName: "Campus student", university: "SLIIT", availability: "Evenings", image: "/img/package%202.jpg", serviceType: "Skill Exchange", summary: "Friendly coding support for Python tasks, debugging, and project guidance.", tags: ["Programming", "Skill Exchange", "Evenings"] },
-              { id: "cv-writing-linkedin-help", providerId: "cv-writing-linkedin-help", title: "CV Writing and LinkedIn Help", category: "Career", rating: 4.9, providerName: "Campus student", university: "NSBM", availability: "Flexible", image: "/img/package%203.jpg", serviceType: "Paid", summary: "Professional profile help to improve CVs, LinkedIn presence, and applications.", tags: ["Career", "Paid", "Flexible"] },
-              { id: "powerpoint-design-help", providerId: "powerpoint-design-help", title: "PowerPoint Presentation Design", category: "Academic", rating: 4.6, providerName: "Campus student", university: "KDU", availability: "Weekdays", image: "/img/package%204.jpg", serviceType: "Skill Exchange / Paid", summary: "Clean and persuasive slide design for academic or project presentations.", tags: ["Academic", "Skill Exchange / Paid", "Weekdays"] },
-            ].map((gig) => (
-              <GigCard key={gig.id} gig={gig} viewAllHref={viewAllHref} />
-            ))}
+          <div className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
+            <p className="text-sm font-semibold text-slate-900">No live gigs yet</p>
+            <p className="mt-2 text-sm text-slate-600">
+              Providers have not published any gigs yet. Once they do, the latest gigs will appear here.
+            </p>
           </div>
         ) : (
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {gigs.map((gig) => (
-              <GigCard key={gig.id} gig={gig} viewAllHref={viewAllHref} />
+              <GigCard key={gig.id} gig={gig} />
             ))}
           </div>
         )}
@@ -193,7 +213,7 @@ export default function SkillGigsSection() {
   );
 }
 
-function GigCard({ gig, viewAllHref }: { gig: LiveGig; viewAllHref: string }) {
+function GigCard({ gig }: { gig: LiveGig }) {
   const { userProfile, refreshProfile } = useAuth();
   const pathname = usePathname();
   const isBuyerHome = pathname === "/home/buyer";
@@ -274,7 +294,7 @@ function GigCard({ gig, viewAllHref }: { gig: LiveGig; viewAllHref: string }) {
           </button>
           <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
             <StarIcon className="h-3.5 w-3.5 text-amber-400" />
-            {gig.rating.toFixed(1)}
+            {gig.rating > 0 ? gig.rating.toFixed(1) : "New"}
           </span>
         </div>
       </div>

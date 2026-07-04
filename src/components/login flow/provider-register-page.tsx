@@ -9,10 +9,9 @@ import { z } from "zod";
 import { upgradeToProvider, checkBuyerHistory } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { isEmailAllowedForUniversity } from "@/lib/universities";
-import { dashboardHref } from "@/lib/role-routes";
+import { homeHref } from "@/lib/role-routes";
 import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
-
 const ALL_SKILLS = [
   "Programming",
   "UX Design",
@@ -73,15 +72,15 @@ export default function ProviderRegisterPage() {
       if (userProfile.role === "both") {
         checkBuyerHistory(userProfile.uid).then((hasHistory) => {
           if (hasHistory) {
-            router.replace(dashboardHref("both"));
+            router.replace(homeHref("both"));
           } else {
-            router.replace(dashboardHref("provider"));
+            router.replace(homeHref("provider"));
           }
         });
         return;
       }
       if (userProfile.role === "provider") {
-        router.replace(dashboardHref("provider"));
+        router.replace(homeHref("provider"));
         return;
       }
 

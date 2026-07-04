@@ -8,7 +8,7 @@ import { collection, doc, getDocs, onSnapshot, query, updateDoc, where } from "f
 
 import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
-import type { UserProfile } from "@/lib/auth";
+import type { ProviderGig, UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { UNIVERSITIES } from "@/lib/universities";
 import UniversityCombobox from "@/components/ui/university-combobox";
@@ -69,53 +69,12 @@ const gigImages = [
   "/img/favorites/mathematics.jpg",
 ];
 
-const mockGigCards: GigCardData[] = [
-  {
-    id: "gig-react-dashboard",
-    providerId: "sarah-jenkins",
-    skillIndex: 0,
-    providerName: "Sarah Jenkins",
-    providerDegree: "BSc Computer Science",
-    university: "Univ of Colombo",
-    title: "I will build a clean React dashboard for your project",
-    category: "Web Development",
-    summary: "Frontend help for layouts, components, data tables, and responsive screens.",
-    availability: "Weekends",
-    rating: 4.9,
-    reviews: 42,
-    match: 92,
-    image: "/img/favorites/web-development.jpg",
-    points: 30,
-    tags: ["React", "Next.js", "Tailwind"],
-    serviceType: "Skill Exchange",
-  },
-  {
-    id: "gig-figma-prototype",
-    providerId: "michael-chen",
-    skillIndex: 0,
-    providerName: "Michael Chen",
-    providerDegree: "BA Graphic Design",
-    university: "Univ of Moratuwa",
-    title: "I will design a Figma prototype for your app idea",
-    category: "UX Design",
-    summary: "Wireframes, clickable prototypes, and visual polish for student products.",
-    availability: "Evenings",
-    rating: 4.7,
-    reviews: 28,
-    match: 86,
-    image: "/img/favorites/ui-ux-design.jpg",
-    points: 25,
-    tags: ["Figma", "UI Design", "Prototype"],
-    serviceType: "Skill Exchange",
-  },
-];
-
 type FindServicesPageContentProps = {
   role?: Role;
 };
 
 export default function FindServicesPageContent({ role }: FindServicesPageContentProps) {
-  const { userProfile, refreshProfile } = useAuth();
+  const { userProfile } = useAuth();
   const searchParams = useSearchParams();
   const [gigs, setGigs] = useState<GigCardData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -160,7 +119,6 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
         });
 
         const dbGigs: GigCardData[] = [];
-        let index = 0;
 
         usersSnapshot.forEach((docSnap) => {
           const user = docSnap.data() as UserProfile;
@@ -171,43 +129,64 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
           if (!profile) return;
 
           const skills = profile.skills?.length ? profile.skills : ["Student Support"];
+          const storedGigs = profile.gigs?.length ? profile.gigs : [];
           const ratingData = ratingsMap[user.uid];
           const rating = ratingData
             ? Number((ratingData.totalStars / ratingData.count).toFixed(1))
-            : 5.0;
+            : 0;
 
-          skills.forEach((skill, skillIndex) => {
-            const category = inferCategory(skill);
+          const gigEntries: Array<{
+            title: string;
+            category: string;
+            summary: string;
+            image: string;
+          }> = storedGigs.length
+            ? storedGigs.map((gig: ProviderGig, skillIndex) => ({
+                title: gig.title || `I will do ${skills[skillIndex] || "Student Support"}`,
+                category: gig.category || inferCategory(skills[skillIndex] || gig.title || "Support"),
+                summary: gig.summary || gig.description || `Practical support from a verified student.`,
+                image:
+                  gig.image ||
+                  (profile.gigImages && profile.gigImages[skillIndex]) ||
+                  gigImages[skillIndex % gigImages.length],
+              }))
+            : skills.map((skill, skillIndex) => ({
+                title: `I will do ${skill}`,
+                category: inferCategory(skill),
+                summary: profile.bio || `Practical ${skill.toLowerCase()} support from a verified student skill swap provider.`,
+                image:
+                  (profile.gigImages && profile.gigImages[skillIndex]) ||
+                  gigImages[skillIndex % gigImages.length],
+              }));
+
+          gigEntries.forEach((gigEntry, skillIndex) => {
             dbGigs.push({
-              id: `${user.uid}-${slugify(skill)}-${skillIndex}`,
+              id: `${user.uid}-${slugify(gigEntry.title)}-${skillIndex}`,
               providerId: user.uid,
               skillIndex,
               providerName: user.name || "Anonymous Member",
               providerDegree: user.degree || "Undergraduate",
               university: user.university || "Sri Lankan University",
               providerImage: user.profileImageUrl || "",
-              title: `I will do ${skill}`,
-              category,
-              summary:
-                profile.bio ||
-                `Practical ${skill} support from a verified student skill swap provider.`,
+              title: gigEntry.title,
+              category: gigEntry.category,
+              summary: gigEntry.summary,
               availability: profile.availability || "Flexible",
               rating,
               reviews: ratingData?.count || 0,
               match: 95,
-              image: (profile.gigImages && profile.gigImages[skillIndex]) || gigImages[index % gigImages.length],
+              image: gigEntry.image,
               points: 20 + (skillIndex % 3) * 5,
-              tags: skills.slice(0, 3),
+              tags: [gigEntry.category, ...(skills.slice(0, 2))].slice(0, 3),
               serviceType: "Skill Exchange",
             });
-            index += 1;
           });
         });
 
-        setGigs(dbGigs.length > 0 ? dbGigs : mockGigCards);
+        setGigs(dbGigs);
       } catch (err) {
         console.error("Error fetching gigs:", err);
-        setGigs(mockGigCards);
+        setGigs([]);
       } finally {
         setLoading(false);
       }
@@ -296,7 +275,9 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
                 ))
               ) : (
                 <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-xs">
-                  <p className="text-sm text-slate-500">No gigs match your search filters.</p>
+                  <p className="text-sm text-slate-500">
+                    No live gigs match your search filters.
+                  </p>
                   <button
                     type="button"
                     onClick={() => {
@@ -428,7 +409,7 @@ function GigCard({
         <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
           <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-sm ring-1 ring-slate-200">
             <StarIcon className="h-3.5 w-3.5 text-amber-400" />
-            {gig.rating.toFixed(1)}
+            {gig.rating > 0 ? gig.rating.toFixed(1) : "New"}
           </span>
         </div>
 

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { collection, doc, getDoc, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
+import { collection, doc, getDoc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
 import { scopedHref } from "@/lib/role-routes";
@@ -68,18 +68,18 @@ const fallbackGig: GigPreviewData = {
   summary:
     "A great book deserves a cover that grabs attention and reflects its story.",
   availability: "3-Day Delivery",
-  rating: 5,
+  rating: 0,
   reviews: 68,
   reviewCards: [
     {
       name: "jhonhopkins",
-      rating: 5,
+      rating: 0,
       quote:
         "An amazing experience working with this seller. The cover design looks modern, clean, and perfectly aligned with the concept.",
     },
     {
       name: "abigail_mend",
-      rating: 5,
+      rating: 0,
       quote:
         "Very high quality book cover design. The visuals immediately attract attention and match the book theme.",
     },
@@ -213,7 +213,7 @@ export default function GigPreviewPage({
           availability:
             (storedGig?.availability && storedGig.availability.join(", ")) ||
             formatAvailability(profile?.availability),
-          rating: reviewCount > 0 ? Number((totalRating / reviewCount).toFixed(1)) : 5,
+          rating: reviewCount > 0 ? Number((totalRating / reviewCount).toFixed(1)) : 0,
           reviews: reviewCount,
           reviewCards,
           image:
@@ -312,7 +312,7 @@ export default function GigPreviewPage({
                 </button>
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
                   <StarIcon className="h-3.5 w-3.5 text-amber-400" />
-                  {gig.rating.toFixed(1)}
+                  {gig.rating > 0 ? gig.rating.toFixed(1) : "New"}
                 </span>
               </div>
             </div>
@@ -386,7 +386,8 @@ function ProviderCard({ gig, role }: { gig: GigPreviewData; role: string }) {
               {gig.university} - {gig.providerDegree}
             </p>
             <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-teal-700">
-              <StarIcon className="h-3.5 w-3.5" /> {gig.rating.toFixed(1)} ({gig.reviews} reviews)
+              <StarIcon className="h-3.5 w-3.5" />{" "}
+              {gig.rating > 0 ? gig.rating.toFixed(1) : "New"} ({gig.reviews} reviews)
             </p>
           </div>
         </div>
@@ -587,7 +588,7 @@ function ReviewCard({
         <div>
           <h3 className="text-sm font-bold text-slate-900">{review.name}</h3>
           <p className="text-xs font-semibold text-teal-700">
-            {review.rating.toFixed(1)} rating
+            {review.rating > 0 ? review.rating.toFixed(1) : "New"} rating
           </p>
         </div>
       </div>
