@@ -43,18 +43,18 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="grid h-screen overflow-hidden lg:grid-cols-[250px_minmax(0,1fr)]">
-      <aside className="flex h-screen flex-col border-r border-slate-200 bg-[#f3f4ff] px-4 py-6 shadow-[inset_-1px_0_0_rgba(15,23,42,0.04)]">
+    <div className="grid h-screen overflow-hidden lg:grid-cols-[255px_minmax(0,1fr)]">
+      <aside className="flex h-screen flex-col border-r border-slate-300 bg-[#eef0ff] px-4 py-7">
         <div className="px-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+          <h1 className="text-[29px] font-semibold tracking-[-0.04em] text-slate-900">
             Skill Swap Hub
           </h1>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-600">
+          <p className="text-[14px] uppercase leading-4 tracking-[0.02em] text-slate-700">
             Admin Panel
           </p>
         </div>
 
-        <nav className="mt-10 space-y-2">
+        <nav className="mt-10 space-y-1.5">
           {navItems.map((item) => {
             const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
 
@@ -63,17 +63,11 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                 key={item.label}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition ${
-                  active ? "bg-[#2559d8] text-white shadow-md" : "text-slate-600 hover:bg-white"
+                className={`flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-[15px] font-medium transition ${
+                  active ? "bg-[#2f66e7] text-white" : "text-slate-600 hover:bg-white/80"
                 }`}
               >
-                <span
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition ${
-                    active
-                      ? "border-white/10 bg-white/15 text-white shadow-inner"
-                      : "border-slate-200 bg-white text-slate-500"
-                  }`}
-                >
+                <span className={`flex h-8 w-8 items-center justify-center ${active ? "text-white" : "text-slate-500"}`}>
                   {item.icon}
                 </span>
                 {item.label}
@@ -83,15 +77,15 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="mt-auto pt-6">
-          <div className="border-t border-slate-200" />
+          <div className="border-t border-slate-300" />
           <div className="space-y-2 pt-6">
             <Link
               href="/admin/settings"
-              className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition ${
-                pathname === "/admin/settings" ? "bg-[#2559d8] text-white shadow-md" : "text-slate-600 hover:bg-white"
+              className={`flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-[15px] font-medium transition ${
+                pathname === "/admin/settings" ? "bg-[#2f66e7] text-white" : "text-slate-600 hover:bg-white/80"
               }`}
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm">
+              <span className={`flex h-8 w-8 items-center justify-center ${pathname === "/admin/settings" ? "text-white" : "text-slate-500"}`}>
                 <SettingsIcon />
               </span>
               Settings
@@ -99,9 +93,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
             <Link
               href="/sign-out"
-              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-600 transition hover:bg-white"
+              className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-[15px] font-medium text-slate-600 transition hover:bg-white/80"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm">
+              <span className="flex h-8 w-8 items-center justify-center text-slate-500">
                 <LogoutIcon />
               </span>
               Logout
@@ -110,16 +104,16 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="min-w-0 bg-[#f6f7ff]">
-        <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-[0_4px_12px_rgba(15,23,42,0.04)]">
-          <h2 className="text-2xl font-medium text-slate-900">{title}</h2>
+      <main className="min-w-0 bg-[#f8f7ff]">
+        <header className="flex h-[74px] items-center justify-between border-b border-slate-300 bg-white px-12 shadow-[0_2px_10px_rgba(15,23,42,0.05)]">
+          <h2 className="text-[25px] font-medium text-slate-900">{title}</h2>
           <div ref={menuRef} className="relative">
             <button
               type="button"
               onClick={() => setMenuOpen((value) => !value)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+              className="flex h-12 w-12 items-center justify-center rounded-full text-slate-900 transition hover:text-slate-700"
             >
               <UserCircleIcon />
             </button>
@@ -151,7 +145,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div className="h-[calc(100vh-5rem)] overflow-y-auto">
+        <div className="h-[calc(100vh-74px)] overflow-y-auto">
           {children}
         </div>
       </main>
