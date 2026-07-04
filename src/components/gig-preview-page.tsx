@@ -302,18 +302,18 @@ export default function GigPreviewPage({
         <span className="px-1 text-slate-400">&gt;</span> Student Skill Swap
       </p>
 
-      <div className="mt-3 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="mt-3 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <main className="min-w-0 space-y-4">
-          <h1 className="break-words text-2xl font-bold leading-tight text-slate-900">{gig.title}</h1>
+          <h1 className="break-words text-2xl font-bold leading-tight text-slate-900 lg:text-[1.8rem]">{gig.title}</h1>
 
           <section className="overflow-hidden rounded-lg border border-slate-200 bg-[#9d6a2e] shadow-sm">
-            <div className="relative h-[300px] w-full md:h-[420px]">
+            <div className="relative h-[280px] w-full md:h-[320px] lg:h-[280px] xl:h-[320px]">
               <Image
                 src={gig.image}
                 alt={gig.title}
                 fill
                 priority
-                className="object-contain p-5 md:p-8"
+                className="object-contain p-4 md:p-6"
                 sizes="(min-width: 1280px) 620px, 100vw"
               />
               <div className="absolute right-4 top-4 flex flex-col items-end gap-2">
@@ -335,40 +335,44 @@ export default function GigPreviewPage({
             </div>
           </section>
 
-          <ProviderCard gig={gig} role={role} />
-          <AboutCard summary={gig.summary} />
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <InfoCard
-              icon={<CheckCircleIcon className="h-4 w-4 text-[#1453c4]" />}
-              title="What I Will Do"
-              titleClass="text-[#1453c4]"
-              items={[
-                `Help with ${gig.skill}`,
-                `Explain concepts at ${gig.proficiency.toLowerCase()} level`,
-                "Review your work and suggest improvements",
-                "Share useful notes, references, or files",
-                "Support revisions after your first feedback",
-              ]}
-            />
-            <InfoCard
-              icon={<CheckCircleIcon className="h-4 w-4 text-teal-700" />}
-              title="Why Swap With Me"
-              titleClass="text-teal-700"
-              items={[
-                `${gig.providerDegree} background`,
-                `Available: ${gig.availability}`,
-                "Clear student-to-student communication",
-                "Focused help based on your exact task",
-              ]}
-            />
+          <div className="-mt-2">
+            <ProviderCard gig={gig} role={role} />
           </div>
+          <div className="-mt-3 space-y-3">
+            <AboutCard summary={gig.summary} />
 
-          <RequirementsCard skill={gig.skill} />
-          <ReviewsSection reviews={gig.reviewCards} />
+            <div className="grid gap-3 md:grid-cols-2">
+              <InfoCard
+                icon={<CheckCircleIcon className="h-4 w-4 text-[#1453c4]" />}
+                title="What I Will Do"
+                titleClass="text-[#1453c4]"
+                items={[
+                  `Help with ${gig.skill}`,
+                  `Explain concepts at ${gig.proficiency.toLowerCase()} level`,
+                  "Review your work and suggest improvements",
+                  "Share useful notes, references, or files",
+                  "Support revisions after your first feedback",
+                ]}
+              />
+              <InfoCard
+                icon={<CheckCircleIcon className="h-4 w-4 text-teal-700" />}
+                title="Why Swap With Me"
+                titleClass="text-teal-700"
+                items={[
+                  `${gig.providerDegree} background`,
+                  `Available: ${gig.availability}`,
+                  "Clear student-to-student communication",
+                  "Focused help based on your exact task",
+                ]}
+              />
+            </div>
+
+            <RequirementsCard skill={gig.skill} />
+            <ReviewsSection reviews={gig.reviewCards} />
+          </div>
         </main>
 
-        <aside className="min-w-0 space-y-4 lg:sticky lg:top-24">
+        <aside className="min-w-0 space-y-3 lg:sticky lg:top-24">
           <PackageCard
             gig={gig}
             packageItems={packageItems}
@@ -377,7 +381,6 @@ export default function GigPreviewPage({
             isOwnGig={Boolean(isOwnGig)}
             editHref={editHref}
           />
-          {!isOwnGig && <SkillMatchCard match={gig.match} skill={gig.skill} />}
         </aside>
       </div>
     </div>
@@ -387,7 +390,7 @@ export default function GigPreviewPage({
 function ProviderCard({ gig, role }: { gig: GigPreviewData; role: string }) {
   return (
     <Link href={`/provider-profile/${gig.providerId}?role=${role}`}>
-      <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:border-[#1453c4]/45 hover:shadow-md cursor-pointer">
+      <article className="cursor-pointer rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:border-[#1453c4]/45 hover:shadow-md lg:p-3.5">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-sm font-bold text-white ring-2 ring-[#2f66e7]/20">
             {getInitials(gig.providerName)}
@@ -430,11 +433,11 @@ function PackageCard({
 }) {
   return (
     <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-      <div className="bg-[#1453c4] px-4 py-3">
+      <div className="bg-[#1453c4] px-4 py-2.5">
         <p className="text-sm font-bold text-white">Premium Student Swap</p>
       </div>
 
-      <div className="space-y-4 p-4">
+      <div className="space-y-3 p-3 lg:p-3.5">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xl font-bold text-slate-900">{gig.value}</p>
           <p className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700">
@@ -444,7 +447,7 @@ function PackageCard({
 
         <p className="break-words text-xs leading-5 text-slate-600">{gig.summary}</p>
 
-        <ul className="space-y-2 border-y border-slate-200 py-3 text-xs text-slate-700">
+        <ul className="space-y-1.5 border-y border-slate-200 py-2.5 text-xs text-slate-700">
           {packageItems.map((item) => (
             <li key={item} className="flex items-center gap-2">
               <CheckCircleIcon className="h-4 w-4 shrink-0 text-teal-700" />
@@ -456,7 +459,7 @@ function PackageCard({
         {isOwnGig ? (
           <Link
             href={editHref}
-            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
+            className="inline-flex h-9 w-full items-center justify-center rounded-md bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
           >
             Edit Gig Settings
           </Link>
@@ -464,13 +467,13 @@ function PackageCard({
           <>
             <Link
               href={requestHref}
-              className="inline-flex h-10 w-full items-center justify-center rounded-md bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
+              className="inline-flex h-9 w-full items-center justify-center rounded-md bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
             >
               Request Skill
             </Link>
             <Link
               href={chatHref}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               <MailIcon className="h-4 w-4" />
               Message Provider
@@ -479,33 +482,16 @@ function PackageCard({
         )}
       </div>
 
-      <div className="bg-[#f1f4ff] px-4 py-3 text-center text-[11px] font-semibold text-slate-500">
+      <div className="bg-[#f1f4ff] px-4 py-2.5 text-center text-[11px] font-semibold text-slate-500">
         SkillSwap Quality Guarantee
       </div>
     </article>
   );
 }
 
-function SkillMatchCard({ match, skill }: { match: number; skill: string }) {
-  return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-[#1453c4]">Skill Match</h2>
-        <span className="text-sm font-bold text-teal-700">{match}%</span>
-      </div>
-      <div className="mt-3 h-2 rounded-full bg-slate-200">
-        <div className="h-full rounded-full bg-teal-600" style={{ width: `${match}%` }} />
-      </div>
-      <p className="mt-3 break-words text-[11px] leading-4 text-slate-600">
-        Based on this provider&apos;s listed skills and your interest in {skill}.
-      </p>
-    </article>
-  );
-}
-
 function AboutCard({ summary }: { summary: string }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <article className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:p-3.5">
       <h2 className="text-xl font-bold text-slate-900">About this Gig</h2>
       <div className="my-3 border-t border-slate-200" />
       <p className="overflow-hidden break-words text-sm italic leading-6 text-slate-700">
@@ -527,12 +513,12 @@ function InfoCard({
   items: string[];
 }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <article className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:p-3.5">
       <h3 className={`flex items-center gap-2 text-sm font-bold ${titleClass}`}>
         {icon}
         {title}
       </h3>
-      <ul className="mt-3 space-y-2 text-xs leading-5 text-slate-700">
+      <ul className="mt-2.5 space-y-1.5 text-xs leading-5 text-slate-700">
         {items.map((item) => (
           <li key={item} className="flex gap-2">
             <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-current" />
@@ -546,9 +532,9 @@ function InfoCard({
 
 function RequirementsCard({ skill }: { skill: string }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-[#f0efff] p-4 shadow-sm">
+    <article className="rounded-lg border border-slate-200 bg-[#f0efff] p-3 shadow-sm lg:p-3.5">
       <h2 className="text-xl font-bold text-slate-900">Requirements</h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <Requirement title="Task Brief" detail={`What you need help with in ${skill}.`} />
         <Requirement title="Deadline & Level" detail="When you need it and your current skill level." />
         <Requirement title="Files or Links" detail="Share your draft, examples, rubric, or project files." />
@@ -570,9 +556,9 @@ function ReviewsSection({ reviews }: { reviews: ReviewData[] }) {
   const visibleReviews = reviews.length > 0 ? reviews : fallbackGig.reviewCards;
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-2.5">
       <h2 className="text-xl font-bold text-slate-900">What people say about this swap</h2>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         {visibleReviews.slice(0, 2).map((review, index) => (
           <ReviewCard
             key={`${review.name}-${index}`}
@@ -593,7 +579,7 @@ function ReviewCard({
   accent?: "blue" | "teal";
 }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <article className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:p-3.5">
       <div className="flex items-center gap-3">
         <span
           className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white ${

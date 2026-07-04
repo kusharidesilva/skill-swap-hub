@@ -455,7 +455,7 @@ function GigCard({
               href={previewHref}
               className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
             >
-              View More
+              View Gig
             </Link>
             <Link
               href={requestHref}
