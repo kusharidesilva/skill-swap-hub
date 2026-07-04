@@ -36,7 +36,7 @@ const features: Feature[] = [
 
 export default function VerifiedStudentsSection() {
   return (
-    <section className="bg-[#f3f5ff] py-16 sm:py-20">
+    <section id="trust-section" className="bg-[#f3f5ff] py-16 sm:py-20 scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center">
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl leading-tight">
