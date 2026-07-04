@@ -268,7 +268,7 @@ export default function AllRequestServicePage({
         ))}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-3">
+      <section className="grid gap-6 xl:grid-cols-3 xl:auto-rows-fr">
         {visibleRequests.map((request) => (
           <RequestCard key={request.id} request={request} role={role} />
         ))}
@@ -386,7 +386,7 @@ function RequestCard({
   };
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
+    <article className="flex h-full min-h-[620px] flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
       <div className="flex items-start justify-between gap-4">
         <span
           className={`flex h-9 w-9 items-center justify-center rounded-lg ${iconClassName}`}
@@ -477,7 +477,7 @@ function RequestCard({
         </div>
       )}
 
-      <div className="mt-6 border-t border-slate-200 pt-6">
+      <div className="mt-auto border-t border-slate-200 pt-6">
         {needsBuyerReview ? (
           <div className="grid gap-3">
             <p className="text-xs font-semibold text-slate-500">
