@@ -17,6 +17,7 @@ import { type UserProfile } from "@/lib/auth";
 import { scopedHref } from "@/lib/role-routes";
 import { UNIVERSITIES } from "@/lib/universities";
 import { createNotification } from "@/lib/notifications";
+import UniversityCombobox from "@/components/ui/university-combobox";
 
 type IncomingRequestsTab = "new" | "accepted" | "completed" | "declined";
 
@@ -901,22 +902,14 @@ function Field({
 
   if (isUniversity) {
     return (
-      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
-        {label}
-        <input
-          type="text"
-          value={value === "Any University" ? "" : value}
-          onChange={(event) => onChange(event.target.value || "Any University")}
-          placeholder="Type or select university..."
-          list="university-options"
-          className="mt-1.5 h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-[#1453c4] transition-colors"
-        />
-        <datalist id="university-options">
-          {options.map((option) => (
-            <option key={option} value={option} />
-          ))}
-        </datalist>
-      </label>
+      <UniversityCombobox
+        label={label}
+        value={value}
+        onSelect={onChange}
+        emptyValue="Any University"
+        placeholder="Any University"
+        labelClassName="block text-[11px] font-bold uppercase tracking-wider text-slate-500"
+      />
     );
   }
 

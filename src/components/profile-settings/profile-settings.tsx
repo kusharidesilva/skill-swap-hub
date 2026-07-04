@@ -11,7 +11,7 @@ import {
   updatePassword,
 } from "firebase/auth";
 import type { UserProfile } from "@/lib/auth";
-import { UNIVERSITIES } from "@/lib/universities";
+import UniversityCombobox from "@/components/ui/university-combobox";
 
 export type Role = "buyer" | "provider" | "both";
 
@@ -369,22 +369,12 @@ function ProfileSettingsForm({
                   />
                 </label>
 
-                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
-                  University
-                  <input
-                    type="text"
-                    value={university}
-                    onChange={(e) => setUniversity(e.target.value)}
-                    placeholder="Type or select university..."
-                    list="settings-university-options"
-                    className="h-9 min-w-0 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
-                  />
-                  <datalist id="settings-university-options">
-                    {UNIVERSITIES.map((uni) => (
-                      <option key={uni} value={uni} />
-                    ))}
-                  </datalist>
-                </label>
+                <UniversityCombobox
+                  label="University"
+                  value={university}
+                  onSelect={setUniversity}
+                  placeholder="Type or select university..."
+                />
 
                 <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
                   Degree Program

@@ -11,6 +11,7 @@ import { scopedHref, type Role } from "@/lib/role-routes";
 import type { UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { UNIVERSITIES } from "@/lib/universities";
+import UniversityCombobox from "@/components/ui/university-combobox";
 
 type GigCardData = {
   id: string;
@@ -544,24 +545,15 @@ function FiltersSidebar(props: {
 
             if (filter.label === "University") {
               return (
-                <div key={filter.label} className="flex flex-col gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    {filter.label}
-                  </span>
-                  <input
-                    type="text"
-                    value={props.universityFilter === "Any University" ? "" : props.universityFilter}
-                    onChange={(e) => props.setUniversityFilter(e.target.value || "Any University")}
-                    placeholder="Type or select university..."
-                    list="find-university-options"
-                    className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-xs text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
-                  />
-                  <datalist id="find-university-options">
-                    {filter.options.map((option) => (
-                      <option key={option} value={option} />
-                    ))}
-                  </datalist>
-                </div>
+                <UniversityCombobox
+                  key={filter.label}
+                  label={filter.label}
+                  value={props.universityFilter}
+                  onSelect={props.setUniversityFilter}
+                  emptyValue="Any University"
+                  placeholder="Any University"
+                  labelClassName="text-[10px] font-bold uppercase tracking-wider text-slate-400"
+                />
               );
             }
 

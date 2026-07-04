@@ -8,8 +8,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { upgradeToProvider, checkBuyerHistory } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
-import { UNIVERSITIES, isEmailAllowedForUniversity } from "@/lib/universities";
+import { isEmailAllowedForUniversity } from "@/lib/universities";
 import { dashboardHref } from "@/lib/role-routes";
+import UniversityCombobox from "@/components/ui/university-combobox";
 
 const ALL_SKILLS = [
   "Programming",
@@ -51,6 +52,7 @@ export default function ProviderRegisterPage() {
     handleSubmit,
     control,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ProviderValues>({
     resolver: zodResolver(providerSchema),
@@ -98,6 +100,7 @@ export default function ProviderRegisterPage() {
   const selectedSkills = useWatch({ control, name: "skills" }) || [];
   const selectedProficiency = useWatch({ control, name: "proficiency" }) || "Intermediate";
   const selectedAvailability = useWatch({ control, name: "availability" }) || [];
+  const universityValue = watch("university") || "";
 
   // ── Skill tag helpers ────────────────────────────────────────────────────────
 
@@ -278,29 +281,19 @@ export default function ProviderRegisterPage() {
                   Academic Profile
                 </p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-500">
-                      University Name
-                    </label>
-                    <input
-                      id="provider-university"
-                      type="text"
-                      placeholder="Type or select your University"
-                      {...register("university")}
-                      list="provider-university-options"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#2b62e6]"
-                    />
-                    <datalist id="provider-university-options">
-                      {UNIVERSITIES.map((uni) => (
-                        <option key={uni} value={uni} />
-                      ))}
-                    </datalist>
-                    {errors.university && (
-                      <p className="text-[10px] text-red-500">
-                        {errors.university.message}
-                      </p>
-                    )}
-                  </div>
+                  <UniversityCombobox
+                    id="provider-university"
+                    label="University Name"
+                    value={universityValue}
+                    onSelect={(nextValue) =>
+                      setValue("university", nextValue, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                    placeholder="Type or select your University"
+                    error={errors.university?.message}
+                  />
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-slate-500">
                       Degree Programme

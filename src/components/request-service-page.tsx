@@ -21,8 +21,8 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import { type UserProfile } from "@/lib/auth";
-import { UNIVERSITIES } from "@/lib/universities";
 import { createNotification } from "@/lib/notifications";
+import UniversityCombobox from "@/components/ui/university-combobox";
 
 const skillCategories = [
   "Programming",
@@ -228,6 +228,7 @@ function RequestForm({
     }`;
 
   const selectedServiceType = watch("serviceType");
+  const preferredUniversity = watch("preferredUniv") || "";
 
   const onInvalidSubmit = () => {
     setFeedback({
@@ -456,23 +457,18 @@ function RequestForm({
             </div>
           </label>
 
-          <label className="grid min-w-0 gap-1.5">
-            <span className="text-xs font-semibold text-slate-600">
-              Preferred University
-            </span>
-            <select
-              {...register("preferredUniv")}
-              title="Preferred University"
-              className={fieldClassName}
-            >
-              <option value="">Any University</option>
-              {UNIVERSITIES.map((uni) => (
-                <option key={uni} value={uni}>
-                  {uni}
-                </option>
-              ))}
-            </select>
-          </label>
+          <UniversityCombobox
+            label="Preferred University"
+            value={preferredUniversity}
+            onSelect={(nextValue) =>
+              setValue("preferredUniv", nextValue, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+            placeholder="Any University"
+            emptyValue=""
+          />
         </div>
 
         {/* Submit Button */}
