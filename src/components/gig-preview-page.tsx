@@ -24,6 +24,7 @@ type ReviewData = {
 };
 
 type GigPreviewData = {
+  gigId: string;
   providerId: string;
   providerName: string;
   providerDegree: string;
@@ -56,6 +57,7 @@ const gigImages = [
 ];
 
 const fallbackGig: GigPreviewData = {
+  gigId: "preview-provider-0",
   providerId: "preview-provider",
   providerName: "Amara Silva",
   providerDegree: "Creative Design Lead",
@@ -100,7 +102,13 @@ export default function GigPreviewPage({
   const [gig, setGig] = useState<GigPreviewData>(fallbackGig);
   const [loading, setLoading] = useState(Boolean(providerId));
   const isFavorited = Boolean(
-    userProfile?.favorites?.some((fav) => (fav as { providerId?: string }).providerId === gig.providerId),
+    userProfile?.favorites?.some(
+      (fav) =>
+        (fav as { gigId?: string; providerId?: string }).gigId === gig.gigId ||
+        ((fav as { gigId?: string; providerId?: string }).gigId
+          ? false
+          : (fav as { providerId?: string }).providerId === gig.providerId),
+    ),
   );
 
   const handleToggleFavorite = async () => {
@@ -114,13 +122,21 @@ export default function GigPreviewPage({
       let updatedFavorites;
 
       if (isFavorited) {
-        updatedFavorites = favorites.filter((fav) => (fav as { providerId?: string }).providerId !== gig.providerId);
+        updatedFavorites = favorites.filter(
+          (fav) =>
+            (fav as { gigId?: string; providerId?: string }).gigId !== gig.gigId &&
+            !(
+              !(fav as { gigId?: string; providerId?: string }).gigId &&
+              (fav as { providerId?: string }).providerId === gig.providerId
+            ),
+        );
       } else {
         const now = new Date();
         updatedFavorites = [
           ...favorites,
           {
-            id: gig.providerId,
+            id: gig.gigId,
+            gigId: gig.gigId,
             providerId: gig.providerId,
             title: gig.title,
             category: gig.category,
@@ -196,6 +212,7 @@ export default function GigPreviewPage({
           });
 
           const nextGig: GigPreviewData = {
+          gigId: `${user.uid}-${safeSkillIndex}`,
           providerId: user.uid,
           providerName: user.name || "Anonymous Member",
           providerDegree: user.degree || "Undergraduate",

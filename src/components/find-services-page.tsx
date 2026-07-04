@@ -16,6 +16,7 @@ import SelectField from "@/components/ui/select-field";
 
 type GigCardData = {
   id: string;
+  gigId?: string;
   providerId: string;
   skillIndex: number;
   providerName: string;
@@ -334,7 +335,13 @@ function GigCard({
   const { userProfile, refreshProfile } = useAuth();
   const availability = Array.isArray(gig.availability) ? gig.availability.join(", ") : gig.availability;
   const isFavorited = Boolean(
-    userProfile?.favorites?.some((fav) => (fav as { providerId?: string }).providerId === gig.providerId),
+    userProfile?.favorites?.some(
+      (fav) =>
+        (fav as { gigId?: string; providerId?: string }).gigId === gig.id ||
+        ((fav as { gigId?: string; providerId?: string }).gigId
+          ? false
+          : (fav as { providerId?: string }).providerId === gig.providerId),
+    ),
   );
 
   const handleToggleFavorite = async () => {
@@ -348,13 +355,21 @@ function GigCard({
       let updatedFavorites;
 
       if (isFavorited) {
-        updatedFavorites = favorites.filter((fav) => (fav as { providerId?: string }).providerId !== gig.providerId);
+        updatedFavorites = favorites.filter(
+          (fav) =>
+            (fav as { gigId?: string; providerId?: string }).gigId !== gig.id &&
+            !(
+              !(fav as { gigId?: string; providerId?: string }).gigId &&
+              (fav as { providerId?: string }).providerId === gig.providerId
+            ),
+        );
       } else {
         const now = new Date();
         updatedFavorites = [
           ...favorites,
           {
-            id: gig.providerId,
+            id: gig.id,
+            gigId: gig.id,
             providerId: gig.providerId,
             title: gig.title,
             category: gig.category,
@@ -391,13 +406,17 @@ function GigCard({
           <button
             type="button"
             onClick={handleToggleFavorite}
-            aria-label={isFavorited ? "Remove from favorites" : "Save to favorites"}
+            aria-label={isFavorited ? "Remove this gig from favorites" : "Save this gig to favorites"}
             className={`flex h-9 w-9 items-center justify-center rounded-full shadow-sm transition ${
               isFavorited ? "bg-red-500 text-white" : "bg-white/95 text-slate-700 hover:bg-red-50 hover:text-red-600"
             }`}
           >
             <HeartIcon className="h-4.5 w-4.5" filled={isFavorited} />
           </button>
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
+            <StarIcon className="h-3.5 w-3.5 text-amber-400" />
+            {gig.rating > 0 ? gig.rating.toFixed(1) : "New"}
+          </span>
         </div>
       </div>
 
@@ -405,13 +424,6 @@ function GigCard({
         <h2 className="line-clamp-2 text-[0.97rem] font-bold leading-6 text-slate-900">
           {gig.title}
         </h2>
-
-        <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-sm ring-1 ring-slate-200">
-            <StarIcon className="h-3.5 w-3.5 text-amber-400" />
-            {gig.rating > 0 ? gig.rating.toFixed(1) : "New"}
-          </span>
-        </div>
 
         <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
           <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#2f66e7] text-[10px] font-bold text-white ring-2 ring-white">

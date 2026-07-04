@@ -100,7 +100,12 @@ export default function SkillGigsSection() {
             ? Number((ratingData.totalStars / ratingData.count).toFixed(1))
             : 0;
 
-          const gigEntries =
+          const gigEntries: Array<{
+            title: string;
+            category: string;
+            summary: string;
+            image: string;
+          }> =
             storedGigs.length > 0
               ? storedGigs.map((gig: { title?: string; category?: string; summary?: string; image?: string }, skillIndex: number) => ({
                   title: gig.title || skills[skillIndex] || "Student Skill",
@@ -223,7 +228,13 @@ function GigCard({ gig }: { gig: LiveGig }) {
   const previewHref = `/gig-preview/${requestRole}?providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0`;
   const requestHref = `${scopedHref("/request-service", requestRole)}?providerId=${encodeURIComponent(gig.providerId)}`;
   const isFavorited = Boolean(
-    userProfile?.favorites?.some((fav) => (fav as { providerId?: string }).providerId === gig.providerId),
+    userProfile?.favorites?.some(
+      (fav) =>
+        (fav as { gigId?: string; providerId?: string }).gigId === gig.id ||
+        ((fav as { gigId?: string; providerId?: string }).gigId
+          ? false
+          : (fav as { providerId?: string }).providerId === gig.providerId),
+    ),
   );
 
   const handleToggleFavorite = async () => {
@@ -237,13 +248,21 @@ function GigCard({ gig }: { gig: LiveGig }) {
       let updatedFavorites;
 
       if (isFavorited) {
-        updatedFavorites = favorites.filter((fav) => (fav as { providerId?: string }).providerId !== gig.providerId);
+        updatedFavorites = favorites.filter(
+          (fav) =>
+            (fav as { gigId?: string; providerId?: string }).gigId !== gig.id &&
+            !(
+              !(fav as { gigId?: string; providerId?: string }).gigId &&
+              (fav as { providerId?: string }).providerId === gig.providerId
+            ),
+        );
       } else {
         const now = new Date();
         updatedFavorites = [
           ...favorites,
           {
-            id: gig.providerId,
+            id: gig.id,
+            gigId: gig.id,
             providerId: gig.providerId,
             title: gig.title,
             category: gig.category,
@@ -285,7 +304,7 @@ function GigCard({ gig }: { gig: LiveGig }) {
           <button
             type="button"
             onClick={handleToggleFavorite}
-            aria-label={isFavorited ? "Remove from favorites" : "Save to favorites"}
+            aria-label={isFavorited ? "Remove this gig from favorites" : "Save this gig to favorites"}
             className={`flex h-9 w-9 items-center justify-center rounded-full shadow-sm transition ${
               isFavorited ? "bg-red-500 text-white" : "bg-white/95 text-slate-700 hover:bg-red-50 hover:text-red-600"
             }`}

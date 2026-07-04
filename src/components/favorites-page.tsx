@@ -9,6 +9,7 @@ import { doc, updateDoc } from "firebase/firestore";
 
 type SavedSkill = {
   id: string;
+  gigId?: string;
   providerId: string;
   title: string;
   category: string;
@@ -41,10 +42,14 @@ export default function FavoritesPage() {
     return (userProfile?.favorites || []) as SavedSkill[];
   }, [userProfile]);
 
-  const handleRemoveFavorite = async (providerId: string) => {
+  const handleRemoveFavorite = async (favoriteKey: string) => {
     if (!userProfile) return;
     try {
-      const updated = savedSkills.filter((fav) => fav.providerId !== providerId);
+      const updated = savedSkills.filter(
+        (fav) =>
+          fav.gigId !== favoriteKey &&
+          !(fav.gigId ? false : fav.providerId === favoriteKey),
+      );
       await updateDoc(doc(db, "users", userProfile.uid), {
         favorites: updated,
       });
@@ -79,7 +84,7 @@ export default function FavoritesPage() {
       <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col items-center gap-4">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
-          <p className="text-sm text-slate-500">Loading saved skills...</p>
+          <p className="text-sm text-slate-500">Loading saved gigs...</p>
         </div>
       </div>
     );
@@ -94,10 +99,10 @@ export default function FavoritesPage() {
               Wishlist
             </p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-              Saved Skills
+              Saved Gigs
             </h1>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Keep your favourite skills in one place and revisit them when you
+              Keep your favourite gig cards in one place and revisit them when you
               are ready to book, compare, or share with a friend.
             </p>
           </div>
@@ -113,12 +118,12 @@ export default function FavoritesPage() {
 
         <div className="mt-6 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
           <label className="relative block">
-            <span className="sr-only">Search saved skills</span>
+            <span className="sr-only">Search saved gigs</span>
             <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
             <input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by skill, tutor, or category"
+              placeholder="Search by gig, tutor, or category"
               className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:bg-white focus:ring-4 focus:ring-blue-100"
             />
           </label>
@@ -178,13 +183,13 @@ export default function FavoritesPage() {
       ) : (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">
-            No saved skills found
+            No saved gigs found
           </h2>
           <p className="mt-2 text-sm text-slate-500">
             {savedSkills.length === 0
-              ? "Browse provider profiles and save your favorites here!"
-              : "Try a different search term or choose another category."}
-          </p>
+              ? "Browse gig cards and save your favorites here!"
+                : "Try a different search term or choose another category."}
+            </p>
         </div>
       )}
     </section>
@@ -227,13 +232,13 @@ function FilterChip({
 }
 
 function SavedSkillCard({
-  skill,
-  onRemove,
+    skill,
+    onRemove,
   role,
   listView = false,
 }: {
   skill: SavedSkill;
-  onRemove: (providerId: string) => void;
+  onRemove: (favoriteKey: string) => void;
   role?: string;
   listView?: boolean;
 }) {
@@ -255,8 +260,8 @@ function SavedSkillCard({
         </span>
         <button
           type="button"
-          onClick={() => onRemove(skill.providerId)}
-          aria-label={`Remove ${skill.title} from saved skills`}
+          onClick={() => onRemove(skill.gigId || skill.providerId)}
+          aria-label={`Remove ${skill.title} from saved gigs`}
           className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm transition hover:scale-105 hover:bg-red-50 text-red-600"
         >
           <HeartFillIcon className="h-5 w-5" />
