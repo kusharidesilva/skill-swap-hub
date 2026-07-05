@@ -51,7 +51,7 @@ const requestServiceSchema = z.object({
     .refine((value) => value.length >= 10, "Description must contain at least 10 characters."),
   level: z.string(),
   serviceType: z.enum(serviceTypeOptions),
-  time: z.string().trim().min(1, "Preferred Time is required."),
+  time: z.string().trim().optional().or(z.literal("")),
   preferredUniv: z.string().trim().optional(),
 });
 
@@ -232,6 +232,18 @@ function RequestForm({
   const preferredUniversity = useWatch({ control, name: "preferredUniv" }) || "";
   const selectedCategory = useWatch({ control, name: "category" });
   const selectedLevel = useWatch({ control, name: "level" });
+  const requestTitle = useWatch({ control, name: "title" }) || "";
+  const requestDescription = useWatch({ control, name: "description" }) || "";
+
+  useEffect(() => {
+    if (
+      feedback?.type === "error" &&
+      requestTitle.trim().length > 0 &&
+      requestDescription.trim().length >= 10
+    ) {
+      setFeedback(null);
+    }
+  }, [feedback, requestTitle, requestDescription]);
 
   const onInvalidSubmit = () => {
     setFeedback({
@@ -259,7 +271,7 @@ function RequestForm({
         description: data.description.trim(),
         level: data.level,
         serviceType: data.serviceType,
-        time: data.time.trim(),
+        time: data.time?.trim() || "",
         university: data.preferredUniv?.trim() || "",
         budget: "Free Swap",
         status: "pending",
@@ -314,6 +326,7 @@ function RequestForm({
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <form
         onSubmit={handleSubmit(onSubmit, onInvalidSubmit)}
+        noValidate
         className="grid gap-4"
       >
         {feedback && (
@@ -368,7 +381,6 @@ function RequestForm({
           </span>
           <textarea
             rows={4}
-            minLength={10}
             {...register("description")}
             placeholder="Describe your need in 10+ characters..."
             aria-invalid={Boolean(errors.description)}
@@ -405,7 +417,7 @@ function RequestForm({
 
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">
-              Preferred Time <span className="text-red-500">*</span>
+              Preferred Time
             </span>
             <input
               type="text"
@@ -414,11 +426,6 @@ function RequestForm({
               aria-invalid={Boolean(errors.time)}
               className={getFieldClassName(Boolean(errors.time))}
             />
-            {errors.time && (
-              <p className="text-xs font-medium text-red-600">
-                {errors.time.message}
-              </p>
-            )}
           </label>
         </div>
 

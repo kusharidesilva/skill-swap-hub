@@ -6,7 +6,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { resetPassword } from "@/lib/auth";
+import { db } from "@/lib/firebase";
+import { isUniversityEmail } from "@/lib/universities";
 
 type Badge = {
   label: string;
@@ -22,9 +25,14 @@ const badges: Badge[] = [
 // Step 2 – success (email sent)
 type Step = "recovery" | "sent";
 
-const recoverySchema = z.object({
-  email: z.string().email("Enter a valid university email."),
-});
+const recoverySchema = z
+  .object({
+    email: z.string().email("Enter a valid university email."),
+  })
+  .refine((value) => isUniversityEmail(value.email), {
+    message: "Only official campus emails can be used for account recovery.",
+    path: ["email"],
+  });
 
 type RecoveryValues = z.infer<typeof recoverySchema>;
 
@@ -45,13 +53,53 @@ export default function ForgotPasswordFlow() {
   const onRecoverySubmit = async (data: RecoveryValues) => {
     setServerError("");
     try {
-      await resetPassword(data.email);
-      setSentEmail(data.email);
+      const trimmedEmail = data.email.trim();
+      const normalizedEmail = trimmedEmail.toLowerCase();
+
+      const emailQueries =
+        normalizedEmail === trimmedEmail
+          ? [
+              query(
+                collection(db, "users"),
+                where("email", "==", normalizedEmail),
+              ),
+            ]
+          : [
+              query(
+                collection(db, "users"),
+                where("email", "==", trimmedEmail),
+              ),
+              query(
+                collection(db, "users"),
+                where("email", "==", normalizedEmail),
+              ),
+            ];
+
+      let hasRegisteredUser = false;
+      for (const userQuery of emailQueries) {
+        const userSnapshot = await getDocs(userQuery);
+        if (!userSnapshot.empty) {
+          hasRegisteredUser = true;
+          break;
+        }
+      }
+
+      if (!hasRegisteredUser) {
+        setServerError(
+          "No Skill Swap Hub account was found for that university email.",
+        );
+        return;
+      }
+
+      await resetPassword(trimmedEmail);
+      setSentEmail(trimmedEmail);
       setStep("sent");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
       if (msg.includes("user-not-found")) {
-        setServerError("No account found with that email address.");
+        setServerError(
+          "No Skill Swap Hub account was found for that university email.",
+        );
       } else {
         setServerError(msg);
       }

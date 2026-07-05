@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   collection,
   query,
   where,
   onSnapshot,
   doc,
+  getDoc,
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
@@ -31,6 +33,7 @@ interface RequestData {
   id: string;
   buyerId: string;
   buyerName: string;
+  buyerProfileImageUrl?: string;
   buyerUniversity: string;
   buyerDegree: string;
   buyerYearOfStudy: string;
@@ -91,7 +94,7 @@ export default function IncomingRequestsPageContent({
             { id: docSnap.id, ...docSnap.data() } as RequestData,
           );
         });
-        updateMergedRequests();
+        void updateMergedRequests();
       },
       (err) => {
         console.error("Error subscribing to specific requests:", err);
@@ -109,7 +112,7 @@ export default function IncomingRequestsPageContent({
             { id: docSnap.id, ...docSnap.data() } as RequestData,
           );
         });
-        updateMergedRequests();
+        void updateMergedRequests();
       },
       (err) => {
         console.error("Error subscribing to general requests:", err);
@@ -117,10 +120,38 @@ export default function IncomingRequestsPageContent({
       },
     );
 
-    const updateMergedRequests = () => {
-      const docs = Array.from(mergedRequests.values());
-      docs.sort((a, b) => b.id.localeCompare(a.id));
-      setRequests(docs);
+    const updateMergedRequests = async () => {
+      const docs = Array.from(mergedRequests.values()).filter(
+        (request) =>
+          !(
+            request.providerId === "general" &&
+            request.buyerId === userProfile.uid
+          ),
+      );
+
+      const buyerImageEntries = await Promise.all(
+        docs.map(async (request) => {
+          if (!request.buyerId) return [request.buyerId, ""] as const;
+          try {
+            const buyerSnapshot = await getDoc(doc(db, "users", request.buyerId));
+            const buyerData = buyerSnapshot.exists()
+              ? (buyerSnapshot.data() as { profileImageUrl?: string })
+              : null;
+            return [request.buyerId, buyerData?.profileImageUrl || ""] as const;
+          } catch (err) {
+            console.error("Error fetching buyer profile image:", err);
+            return [request.buyerId, ""] as const;
+          }
+        }),
+      );
+
+      const buyerImageMap = new Map(buyerImageEntries);
+      const hydratedDocs = docs.map((request) => ({
+        ...request,
+        buyerProfileImageUrl: buyerImageMap.get(request.buyerId) || "",
+      }));
+      hydratedDocs.sort((a, b) => b.id.localeCompare(a.id));
+      setRequests(hydratedDocs);
       setFetching(false);
     };
 
@@ -258,8 +289,43 @@ function NewRequestsView({
   role: "provider" | "both";
   userProfile: UserProfile | null;
 }) {
-  const [category, setCategory] = useState("All Categories");
-  const [university, setUniversity] = useState("Any University");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const categoryOptions = [
+    "All Categories",
+    "Programming",
+    "UX Design",
+    "Graphic Design",
+    "Mathematics",
+    "Photography",
+    "Video Editing",
+    "Data Analysis",
+    "Web Development",
+    "Content Writing",
+    "Music",
+  ];
+  const universityOptions = ["Any University", ...UNIVERSITIES];
+  const [category, setCategory] = useState(
+    searchParams.get("category") || "All Categories",
+  );
+  const [university, setUniversity] = useState(
+    searchParams.get("university") || "Any University",
+  );
+
+  useEffect(() => {
+    const nextCategory = searchParams.get("category") || "All Categories";
+    const nextUniversity = searchParams.get("university") || "Any University";
+
+    setCategory(
+      categoryOptions.includes(nextCategory) ? nextCategory : "All Categories",
+    );
+    setUniversity(
+      universityOptions.includes(nextUniversity)
+        ? nextUniversity
+        : "Any University",
+    );
+  }, [searchParams]);
 
   // Filtering
   const filteredRequests = useMemo(() => {
@@ -278,8 +344,32 @@ function NewRequestsView({
     });
   }, [requests, category, university]);
 
-  const activeRequest = filteredRequests[0] ?? null;
-  const isGeneralRequest = activeRequest?.providerId === "general";
+  const hasActiveFilters =
+    category !== "All Categories" || university !== "Any University";
+
+  const updateFilters = (
+    nextCategory: string,
+    nextUniversity: string,
+  ) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (nextCategory === "All Categories") {
+      params.delete("category");
+    } else {
+      params.set("category", nextCategory);
+    }
+
+    if (nextUniversity === "Any University") {
+      params.delete("university");
+    } else {
+      params.set("university", nextUniversity);
+    }
+
+    const nextQuery = params.toString();
+    router.push(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+      scroll: false,
+    });
+  };
 
   const handleDecision = async (
     reqId: string,
@@ -319,115 +409,175 @@ function NewRequestsView({
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[340px_minmax(0,1fr)]">
-      <article className="rounded-xl border border-slate-200 bg-[#f7f8ff] p-5 shadow-sm h-fit">
-        <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
-          Filters
-        </h2>
-        <div className="mt-4 space-y-4">
-          <Field
-            label="Category"
-            value={category}
-            options={[
-              "All Categories",
-              "Programming",
-              "UX Design",
-              "Graphic Design",
-              "Mathematics",
-              "Photography",
-              "Video Editing",
-              "Data Analysis",
-              "Web Development",
-              "Content Writing",
-              "Music",
-            ]}
-            onChange={setCategory}
-          />
-          <Field
-            label="University"
-            value={university}
-            options={[
-              "Any University",
-              ...UNIVERSITIES,
-            ]}
-            onChange={setUniversity}
-          />
+    <div className="space-y-5">
+      <article className="rounded-2xl border border-slate-200 bg-[#f7f8ff] p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-center">
+          <div className="grid w-full gap-4 md:grid-cols-2 xl:max-w-3xl">
+            <Field
+              label="Category"
+              value={category}
+              options={categoryOptions}
+              fieldClassName="min-h-10 text-sm font-medium"
+              onChange={(nextCategory) => {
+                setCategory(nextCategory);
+                updateFilters(nextCategory, university);
+              }}
+            />
+            <Field
+              label="University"
+              value={university}
+              options={universityOptions}
+              fieldClassName="min-h-10 text-sm font-medium"
+              onChange={(nextUniversity) => {
+                setUniversity(nextUniversity);
+                updateFilters(category, nextUniversity);
+              }}
+            />
+          </div>
         </div>
       </article>
 
-      {activeRequest ? (
-        <article className="rounded-xl border border-slate-200 bg-[#f7f8ff] p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-slate-800">
-                {activeRequest.buyerName.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-900">
-                  {activeRequest.buyerName}
-                </p>
-                <p className="text-[11px] text-slate-500">
-                  {activeRequest.buyerDegree} - {activeRequest.buyerUniversity}{" "}
-                  ({activeRequest.buyerYearOfStudy})
-                </p>
-              </div>
-            </div>
-            <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-bold text-teal-700">
-              Matched Buyer
-            </span>
-          </div>
+      {filteredRequests.length > 0 ? (
+        <div className="grid items-start gap-4 md:grid-cols-2 2xl:grid-cols-3">
+          {filteredRequests.map((request) => {
+            const isGeneralRequest = request.providerId === "general";
 
-          <div className="pt-3">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-              Skill Needed
-            </p>
-            <p className="mt-0.5 text-sm font-extrabold text-[#1453c4]">
-              {activeRequest.title}
-            </p>
-            <p className="mt-1.5 max-w-3xl text-xs leading-relaxed text-slate-600">
-              {activeRequest.description}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-slate-500 border-t border-slate-100 pt-2.5">
-              <span className="font-medium">📅 Time: {activeRequest.time}</span>
-              <span className="font-medium">
-                💼 Type: {activeRequest.serviceType}
-              </span>
-              <span className="font-medium">
-                💰 Budget: {activeRequest.budget}
-              </span>
-              <span className="font-medium">
-                🎓 Level: {activeRequest.level}
-              </span>
-            </div>
-          </div>
+            return (
+              <article
+                key={request.id}
+                className="flex h-[380px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 text-sm font-bold text-slate-800 ${
+                        hasActiveFilters
+                          ? "border-[#2f66e7] bg-blue-100"
+                          : "border-emerald-500 bg-emerald-50"
+                      }`}
+                    >
+                      {request.buyerProfileImageUrl ? (
+                        <img
+                          src={request.buyerProfileImageUrl}
+                          alt={request.buyerName}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        request.buyerName.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-bold leading-5 text-slate-900">
+                        {request.buyerName}
+                      </p>
+                      <p className="truncate text-xs leading-5 text-slate-500">
+                        {request.buyerDegree}
+                      </p>
+                      <p className="truncate whitespace-nowrap text-xs leading-5 text-slate-500">
+                        {request.buyerUniversity} ({request.buyerYearOfStudy})
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex min-h-6 shrink-0 items-start">
+                    {hasActiveFilters ? (
+                      <span className="group relative inline-flex h-5 w-5 items-center justify-center">
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#1453c4]" />
+                        <span className="pointer-events-none absolute right-0 top-6 z-10 whitespace-nowrap rounded-md bg-[#1453c4] px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-sm transition group-hover:opacity-100">
+                          Matched
+                        </span>
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
 
-          <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-3">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleDecision(activeRequest.id, "working")}
-                className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs"
-              >
-                Accept Swap
-              </button>
-              {!isGeneralRequest && (
-                <button
-                  onClick={() => handleDecision(activeRequest.id, "rejected")}
-                  className="rounded-lg border border-red-300 hover:bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700"
-                >
-                  Decline
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-3 text-xs font-semibold">
-              <Link
-                href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(activeRequest.buyerId)}&subject=${encodeURIComponent(activeRequest.title)}`}
-                className="text-[#1453c4] hover:underline"
-              >
-                Chat Now
-              </Link>
-            </div>
-          </div>
-        </article>
+                <div className="flex min-h-0 flex-1 flex-col pt-3">
+                  <span className="inline-flex w-fit rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#1453c4]">
+                    {request.category}
+                  </span>
+                  <div className="mt-3 flex items-baseline gap-2">
+                    <p className="line-clamp-2 text-[15px] font-extrabold leading-5 text-[#1453c4]">
+                      {request.title}
+                    </p>
+                    <p className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                      Skill Needed
+                    </p>
+                  </div>
+
+                  <div className="relative mt-3 min-h-0 flex-1 overflow-hidden">
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-5 bg-gradient-to-t from-white via-white/85 to-transparent" />
+                    <div className="min-h-0 flex h-full flex-col space-y-3 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <p className="line-clamp-3 text-sm leading-6 text-slate-600">
+                      {request.description}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#f7f8ff] p-2.5 text-[11px] text-slate-600">
+                      <div className="min-w-0 rounded-lg bg-white/70 px-2.5 py-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Time
+                        </p>
+                        <p className="mt-1 truncate font-semibold text-slate-700">
+                          {request.time}
+                        </p>
+                      </div>
+                      <div className="min-w-0 rounded-lg bg-white/70 px-2.5 py-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Type
+                        </p>
+                        <p className="mt-1 truncate font-semibold text-slate-700">
+                          {request.serviceType}
+                        </p>
+                      </div>
+                      <div className="min-w-0 rounded-lg bg-white/70 px-2.5 py-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Budget
+                        </p>
+                        <p className="mt-1 truncate font-semibold text-slate-700">
+                          {request.budget}
+                        </p>
+                      </div>
+                      <div className="min-w-0 rounded-lg bg-white/70 px-2.5 py-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Level
+                        </p>
+                        <p className="mt-1 truncate font-semibold text-slate-700">
+                          {request.level}
+                        </p>
+                      </div>
+                    </div>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`mt-3 grid gap-2 border-t border-slate-100 pt-3 ${
+                      isGeneralRequest ? "grid-cols-2" : "grid-cols-3"
+                    }`}
+                  >
+                    <button
+                      onClick={() => handleDecision(request.id, "working")}
+                      className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700"
+                    >
+                      Accept Swap
+                    </button>
+                    {!isGeneralRequest && (
+                      <button
+                        onClick={() => handleDecision(request.id, "rejected")}
+                        className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50"
+                      >
+                        Decline
+                      </button>
+                    )}
+                    <Link
+                      href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(request.buyerId)}&subject=${encodeURIComponent(request.title)}`}
+                      className="inline-flex items-center justify-center rounded-lg border border-[#1453c4] px-3 py-2 text-xs font-bold text-[#1453c4] transition hover:bg-blue-50"
+                    >
+                      Chat
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       ) : (
         <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500 shadow-sm">
           No incoming skill swap requests match the current filters.
@@ -436,7 +586,6 @@ function NewRequestsView({
     </div>
   );
 }
-
 function AcceptedView({
   requests,
   role,
@@ -898,11 +1047,13 @@ function Field({
   value,
   options,
   onChange,
+  fieldClassName = "",
 }: {
   label: string;
   value: string;
   options: string[];
   onChange: (value: string) => void;
+  fieldClassName?: string;
 }) {
   const isUniversity = label.toLowerCase() === "university";
 
@@ -915,6 +1066,7 @@ function Field({
         emptyValue="Any University"
         placeholder="Any University"
         labelClassName="block text-[11px] font-bold uppercase tracking-wider text-slate-500"
+        className={fieldClassName}
       />
     );
   }
@@ -926,7 +1078,8 @@ function Field({
       onChange={onChange}
       options={options}
       labelClassName="text-[11px] font-bold uppercase tracking-wider text-slate-500"
-      className="h-9 px-2.5 text-xs font-semibold text-slate-700"
+      className={`h-10 px-2.5 text-xs font-semibold text-slate-700 ${fieldClassName}`}
     />
   );
 }
+
