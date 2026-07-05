@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 
@@ -115,7 +115,28 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
       }
     }
 
-    load();
+    const providerQuery = query(
+      collection(db, "requests"),
+      where("providerId", "==", userProfile.uid),
+      where("status", "==", "completed")
+    );
+    const buyerQuery = query(
+      collection(db, "requests"),
+      where("buyerId", "==", userProfile.uid),
+      where("status", "==", "completed")
+    );
+
+    const unsubscribeProvider = onSnapshot(providerQuery, () => {
+      void load();
+    });
+    const unsubscribeBuyer = onSnapshot(buyerQuery, () => {
+      void load();
+    });
+
+    return () => {
+      unsubscribeProvider();
+      unsubscribeBuyer();
+    };
   }, [userProfile]);
 
   const activeList = tab === "received" ? received : given;
@@ -155,9 +176,9 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
       {role !== "buyer" && (
         <div className="grid gap-4 sm:grid-cols-2">
           <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm text-center">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Global Rating</p>
-            <p className="mt-2 text-3xl font-bold text-[#1453c4]">{avgRating}<span className="text-base text-slate-400"> / 5</span></p>
-            <p className="mt-1 text-amber-500">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Rating</p>
+            <p className="mt-2 text-4xl font-bold leading-none text-[#1453c4]">{avgRating}</p>
+            <p className="mt-2 text-lg leading-none text-amber-500">
               {avgRating !== "–" 
                 ? "★".repeat(Math.round(Number(avgRating) || 0)) + "☆".repeat(5 - Math.round(Number(avgRating) || 0)) 
                 : "☆☆☆☆☆"}
