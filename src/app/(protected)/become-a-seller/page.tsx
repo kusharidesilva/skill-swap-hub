@@ -1,5 +1,5 @@
-import ProviderRegisterPage from "@/components/login flow/provider-register-page";
+import ProviderRegisterPage from "@/components/login flow/provider-register-page"; 
 
-export default function BecomeASeller() {
-  return <ProviderRegisterPage />;
-}
+export default function BecomeASeller() { 
+  return <ProviderRegisterPage />; 
+}   

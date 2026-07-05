@@ -1,9 +1,9 @@
-import SiteFooter from "@/components/footer";
-import Navbar from "@/components/navbar";
-import BuyerProfilePublicPage from "@/components/buyer-profile-public-page";
-import { isRole } from "@/lib/role-routes";
+import SiteFooter from "@/components/footer"; 
+import Navbar from "@/components/navbar"; 
+import BuyerProfilePublicPage from "@/components/buyer-profile-public-page"; 
+import { isRole } from "@/lib/role-routes"; 
 
-type BuyerProfilePageProps = {
+type BuyerProfilePageProps = { 
   params: Promise<{
     buyerId: string;
   }>;

@@ -6,14 +6,14 @@ import Navbar from "@/components/navbar";
 import ProfileShell from "@/components/profile-shell";
 import { homeHref, isRole } from "@/lib/role-routes";
 
-type GigPreviewByRolePageProps = {
+type GigPreviewByRolePageProps = { 
   params: Promise<{ role?: string | string[] }>;
-  searchParams: Promise<{
-    source?: string | string[];
-    gigId?: string | string[];
-    providerId?: string | string[];
-    skillIndex?: string | string[];
-  }>;
+  searchParams: Promise<{ 
+    source?: string | string[]; 
+    gigId?: string | string[]; 
+    providerId?: string | string[]; 
+    skillIndex?: string | string[]; 
+  }>; 
 };
 
 export default async function GigPreviewByRolePage({ params, searchParams }: GigPreviewByRolePageProps) {
@@ -22,10 +22,10 @@ export default async function GigPreviewByRolePage({ params, searchParams }: Gig
   const source = query.source;
   const gigId = query.gigId;
   const providerId = typeof query.providerId === "string" ? query.providerId : undefined;
-  const skillIndex =
-    typeof query.skillIndex === "string" ? Number.parseInt(query.skillIndex, 10) : undefined;
+  const skillIndex = 
+    typeof query.skillIndex === "string" ? Number.parseInt(query.skillIndex, 10) : undefined; 
 
-  if (!isRole(role)) {
+  if (!isRole(role)) { 
     notFound();
   }
 
@@ -33,7 +33,7 @@ export default async function GigPreviewByRolePage({ params, searchParams }: Gig
     source === "edit" && typeof gigId === "string" && gigId
       ? `/edit-gig/${role}/${gigId}`
       : source === "find"
-        ? `/find-services/${role}`
+        ? `/find-services/${role}` 
       : source === "home"
         ? homeHref(role)
       : `/post-gig/${role}`;

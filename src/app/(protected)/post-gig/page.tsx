@@ -1,4 +1,4 @@
-import ProfileShell from "@/components/profile-shell";
+import ProfileShell from "@/components/profile-shell"; 
 import PostNewGigPage from "@/components/post-new-gig-page";
 
 export default function PostGigPage() {

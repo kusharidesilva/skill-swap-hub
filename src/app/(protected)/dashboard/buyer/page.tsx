@@ -1,5 +1,5 @@
-import DashboardView from "@/components/dashboard-view";
+import DashboardView from "@/components/dashboard-view"; 
 
-export default function BuyerDashboardPage() {
-  return <DashboardView role="buyer" />;
-}
+export default function BuyerDashboardPage() { 
+  return <DashboardView role="buyer" />; 
+} 

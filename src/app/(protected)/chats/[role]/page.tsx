@@ -16,18 +16,18 @@ export default async function RoleChatsPage({ params }: RolePageProps) {
     notFound();
   }
 
-  return (
-    <ProfileShell role={role}>
-      <Suspense fallback={
-        <div className="flex h-[400px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
-            <p className="text-sm text-slate-500">Loading chat session...</p>
-          </div>
-        </div>
-      }>
-        <ChatsPage role={role} />
-      </Suspense>
-    </ProfileShell>
+  return ( 
+    <ProfileShell role={role}> 
+      <Suspense fallback={ 
+        <div className="flex h-[400px] items-center justify-center rounded-2xl border border-slate-200 bg-white"> 
+          <div className="flex flex-col items-center gap-3"> 
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" /> 
+            <p className="text-sm text-slate-500">Loading chat session...</p>  
+          </div> 
+        </div> 
+      }> 
+        <ChatsPage role={role} /> 
+      </Suspense> 
+    </ProfileShell> 
   );
 }
