@@ -8,7 +8,7 @@ export default function AboutProvider() {
       <Navbar />
       <AboutPage
         primaryCtaLabel="Learn More"
-        primaryCtaHref="#story"
+        primaryCtaHref="#story" 
         secondaryCtaLabel="Explore Skills"
         secondaryCtaHref="/home/provider#explore-skills"
         ctaButtonLabel="Go to Dashboard"

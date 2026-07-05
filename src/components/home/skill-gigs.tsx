@@ -2,45 +2,45 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; 
 import { collection, doc, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import { usePathname } from "next/navigation";
-import type { SVGProps } from "react";
-import { db } from "@/lib/firebase";
-import { formatRatingLabel } from "@/lib/ratings";
-import { scopedHref } from "@/lib/role-routes";
-import { useAuth } from "@/context/AuthContext";
+import type { SVGProps } from "react"; 
+import { db } from "@/lib/firebase"; 
+import { formatRatingLabel } from "@/lib/ratings"; 
+import { scopedHref } from "@/lib/role-routes"; 
+import { useAuth } from "@/context/AuthContext"; 
+ 
+const gigImages = [ 
+  "/img/package%201.jpg", 
+  "/img/package%202.jpg", 
+  "/img/package%203.jpg", 
+  "/img/package%204.jpg",  
+]; 
 
-const gigImages = [
-  "/img/package%201.jpg",
-  "/img/package%202.jpg",
-  "/img/package%203.jpg",
-  "/img/package%204.jpg",
-];
-
-type LiveGig = {
-  id: string;
-  providerId: string;
+type LiveGig = { 
+  id: string; 
+  providerId: string; 
   title: string;
   category: string;
   rating: number;
   providerName: string;
-  university: string;
+  university: string; 
   providerImage?: string;
   summary: string;
-  availability: string;
+  availability: string; 
   image: string;
-  serviceType: string;
+  serviceType: string; 
   tags: string[];
-};
+}; 
 
 export default function SkillGigsSection() {
   const pathname = usePathname();
-  const { userProfile } = useAuth();
-  const [gigs, setGigs] = useState<LiveGig[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { userProfile } = useAuth(); 
+  const [gigs, setGigs] = useState<LiveGig[]>([]); 
+  const [loading, setLoading] = useState(true); 
   const [ratingsVersion, setRatingsVersion] = useState(0);
-
+ 
   const isBuyerHome = pathname === "/home/buyer";
   const isProviderHome = pathname === "/home/provider";
   const isBothHome = pathname === "/home/both";
@@ -62,11 +62,11 @@ export default function SkillGigsSection() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    async function fetchGigs() {
-      try {
-        const usersSnap = await getDocs(collection(db, "users"));
-        const requestsSnap = await getDocs(query(collection(db, "requests"), where("status", "==", "completed")));
+  useEffect(() => { 
+    async function fetchGigs() { 
+      try { 
+        const usersSnap = await getDocs(collection(db, "users")); 
+        const requestsSnap = await getDocs(query(collection(db, "requests"), where("status", "==", "completed"))); 
         const ratingsMap: Record<string, { totalStars: number; count: number }> = {};
 
         requestsSnap.forEach((reqDoc) => {
@@ -79,45 +79,45 @@ export default function SkillGigsSection() {
           }
         });
 
-        const liveGigs: LiveGig[] = [];
+        const liveGigs: LiveGig[] = []; 
 
-        usersSnap.forEach((userDoc) => {
-          if (userProfile && userDoc.id === userProfile.uid) return;
-
-          const user = userDoc.data();
-          const skills: string[] = user.providerProfile?.skills || [];
-          const storedGigs = user.providerProfile?.gigs || [];
-          const providerName: string = user.name || "Campus Student";
-          const university: string = user.university || "Campus";
-          const providerImage: string = user.profileImageUrl || "";
-          const availability: string =
-            typeof user.providerProfile?.availability === "string"
-              ? user.providerProfile.availability
-              : Array.isArray(user.providerProfile?.availability)
-                ? (user.providerProfile.availability[0] as string) || "Flexible"
-                : "Flexible";
-          const ratingData = ratingsMap[userDoc.id];
+        usersSnap.forEach((userDoc) => { 
+          if (userProfile && userDoc.id === userProfile.uid) return; 
+ 
+          const user = userDoc.data(); 
+          const skills: string[] = user.providerProfile?.skills || []; 
+          const storedGigs = user.providerProfile?.gigs || []; 
+          const providerName: string = user.name || "Campus Student"; 
+          const university: string = user.university || "Campus"; 
+          const providerImage: string = user.profileImageUrl || ""; 
+          const availability: string = 
+            typeof user.providerProfile?.availability === "string" 
+              ? user.providerProfile.availability 
+              : Array.isArray(user.providerProfile?.availability) 
+                ? (user.providerProfile.availability[0] as string) || "Flexible" 
+                : "Flexible"; 
+          const ratingData = ratingsMap[userDoc.id]; 
           const rating = ratingData
             ? Number((ratingData.totalStars / ratingData.count).toFixed(1))
-            : 0;
+            : 0; 
 
-          const gigEntries: Array<{
-            title: string;
-            category: string;
-            summary: string;
-            image: string;
+          const gigEntries: Array<{ 
+            title: string; 
+            category: string; 
+            summary: string; 
+            image: string; 
           }> =
             storedGigs.length > 0
-              ? storedGigs.map((gig: { title?: string; category?: string; summary?: string; image?: string }, skillIndex: number) => ({
-                  title: gig.title || skills[skillIndex] || "Student Skill",
-                  category: gig.category || skills[skillIndex] || "Skill",
-                  summary:
-                    gig.summary ||
-                    `Practical support from a verified university student.`,
-                  image:
-                    gig.image ||
-                    user.providerProfile?.gigImages?.[skillIndex] ||
-                    gigImages[skillIndex % gigImages.length],
+              ? storedGigs.map((gig: { title?: string; category?: string; summary?: string; image?: string }, skillIndex: number) => ({ 
+                  title: gig.title || skills[skillIndex] || "Student Skill", 
+                  category: gig.category || skills[skillIndex] || "Skill", 
+                  summary: 
+                    gig.summary || 
+                    `Practical support from a verified university student.`, 
+                  image: 
+                    gig.image || 
+                    user.providerProfile?.gigImages?.[skillIndex] || 
+                    gigImages[skillIndex % gigImages.length], 
                 }))
               : skills.map((skill, skillIndex) => ({
                   title: `I will do ${skill}`,

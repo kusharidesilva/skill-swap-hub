@@ -1,6 +1,6 @@
 import SiteFooter from "@/components/footer";
 import SupportPage from "@/components/support-page";
-import Navbar from "@/components/navbar";
+import Navbar from "@/components/navbar"; 
 
 export default function HelpBuyer() {
   return (
@@ -9,5 +9,5 @@ export default function HelpBuyer() {
       <SupportPage />
       <SiteFooter role="buyer" />
     </div>
-  );
+  ); 
 }

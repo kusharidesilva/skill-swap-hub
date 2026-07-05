@@ -4,7 +4,7 @@ import ProfileShell from "@/components/profile-shell";
 export default function BuyerProfilePage() {
   return (
     <ProfileShell role="buyer">
-      <Profile role="buyer" />
+      <Profile role="buyer" /> 
     </ProfileShell>
   );
 }

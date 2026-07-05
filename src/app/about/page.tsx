@@ -1,5 +1,5 @@
 import AboutPage from "@/components/about-page";
-import Navbar from "@/components/navbar";
+import Navbar from "@/components/navbar"; 
 import SiteFooter from "@/components/footer";
 
 export default function About() {
@@ -10,7 +10,7 @@ export default function About() {
         primaryCtaLabel="Join the Hub"
         primaryCtaHref="/get-started"
         secondaryCtaLabel="Explore Skills"
-        secondaryCtaHref="/#explore-skills"
+        secondaryCtaHref="/#explore-skills" 
         ctaButtonLabel="Create Your Profile"
         ctaButtonHref="/get-started"
       />

@@ -60,9 +60,9 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
         className="absolute right-0 top-0 h-72 w-72 rounded-full bg-[#d2f1e4] blur-3xl"
         aria-hidden="true"
       />
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_85px)]">
-        <div className="relative z-10">
-          <div className="flex flex-wrap items-center gap-3">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_85px)]"> 
+        <div className="relative z-10"> 
+          <div className="flex flex-wrap items-center gap-3"> 
             {highlights.map((item) => (
               <HighlightBadge
                 key={item.label}
@@ -71,25 +71,25 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
               />
             ))}
           </div>
-          <h1 className="mt-6 text-5xl font-bold tracking-tight text-slate-900 sm:text-6xl leading-[1.15]">
+          <h1 className="mt-6 text-5xl font-bold tracking-tight text-slate-900 sm:text-6xl leading-[1.15]"> 
             <span className="block">Exchange Skills</span>
-            <span className="block text-[#2b62e6]">Learn Together</span>
+            <span className="block text-[#2b62e6]">Learn Together</span> 
             <span className="block">Grow Faster</span>
           </h1>
-          <p className="mt-6 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
-            A trusted student-only platform for Sri Lankan university students to offer skills,
-            request services, and connect with verified peers.
+          <p className="mt-6 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base"> 
+            A trusted student-only platform for Sri Lankan university students to offer skills, 
+            request services, and connect with verified peers. 
           </p>
-          <div className="mt-8 flex flex-wrap gap-4">
-            <Link
+          <div className="mt-8 flex flex-wrap gap-4"> 
+            <Link 
               href={primaryHref}
-              className="rounded-lg bg-[#2b62e6] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+              className="rounded-lg bg-[#2b62e6] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]" 
             >
               {primaryLabel}
             </Link>
             <Link
               href={exploreHref}
-              className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900"
+              className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900" 
             >
               Explore Skills
             </Link>
@@ -99,8 +99,8 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
             className="mt-8 flex w-full max-w-xl items-center gap-3 rounded-xl bg-white p-1.5 shadow-md border border-slate-200/80"
             role="search"
           >
-            <div className="flex flex-1 items-center gap-2.5 px-3 text-slate-400">
-              <SearchIcon className="h-5 w-5 text-slate-400" aria-hidden="true" />
+            <div className="flex flex-1 items-center gap-2.5 px-3 text-slate-400"> 
+              <SearchIcon className="h-5 w-5 text-slate-400" aria-hidden="true" /> 
               <input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
@@ -142,18 +142,18 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
   );
 }
 
-function HighlightBadge({
-  label,
-  Icon,
-}: {
-  label: string;
-  Icon: IconType;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e6fcf4] px-3 py-1 text-xs font-semibold text-[#0f8a6b] shadow-xs">
-      <Icon className="h-4 w-4" aria-hidden="true" />
-      {label}
-    </span>
+function HighlightBadge({ 
+  label, 
+  Icon, 
+}: { 
+  label: string; 
+  Icon: IconType; 
+}) { 
+  return ( 
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e6fcf4] px-3 py-1 text-xs font-semibold text-[#0f8a6b] shadow-xs"> 
+      <Icon className="h-4 w-4" aria-hidden="true" /> 
+      {label} 
+    </span> 
   );
 }
 

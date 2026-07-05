@@ -1,4 +1,4 @@
-import AboutPage from "@/components/about-page";
+import AboutPage from "@/components/about-page"; 
 import Navbar from "@/components/navbar";
 import SiteFooter from "@/components/footer";
 
@@ -8,7 +8,7 @@ export default function AboutBoth() {
       <Navbar role="both" />
       <AboutPage
         primaryCtaLabel="Learn More"
-        primaryCtaHref="#story"
+        primaryCtaHref="#story" 
         secondaryCtaLabel="Explore Skills"
         secondaryCtaHref="/home/both#explore-skills"
         ctaButtonLabel="Go to Dashboard"

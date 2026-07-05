@@ -8,7 +8,7 @@ export default function AboutBuyer() {
       <Navbar />
       <AboutPage
         primaryCtaLabel="Learn More"
-        primaryCtaHref="#story"
+        primaryCtaHref="#story" 
         secondaryCtaLabel="Explore Skills"
         secondaryCtaHref="/home/buyer#explore-skills"
         ctaButtonLabel="Go to Dashboard"
