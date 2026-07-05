@@ -131,8 +131,8 @@ export default function AdminVerifications() {
             >
               {row.expiry}
             </span>
-            <button type="button" aria-label={`View ${row.name}`} className="text-slate-600 transition hover:text-slate-900">
-              <EyeIcon />
+            <button type="button" aria-label={`Edit ${row.name}`} className="text-slate-600 transition hover:text-slate-900">
+              <EditIcon />
             </button>
           </div>
         ))}
@@ -281,11 +281,11 @@ function FilterIcon() {
   );
 }
 
-function EyeIcon() {
+function EditIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-      <circle cx="12" cy="12" r="2.5" />
+      <path d="M12 20h8" />
+      <path d="m15.5 4.5 4 4L8 20l-5 1 1-5 11.5-11.5Z" />
     </svg>
   );
 }

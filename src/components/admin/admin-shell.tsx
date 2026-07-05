@@ -12,8 +12,8 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: <DashboardIcon /> },
-  { label: "User Management", href: "/admin/user-management", icon: <UsersIcon /> },
   { label: "Verifications", href: "/admin/verifications", icon: <ShieldIcon /> },
+  { label: "User Management", href: "/admin/user-management", icon: <UsersIcon /> },
   { label: "Issue Resolution", href: "/admin/issue-resolution", icon: <TriangleIcon /> },
 ];
 

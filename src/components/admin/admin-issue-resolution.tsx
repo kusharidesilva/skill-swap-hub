@@ -4,14 +4,13 @@ type IssueRow = {
   reportedUser: string;
   service: string;
   issueType: string;
-  evidence: string;
   date: string;
-  status: "Pending" | "Reviewing" | "Resolved" | "Rejected";
+  status: "Pending" | "Resolved" | "Rejected";
 };
 
 const stats = [
   { label: "Pending Reports", value: "24", tone: "orange" },
-  { label: "Under Review", value: "12", tone: "blue" },
+  { label: "Pending Follow-ups", value: "12", tone: "blue" },
   { label: "Resolved Today", value: "8", tone: "teal" },
 ] as const;
 
@@ -22,7 +21,6 @@ const issues: IssueRow[] = [
     reportedUser: "JohnD",
     service: "Calculus Tutoring",
     issueType: "Inappropriate behaviour",
-    evidence: "Chat Log",
     date: "Oct 24, 2023",
     status: "Pending",
   },
@@ -32,9 +30,8 @@ const issues: IssueRow[] = [
     reportedUser: "SarahK",
     service: "Guitar Lessons",
     issueType: "Scam risk",
-    evidence: "Screenshots",
     date: "Oct 23, 2023",
-    status: "Reviewing",
+    status: "Pending",
   },
   {
     id: "#ISS-8915",
@@ -42,7 +39,6 @@ const issues: IssueRow[] = [
     reportedUser: "DaveB",
     service: "Web Dev Help",
     issueType: "Poor service quality",
-    evidence: "None",
     date: "Oct 21, 2023",
     status: "Resolved",
   },
@@ -52,7 +48,6 @@ const issues: IssueRow[] = [
     reportedUser: "LisaM",
     service: "N/A",
     issueType: "Fake user",
-    evidence: "Profile Link",
     date: "Oct 19, 2023",
     status: "Rejected",
   },
@@ -97,21 +92,21 @@ export default function AdminIssueResolution() {
       </section>
 
       <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid grid-cols-[0.8fr_0.9fr_0.9fr_1fr_0.9fr_0.9fr_0.7fr_0.7fr] border-b border-slate-200 bg-[#f6f7ff] px-4 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+        <div className="grid grid-cols-[0.8fr_0.95fr_0.95fr_1fr_1fr_0.8fr_0.8fr_0.55fr] border-b border-slate-200 bg-[#f6f7ff] px-4 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
           <span>Report ID</span>
           <span>Reported By</span>
           <span>Reported User</span>
           <span>Related Skill/Service</span>
           <span>Issue Type</span>
-          <span>Evidence Attached</span>
           <span>Date</span>
           <span>Status</span>
+          <span>Action</span>
         </div>
 
         {issues.map((issue) => (
           <div
             key={issue.id}
-            className="grid grid-cols-[0.8fr_0.9fr_0.9fr_1fr_0.9fr_0.9fr_0.7fr_0.7fr] items-center border-b border-slate-200 px-4 py-4 text-sm last:border-b-0"
+            className="grid grid-cols-[0.8fr_0.95fr_0.95fr_1fr_1fr_0.8fr_0.8fr_0.55fr] items-center border-b border-slate-200 px-4 py-4 text-sm last:border-b-0"
           >
             <span className="text-slate-600">{issue.id}</span>
             <ReportedUser name={issue.reportedBy} />
@@ -120,11 +115,14 @@ export default function AdminIssueResolution() {
             <span className="inline-flex w-fit rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500">
               {issue.issueType}
             </span>
-            <span className="text-slate-600">{issue.evidence}</span>
             <span className="whitespace-pre-line text-slate-600">{issue.date}</span>
             <StatusPill status={issue.status} />
-            <button type="button" className="ml-auto text-slate-700" aria-label="Actions">
-              <DotsIcon />
+            <button
+              type="button"
+              className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-slate-50"
+              aria-label={`Edit ${issue.id}`}
+            >
+              <EditIcon />
             </button>
           </div>
         ))}
@@ -176,11 +174,9 @@ function StatusPill({ status }: { status: IssueRow["status"] }) {
   const styles =
     status === "Pending"
       ? "bg-orange-100 text-orange-700"
-      : status === "Reviewing"
-        ? "bg-blue-100 text-blue-700"
-        : status === "Resolved"
+      : status === "Resolved"
           ? "bg-teal-100 text-teal-700"
-          : "bg-slate-100 text-slate-500";
+          : "bg-red-100 text-red-700";
 
   return <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${styles}`}>{status}</span>;
 }
@@ -236,12 +232,11 @@ function FilterIcon() {
   );
 }
 
-function DotsIcon() {
+function EditIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-      <circle cx="12" cy="5" r="1.5" />
-      <circle cx="12" cy="12" r="1.5" />
-      <circle cx="12" cy="19" r="1.5" />
+    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h8" />
+      <path d="m15.5 4.5 4 4L8 20l-5 1 1-5 11.5-11.5Z" />
     </svg>
   );
 }

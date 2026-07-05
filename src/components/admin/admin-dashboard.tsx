@@ -16,6 +16,7 @@ type CategoryRow = {
 };
 
 type ActionRow = {
+  id: string;
   type: string;
   entity: string;
   date: string;
@@ -27,8 +28,8 @@ type ActionRow = {
 
 const sidebarItems = [
   { label: "Dashboard", active: true, icon: <DashboardIcon /> },
-  { label: "User Management", icon: <UsersIcon /> },
   { label: "Verifications", icon: <ShieldIcon /> },
+  { label: "User Management", icon: <UsersIcon /> },
   { label: "Issue Resolution", icon: <TriangleIcon /> },
 ];
 
@@ -90,6 +91,7 @@ const topCategories: CategoryRow[] = [
 
 const actions: ActionRow[] = [
   {
+    id: "report-1",
     type: "User Report",
     entity: "John D. (Spam offer)",
     date: "2 hours ago",
@@ -99,21 +101,23 @@ const actions: ActionRow[] = [
     statusTone: "critical",
   },
   {
-    type: "Payment Proof",
-    entity: "Sarah M.",
+    id: "report-2",
+    type: "User Report",
+    entity: "Nethmi P. (Abusive messages)",
     date: "5 hours ago",
-    status: "Pending",
-    action: "Verify",
-    icon: <ClipboardIcon />,
-    statusTone: "pending",
+    status: "Critical",
+    action: "Review",
+    icon: <FlagIcon />,
+    statusTone: "critical",
   },
   {
-    type: "Edu Email",
-    entity: "alex.w@university.edu",
+    id: "report-3",
+    type: "User Report",
+    entity: "Ishan K. (Fake payment proof)",
     date: "1 day ago",
     status: "Pending",
-    action: "Approve",
-    icon: <BadgeCheckIcon />,
+    action: "Review",
+    icon: <FlagIcon />,
     statusTone: "pending",
   },
 ];
@@ -184,7 +188,7 @@ export default function AdminDashboard() {
 
           {actions.map((row) => (
             <div
-              key={row.type}
+              key={row.id}
               className="grid grid-cols-[1.1fr_1.6fr_1fr_0.8fr_0.8fr] items-center border-b border-slate-200 px-6 py-4 text-sm last:border-b-0"
             >
               <div className="flex items-center gap-2 text-slate-700">
@@ -369,38 +373,41 @@ function ChevronDownIcon() {
 
 function SquareGridIcon() {
   return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
     </svg>
   );
 }
 
 function UsersTwoIcon() {
   return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15.5 19.5v-.8A3.7 3.7 0 0 0 11.8 15H7.2a3.7 3.7 0 0 0-3.7 3.7v.8" />
+      <circle cx="9.5" cy="8" r="3.25" />
+      <path d="M16.5 15.5a3.5 3.5 0 0 1 3 3.2v.8" />
+      <path d="M15.6 5.2a3.1 3.1 0 0 1 0 5.6" />
     </svg>
   );
 }
 
 function ShieldCheckIcon() {
   return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="m9 12 2 2 4-4" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3 5.5 5.9v5.7c0 4.4 2.8 7.2 6.5 8.9 3.7-1.7 6.5-4.5 6.5-8.9V5.9L12 3Z" />
+      <path d="m9.4 11.9 1.8 1.8 3.6-3.8" />
     </svg>
   );
 }
 
 function TriangleOutlineIcon() {
   return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m10.3 4.3-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-2.7l-8.2-14a2 2 0 0 0-3.4 0z" />
-      <path d="M12 9v4" />
-      <path d="M12 17h.01" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.3 4.8 3.8 16a2 2 0 0 0 1.7 3h13a2 2 0 0 0 1.7-3L13.7 4.8a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9.2v4.3" />
+      <circle cx="12" cy="16.9" r=".75" fill="currentColor" stroke="none" />
     </svg>
   );
 }
@@ -436,71 +443,72 @@ function UserCircleOutlineIcon() {
 
 function CapIcon() {
   return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 8l9-4 9 4-9 4-9-4z" />
-      <path d="M7 10v4c0 1.7 2.2 3 5 3s5-1.3 5-3v-4" />
-      <path d="M21 9v5" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m3 8.5 9-4 9 4-9 4-9-4Z" />
+      <path d="M7 10.5v3.3c0 1.8 2.2 3.2 5 3.2s5-1.4 5-3.2v-3.3" />
+      <path d="M21 9v4.5" />
     </svg>
   );
 }
 
 function BadgeCheckOutlineIcon() {
   return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3l2.4 2.9 3.6.4 1.4 3.4-1.4 3.4.1 3.7-3.4.8L12 21l-2.7-3.4-3.4-.8.1-3.7L4.6 9.7 6 6.3l3.6-.4L12 3z" />
-      <path d="m9.2 12.1 1.9 1.9 3.7-3.7" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2.8 6.8 5.1v4.7c0 4 2.3 6.8 5.2 8.4 2.9-1.6 5.2-4.4 5.2-8.4V5.1L12 2.8Z" />
+      <path d="m9.7 10.9 1.6 1.7 3.2-3.4" />
+      <path d="M8.8 18.2 8.1 21l3.9-1.6 3.9 1.6-.7-2.8" />
     </svg>
   );
 }
 
 function ClipboardOutlineIcon() {
   return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="6" y="5" width="12" height="16" rx="2" />
-      <path d="M9 5a3 3 0 0 1 6 0" />
-      <path d="M9 11h6M9 15h4" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="6" y="4.75" width="12" height="15.5" rx="2.2" />
+      <path d="M9 4.75h6a1.5 1.5 0 0 1 1.5 1.5v.25H7.5v-.25A1.5 1.5 0 0 1 9 4.75Z" />
+      <path d="M9 10.5h6" />
+      <path d="M9 14h6" />
+      <path d="M9 17.5h3.5" />
     </svg>
   );
 }
 
 function HandshakeOutlineIcon() {
   return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 13 3 9l4-4 4 3" />
-      <path d="M16 13l5-4-4-4-4 3" />
-      <path d="M7 14l3 3a2 2 0 0 0 3 0l1-1" />
-      <path d="M12 13l3-3" />
-      <path d="M9 10l3 3" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8.5" cy="8.5" r="2.5" />
+      <circle cx="15.5" cy="15.5" r="2.5" />
+      <path d="m10.3 10.3 3.4 3.4" />
+      <path d="m13.7 10.3-3.4 3.4" />
     </svg>
   );
 }
 
 function HandHeartIcon() {
   return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 12h6l2 2" />
-      <path d="M6 12V7a2 2 0 0 1 2-2h2" />
-      <path d="M12 14l3 3 5-5" />
-      <path d="M3 13h3l2 2" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5.5 7.5h9.8a2 2 0 0 1 1.4.6l1.8 1.8a2 2 0 0 1 0 2.8l-5.7 5.7a2 2 0 0 1-2.8 0l-4.5-4.5a2 2 0 0 1 0-2.8l2.8-2.8a2 2 0 0 1 1.2-.6Z" />
+      <path d="M14.5 7.5v4h4" />
+      <circle cx="9.2" cy="11.2" r="1.1" />
     </svg>
   );
 }
 
 function QuestionOutlineIcon() {
   return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9" />
       <path d="M9.5 9a2.5 2.5 0 1 1 3.9 2.1c-.9.6-1.4 1-1.4 2.4" />
-      <path d="M12 17h.01" />
+      <circle cx="12" cy="17" r=".75" fill="currentColor" stroke="none" />
     </svg>
   );
 }
 
 function FlagOutlineIcon() {
   return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 4v16" />
-      <path d="M5 5h9l-1.5 3L14 11H5" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5.5 4v16" />
+      <path d="M5.5 5h9l-1.8 3 1.8 3h-9" />
     </svg>
   );
 }
@@ -517,10 +525,12 @@ function CodeBracketIcon() {
 function LanguageOutlineIcon() {
   return (
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 5h7M9 3v2a14 14 0 0 0 5 10" />
-      <path d="M4 19c4-1 8-5 10-10" />
-      <path d="M12 19h8" />
-      <path d="m16 3 4 4-4 4" />
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M3.8 12h16.4" />
+      <path d="M12 3.8a12.5 12.5 0 0 1 0 16.4" />
+      <path d="M12 3.8a12.5 12.5 0 0 0 0 16.4" />
+      <path d="M8.5 7.5h2.2" />
+      <path d="M13.6 15.8h3.1" />
     </svg>
   );
 }
@@ -536,11 +546,12 @@ function CalculatorIcon() {
 
 function PaletteOutlineIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 2-2 1.5 1.5 0 0 1 1.5-1.5H18a3 3 0 0 0 0-6 1 1 0 0 1-1-1v-.5A6 6 0 0 0 12 3z" />
-      <circle cx="8" cy="10" r="1" fill="currentColor" />
-      <circle cx="12" cy="8" r="1" fill="currentColor" />
-      <circle cx="16" cy="10" r="1" fill="currentColor" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3.5a8.5 8.5 0 1 0 0 17h1.7a1.8 1.8 0 0 0 1.8-1.8 1.4 1.4 0 0 1 1.4-1.4h.9a3.7 3.7 0 0 0 0-7.4h-.6a1.2 1.2 0 0 1-1.2-1.2V8A4.5 4.5 0 0 0 12 3.5Z" />
+      <circle cx="7.8" cy="10" r=".9" fill="currentColor" stroke="none" />
+      <circle cx="11.1" cy="7.7" r=".9" fill="currentColor" stroke="none" />
+      <circle cx="15.2" cy="9.4" r=".9" fill="currentColor" stroke="none" />
+      <circle cx="9.4" cy="14.2" r=".9" fill="currentColor" stroke="none" />
     </svg>
   );
 }

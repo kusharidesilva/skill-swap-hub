@@ -8,7 +8,6 @@ type UserRow = {
   verification: "Verified" | "Pending ID";
   account: "Active" | "Suspended";
   rating: string;
-  joined: string;
 };
 
 const users: UserRow[] = [
@@ -20,7 +19,6 @@ const users: UserRow[] = [
     verification: "Verified",
     account: "Active",
     rating: "4.9",
-    joined: "Oct 12, 2023",
   },
   {
     name: "Marcus Rodriguez",
@@ -30,7 +28,6 @@ const users: UserRow[] = [
     verification: "Pending ID",
     account: "Active",
     rating: "New",
-    joined: "Jan 05, 2024",
   },
   {
     name: "David Chen",
@@ -40,7 +37,6 @@ const users: UserRow[] = [
     verification: "Verified",
     account: "Suspended",
     rating: "3.2",
-    joined: "Aug 22, 2023",
   },
 ];
 
@@ -94,7 +90,7 @@ export default function AdminUserManagement() {
           <span>University &amp; Programme</span>
           <span>Verification</span>
           <span>Account Status</span>
-          <span>Rating / Joined</span>
+          <span>Rating</span>
           <span>Actions</span>
         </div>
 
@@ -116,7 +112,7 @@ export default function AdminUserManagement() {
               <p className="text-sm text-slate-500">{user.programme}</p>
             </div>
 
-            <StatusChip tone="teal">{user.verification}</StatusChip>
+            <StatusChip tone={user.verification === "Verified" ? "teal" : "amber"}>{user.verification}</StatusChip>
             <StatusChip tone={user.account === "Active" ? "indigo" : "rose"}>{user.account}</StatusChip>
 
             <div>
@@ -124,7 +120,6 @@ export default function AdminUserManagement() {
                 <StarIcon />
                 {user.rating}
               </p>
-              <p className="mt-1 text-sm text-slate-500">{user.joined}</p>
             </div>
 
             <button
@@ -190,12 +185,16 @@ function StatusChip({
   tone,
   children,
 }: {
-  tone: "teal" | "indigo" | "rose";
+  tone: "teal" | "amber" | "blue" | "indigo" | "rose";
   children: ReactNode;
 }) {
   const styles =
     tone === "teal"
       ? "bg-teal-100 text-teal-700"
+      : tone === "amber"
+        ? "bg-amber-100 text-amber-700"
+      : tone === "blue"
+        ? "bg-blue-100 text-blue-700"
       : tone === "indigo"
         ? "bg-indigo-100 text-indigo-700"
         : "bg-rose-100 text-rose-700";

@@ -45,18 +45,7 @@ export default function AdminSettings() {
 
               <div className="border-t border-slate-200 pt-4">
                 <p className="text-sm font-medium text-slate-600">Last Login</p>
-                <p className="mt-2 text-sm leading-5 text-slate-700">Oct 24, 2024 at 10:45 AM (EST)</p>
-                <p className="text-xs text-slate-500">IP: 192.168.1.1</p>
-              </div>
-
-              <div className="border-t border-slate-200 pt-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-base font-semibold text-slate-800">Two-Factor Auth</p>
-                    <p className="text-xs text-slate-500">Require code on login</p>
-                  </div>
-                  <ToggleSwitch />
-                </div>
+                <p className="mt-2 text-sm leading-5 text-slate-700">Oct 24, 2024 at 10:45 AM</p>
               </div>
             </div>
           </Card>
@@ -98,14 +87,6 @@ function InputField({ label, value }: { label: string; value?: string }) {
         {value ?? ""}
       </div>
     </label>
-  );
-}
-
-function ToggleSwitch() {
-  return (
-    <div className="flex h-7 w-14 items-center rounded-full bg-[#2f66e7] p-1">
-      <span className="ml-auto h-5 w-5 rounded-full bg-white shadow-sm" />
-    </div>
   );
 }
 
