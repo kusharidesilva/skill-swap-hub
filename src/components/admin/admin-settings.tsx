@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 export default function AdminSettings() {
   return (
     <div className="px-6 py-10">
+      {/* Admin profile, security, and system preferences */}
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
           <Card title="Basic Information">

@@ -10,6 +10,7 @@ export interface CreateNotificationParams {
   tone: "blue" | "emerald" | "green" | "teal" | "indigo" | "red";
 }
 
+// All features use this helper so notifications share the same Firestore shape.
 export async function createNotification(params: CreateNotificationParams) {
   try {
     await addDoc(collection(db, "notifications"), {
@@ -18,6 +19,7 @@ export async function createNotification(params: CreateNotificationParams) {
       createdAt: serverTimestamp(),
     });
   } catch (err) {
+    // A notification failure should not cancel the user's main action.
     console.error("Error creating notification:", err);
   }
 }

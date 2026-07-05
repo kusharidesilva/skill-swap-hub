@@ -21,8 +21,7 @@ const badges: Badge[] = [
   { label: "University Exclusive", icon: "cap" },
 ];
 
-// Step 1 – enter email
-// Step 2 – success (email sent)
+// The flow switches from the email form to a clear sent-confirmation screen.
 type Step = "recovery" | "sent";
 
 const recoverySchema = z
@@ -91,6 +90,7 @@ export default function ForgotPasswordFlow() {
         return;
       }
 
+      // Firebase owns the secure reset link and password update page.
       await resetPassword(trimmedEmail);
       setSentEmail(trimmedEmail);
       setStep("sent");
@@ -111,7 +111,7 @@ export default function ForgotPasswordFlow() {
       <div className="fixed inset-0 bg-black/20" aria-hidden="true" />
       <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
         <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
-          {/* Left panel */}
+          {/* Security guidance */}
           <section className="relative flex flex-col justify-between bg-linear-to-br from-[#2b62e6] via-[#1f5ad7] to-[#0e3a9e] px-10 py-12 text-white">
             <div className="absolute inset-0 opacity-10">
               <div className="h-full w-full bg-[linear-gradient(120deg,rgba(255,255,255,0.15)_0%,rgba(255,255,255,0.02)_50%,transparent_100%)]" />
@@ -149,7 +149,7 @@ export default function ForgotPasswordFlow() {
             </div>
           </section>
 
-          {/* Right panel */}
+          {/* Recovery form or success message */}
           <section className="relative flex flex-col justify-center bg-white px-8 py-12 sm:px-12">
             <Link
               href="/"
@@ -160,7 +160,7 @@ export default function ForgotPasswordFlow() {
             </Link>
 
             {step === "recovery" ? (
-              /* ── Step 1: Enter email ── */
+              /* Email entry step */
               <div className="max-w-md">
                 <h2 className="text-2xl font-semibold text-slate-900">
                   Account Recovery
@@ -238,7 +238,7 @@ export default function ForgotPasswordFlow() {
                 </div>
               </div>
             ) : (
-              /* ── Step 2: Email sent success ── */
+              /* Email sent confirmation */
               <div className="max-w-md">
                 {/* Success badge */}
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 shadow-sm">
@@ -322,7 +322,7 @@ export default function ForgotPasswordFlow() {
   );
 }
 
-// ── Icons ────────────────────────────────────────────────────────────────────
+// Small icons used by the recovery screens.
 
 function BadgeIcon({
   type,

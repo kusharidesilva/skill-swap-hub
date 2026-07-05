@@ -16,8 +16,7 @@ interface AuthContextValue {
   firebaseUser: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  /** Call this after any Firestore profile update (e.g. upgradeToProvider)
-   *  to keep the in-memory profile in sync without requiring a re-login. */
+  // Refreshes role or profile changes without making the user sign in again.
   refreshProfile: () => Promise<void>;
 }
 
@@ -34,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Firebase restores the session first, then we load the matching Firestore profile.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
       if (user) {
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  /** Force-fetch the latest profile from Firestore and update in-memory state */
+  // Features such as provider registration call this after updating the profile.
   const refreshProfile = useCallback(async () => {
     const user = auth.currentUser;
     if (!user) return;
@@ -56,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserProfile(profile);
   }, []);
 
+  // One provider gives every client page the same live authentication state.
   return (
     <AuthContext.Provider value={{ firebaseUser, userProfile, loading, refreshProfile }}>
       {children}

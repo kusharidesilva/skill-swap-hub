@@ -74,6 +74,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
   useEffect(() => {
     let active = true;
 
+    // Only users from completed swaps are valid report targets.
     async function loadCompletedSwapUsers() {
       if (!userProfile) {
         if (active) {
@@ -105,6 +106,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
           return;
         }
 
+        // A map removes duplicates when the same person appears in both request roles.
         const reportableUsers = new Map<string, UserOption>();
 
         buyerSnapshot.forEach((entry) => {
@@ -166,6 +168,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
   useEffect(() => {
     let active = true;
 
+    // A report opened from a profile locks the target but still resolves their name.
     async function loadLockedTarget() {
       if (!providerId) {
         setLockedTargetName("");
@@ -208,6 +211,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
       return;
     }
 
+    // Live history lets the reporter see new moderation status changes.
     const reportsQuery = query(collection(db, "reports"), where("reporterId", "==", userProfile.uid));
 
     const unsubscribe = onSnapshot(
@@ -249,6 +253,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
     return () => unsubscribe();
   }, [userProfile]);
 
+  // Validation flags are also reused by the form to highlight individual fields.
   const selectedTarget = usersList.find((user) => user.id === targetUserId);
   const targetName = selectedTarget?.name || lockedTargetName;
   const isLockedTarget = Boolean(providerId);
@@ -266,6 +271,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
       return;
     }
 
+    // Validate before upload and cap the final evidence list at five files.
     const invalidFile = nextFiles.find(
       (file) => !ALLOWED_FILE_TYPES.has(file.type) || file.size > MAX_FILE_SIZE_BYTES
     );
@@ -336,6 +342,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
       return;
     }
 
+    // The client repeats the completed-swap rule before any evidence is uploaded.
     if (!targetIsEligible) {
       setFeedback({
         type: "error",
@@ -369,6 +376,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
     setFeedback(null);
 
     try {
+      // Upload evidence first so the report stores permanent download URLs.
       const uploadedEvidence = await Promise.all(
         selectedFiles.map(async (file) => {
           const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
@@ -429,6 +437,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
 
   return (
     <div className="flex w-full flex-col gap-8 pb-8">
+      {/* Trust and safety introduction */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="max-w-[700px] pt-1">
           <h1 className="text-[30px] font-semibold leading-[1.15] tracking-[-0.03em] text-[#24324b]">
@@ -455,6 +464,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
         </section>
       </div>
 
+      {/* Report form and guidance */}
       <div className="grid gap-8 xl:grid-cols-[minmax(0,620px)_minmax(0,438px)]">
         <section className="overflow-hidden rounded-[18px] border border-[#dbe2ef] bg-white shadow-[0_6px_18px_rgba(33,42,62,0.06)]">
           <div className="flex items-center gap-3 border-b border-[#dbe2ef] bg-[#f8fbff] px-6 py-4">

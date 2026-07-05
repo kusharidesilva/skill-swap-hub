@@ -54,7 +54,7 @@ export default function SignOutFlow() {
   );
 }
 
-// ── Confirm Card ──────────────────────────────────────────────────────────────
+// Ask for confirmation before ending the Firebase session.
 
 type ConfirmCardProps = {
   name: string;
@@ -131,7 +131,7 @@ function ConfirmCard({
   );
 }
 
-// ── Success Card ──────────────────────────────────────────────────────────────
+// Confirm that local authentication state has been cleared.
 
 function SuccessCard() {
   return (
@@ -210,7 +210,7 @@ function SuccessCard() {
   );
 }
 
-// ── Small helpers ─────────────────────────────────────────────────────────────
+// Small reusable pieces shared by both cards.
 
 function IconButton({ label, icon }: { label: string; icon: ReactNode }) {
   return (
@@ -224,7 +224,7 @@ function IconButton({ label, icon }: { label: string; icon: ReactNode }) {
   );
 }
 
-// ── Icons ─────────────────────────────────────────────────────────────────────
+// Icons used by the sign-out flow.
 
 function ArrowIcon({ className }: { className?: string }) {
   return (

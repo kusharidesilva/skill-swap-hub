@@ -12,6 +12,7 @@ type RolePageProps = {
 export default async function RoleMyGigsPage({ params, searchParams }: RolePageProps) {
   const { role } = await params;
   const tabValue = (await searchParams).tab;
+  // Only the management tab needs a special query value.
   const activeTab = tabValue === "manage" ? "manage" : "offered";
 
   if (!isRole(role)) {

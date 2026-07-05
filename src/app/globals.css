@@ -1,11 +1,13 @@
 @import "tailwindcss";
 
 :root {
+  /* Shared light theme colours used by the whole application. */
   --background: #ffffff;
   --foreground: #171717;
 }
 
 @theme inline {
+  /* Expose the CSS variables to Tailwind utility classes. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -13,6 +15,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
+  /* Keep the same variables readable when the device prefers dark mode. */
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
@@ -24,7 +27,8 @@ html {
 } 
  
 html, 
-body { 
+body {
+  /* Global page defaults before individual components add their own layout. */
   max-width: 100vw; 
   overflow-x: hidden; 
 } 
@@ -43,4 +47,3 @@ body {
 .scrollbar-none::-webkit-scrollbar { 
   display: none; 
 } 
- 

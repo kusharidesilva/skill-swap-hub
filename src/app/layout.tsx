@@ -25,12 +25,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // The root layout loads fonts and shares authentication with every route.
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        {/* Client pages read the signed-in user and profile from this provider. */}
         <AuthProvider>{children}</AuthProvider> 
       </body> 
     </html>

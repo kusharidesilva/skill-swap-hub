@@ -12,9 +12,10 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Prevent duplicate app init in Next.js hot reload
+// Reuse the existing app during hot reload so Firebase is initialized only once.
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
+// These shared instances keep every feature connected to the same Firebase app.
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);

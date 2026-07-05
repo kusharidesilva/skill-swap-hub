@@ -55,9 +55,10 @@ export default function LoginPage() {
     setLoading(true);
     setServerError("");
     try {
+      // The helper returns a role-aware destination after checking Firestore.
       const { user, redirectPath } = await loginUser(data.email, data.password);
 
-      // If email not verified, send to verify-email page
+      // Unverified accounts stay signed in so they can resend or recheck the email.
       if (!user.emailVerified) {
         router.push("/verify-email?from=buyer");
         return;
@@ -94,7 +95,7 @@ export default function LoginPage() {
       <div className="fixed inset-0 bg-black/20" aria-hidden="true" />
       <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
         <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
-          {/* Left Panel */}
+          {/* Brand message and platform benefits */}
           <section className="relative flex flex-col justify-between bg-linear-to-br from-[#2b62e6] via-[#1f5ad7] to-[#0e3a9e] px-10 py-12 text-white">
             <div className="absolute inset-0 opacity-10">
               <div className="h-full w-full bg-[linear-gradient(120deg,rgba(255,255,255,0.15)_0%,rgba(255,255,255,0.02)_50%,transparent_100%)]" />
@@ -129,7 +130,7 @@ export default function LoginPage() {
             </div>
           </section>
 
-          {/* Right Panel – Form */}
+          {/* Login form */}
           <section className="relative flex flex-col justify-center bg-white px-8 py-12 sm:px-12">
             <Link
               href="/"

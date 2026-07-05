@@ -19,6 +19,7 @@ export default async function BuyerProfilePage({
   const { buyerId } = await params;
   const query = await searchParams;
   const requestedRole = query?.role;
+  // The optional role keeps links correct without changing the public profile URL.
   const role = isRole(requestedRole) ? requestedRole : undefined;
 
   return (

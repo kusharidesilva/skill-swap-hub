@@ -64,6 +64,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (!userProfile) return;
 
+    // New notifications appear instantly and remain ordered from newest to oldest.
     const q = query(
       collection(db, "notifications"),
       where("userId", "==", userProfile.uid),
@@ -104,6 +105,7 @@ export default function NotificationsPage() {
   const handleMarkAllRead = async () => {
     if (!userProfile) return;
     try {
+      // Run independent updates together so a long list does not feel slow.
       const promises = items
         .filter((item) => !item.read)
         .map((item) =>
@@ -128,7 +130,7 @@ export default function NotificationsPage() {
   };
 
   const handleNotificationClick = async (item: NotificationItem) => {
-    // 1. Mark as read in background if not read
+    // Mark the item as read before deciding where it should open.
     if (!item.read) {
       try {
         await updateDoc(doc(db, "notifications", item.id), { read: true });
@@ -137,11 +139,10 @@ export default function NotificationsPage() {
       }
     }
 
-    // 2. Navigate to destination
     if (!userProfile) return;
     const role = userProfile.role || "buyer";
     
-    // Explicit paths stored in DB take precedence
+    // A stored path is the most accurate destination for newer notifications.
     const targetPath = item.href || item.destination;
     if (targetPath) {
       router.push(targetPath);
@@ -151,19 +152,17 @@ export default function NotificationsPage() {
     const lowerTitle = item.title.toLowerCase();
     const type = item.type || "";
 
-    // Chats / Messages
+    // Older records are routed by their type or title for backward compatibility.
     if (type === "message" || lowerTitle.includes("message") || lowerTitle.includes("chat")) {
       router.push(role === "both" ? "/chats/both" : role === "provider" ? "/chats/provider" : "/chats/buyer");
       return;
     }
 
-    // Reviews
     if (type === "review" || lowerTitle.includes("review") || lowerTitle.includes("rated") || lowerTitle.includes("completed & rated")) {
       router.push(role === "both" ? "/ratings/both" : "/ratings/provider");
       return;
     }
 
-    // Requests
     if (type === "request" || type === "match" || lowerTitle.includes("request")) {
       const isBuyerFocused =
         lowerTitle.includes("accepted") ||
@@ -180,7 +179,7 @@ export default function NotificationsPage() {
       return;
     }
 
-    // Fallback Dashboard
+    // Unknown notification types safely return to the user's dashboard.
     router.push(`/dashboard/${role}`);
   };
 
@@ -197,6 +196,7 @@ export default function NotificationsPage() {
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      {/* Header actions and live notification list */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Notifications</h1>

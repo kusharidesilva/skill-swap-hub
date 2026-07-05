@@ -26,7 +26,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
   const [given, setGiven]         = useState<ReviewItem[]>([]);
   const [fetching, setFetching]   = useState(false);
 
-  // Both buyer and provider dashboards now show "received" as the default tab if they have reviews
+  // Start with feedback about the user, which is usually the most useful view.
   const [tab, setTab] = useState<ReviewsTab>("received");
   const [filterStars, setFilterStars] = useState<"all" | "5" | "4" | "3">("all");
 
@@ -39,7 +39,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
         const receivedList: ReviewItem[] = [];
         const givenList: ReviewItem[] = [];
 
-        // 1. Load requests where this user was the PROVIDER
+        // Provider-side requests can contain reviews written in both directions.
         const asProviderSnap = await getDocs(
           query(collection(db, "requests"),
             where("providerId", "==", userProfile!.uid),
@@ -48,7 +48,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
 
         asProviderSnap.forEach((d) => {
           const r = d.data();
-          // Received review: Buyer left feedback for this provider
+          // The buyer's review belongs in this user's received list.
           if (r.review && typeof r.review.rating === "number") {
             receivedList.push({
               id: `recv-prov-${d.id}`,
@@ -59,7 +59,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
               comment: r.review.comment || "",
             });
           }
-          // Given review: This provider left feedback for the buyer
+          // The provider's review belongs in this user's given list.
           if (r.providerReview && typeof r.providerReview.rating === "number") {
             givenList.push({
               id: `given-prov-${d.id}`,
@@ -72,7 +72,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
           }
         });
 
-        // 2. Load requests where this user was the BUYER
+        // Buyer-side requests are mapped the same way from the opposite role.
         const asBuyerSnap = await getDocs(
           query(collection(db, "requests"),
             where("buyerId", "==", userProfile!.uid),
@@ -81,7 +81,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
 
         asBuyerSnap.forEach((d) => {
           const r = d.data();
-          // Received review: Provider left feedback for this buyer
+          // The provider's review belongs in this user's received list.
           if (r.providerReview && typeof r.providerReview.rating === "number") {
             receivedList.push({
               id: `recv-buyer-${d.id}`,
@@ -93,7 +93,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
               isFromProvider: true,
             });
           }
-          // Given review: This buyer left feedback for the provider
+          // The buyer's review belongs in this user's given list.
           if (r.review && typeof r.review.rating === "number") {
             givenList.push({
               id: `given-buyer-${d.id}`,
@@ -146,7 +146,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
     return activeList.filter((r) => r.rating === n);
   }, [activeList, filterStars]);
 
-  // Stats (computed from reviews received by the user)
+  // Summary scores use received reviews only, never reviews written by the user.
   const avgRating = received.length
     ? (received.reduce((s, r) => s + r.rating, 0) / received.length).toFixed(1)
     : "–";
@@ -167,6 +167,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
 
   return (
     <section className="space-y-5 pb-10">
+      {/* Rating summary and received/given tabs */}
       <header>
         <h1 className="text-xl font-bold text-slate-900">Ratings &amp; Reviews</h1>
         <p className="mt-1 text-xs text-slate-500">Manage your reputation and view feedback from your swap partners.</p>

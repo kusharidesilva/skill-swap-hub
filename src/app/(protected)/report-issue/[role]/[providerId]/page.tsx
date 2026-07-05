@@ -14,6 +14,7 @@ type TargetedReportPageProps = {
 export default async function TargetedReportPage({ params }: TargetedReportPageProps) {
   const { role, providerId } = await params;
 
+  // A targeted report needs both a valid viewer role and a real target ID.
   if (!isRole(role) || !providerId) {
     notFound();
   }

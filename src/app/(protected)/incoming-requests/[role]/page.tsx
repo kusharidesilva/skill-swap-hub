@@ -15,6 +15,7 @@ export default async function RoleIncomingRequestsPage({
 }: RolePageProps) {
   const { role } = await params;
   const tabValue = (await searchParams).tab;
+  // Unknown tab values safely open the new-request queue.
   const activeTab =
     tabValue === "accepted" || tabValue === "completed" || tabValue === "declined"
       ? tabValue

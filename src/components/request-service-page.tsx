@@ -104,7 +104,7 @@ export default function RequestServiceContent({
 
   const targetProviderId = providerIdParam || "general";
 
-  // Fetch designated provider info if target providerId is passed in search query
+  // A provider ID in the URL turns this into a direct request instead of an open one.
   useEffect(() => {
     if (!providerIdParam) return;
 
@@ -156,6 +156,7 @@ export default function RequestServiceContent({
 
   return (
     <div className="flex w-full flex-col gap-8 pb-10">
+      {/* Page introduction */}
       <header>
         <h1 className="text-xl font-bold tracking-tight text-slate-900">
           Request a Service
@@ -172,6 +173,7 @@ export default function RequestServiceContent({
         )}
       </header>
 
+      {/* Request form and recent request timeline */}
       <section className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
         <RequestForm
           buyerProfile={userProfile}
@@ -279,7 +281,7 @@ function RequestForm({
         updatedAt: serverTimestamp(),
       });
 
-      // Send notification to the provider
+      // Direct providers get a notification after the request is saved successfully.
       if (providerId && providerId !== "general") {
         await createNotification({
           userId: providerId,
@@ -291,9 +293,7 @@ function RequestForm({
         });
       }
 
-      // If this user is currently a pure provider who just made their first
-      // buyer request, upgrade their Firestore role to "both" so the
-      // navbar/shell immediately shows the correct dual-role UI.
+      // A provider making their first buyer request now needs access to both modes.
       if (buyerProfile.role === "provider") {
         await updateDoc(doc(db, "users", buyerProfile.uid), { role: "both" });
         await refreshProfile();
@@ -323,6 +323,7 @@ function RequestForm({
   };
 
   return (
+    // The form owns validation and creates the request document.
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <form
         onSubmit={handleSubmit(onSubmit, onInvalidSubmit)}
@@ -341,7 +342,7 @@ function RequestForm({
           </div>
         )}
 
-        {/* Skill Needed and Category */}
+        {/* Skill and category */}
         <div className="grid gap-4 md:grid-cols-2">
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">
@@ -400,7 +401,7 @@ function RequestForm({
           )}
         </label>
 
-        {/* Required Level and Preferred Time */}
+        {/* Experience level and preferred time */}
         <div className="grid gap-4 md:grid-cols-2">
           <SelectField
             label="Required Level"
@@ -429,7 +430,7 @@ function RequestForm({
           </label>
         </div>
 
-        {/* Service Type and Preferred University */}
+        {/* Service type and university preference */}
         <div className="grid gap-4">
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">
@@ -473,7 +474,7 @@ function RequestForm({
           />
         </div>
 
-        {/* Submit Button */}
+        {/* Submit action */}
         <div className="border-t border-slate-200 pt-4">
           <button
             type="submit"
@@ -500,18 +501,18 @@ function RecentRequestsPanel({
   const [requests, setRequests] = useState<RequestData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // States to reveal interactive review form per card
+  // Track the request whose review form is currently open.
   const [activeReviewId, setActiveReviewId] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
 
-  // States to reveal interactive revision input per card
+  // Revision notes are kept separate from review feedback.
   const [activeRevisionId, setActiveRevisionId] = useState<string | null>(null);
   const [revisionText, setRevisionText] = useState("");
 
   const RECENT_REQUEST_LIMIT = 1;
 
-  // Real-time listener on requests submitted by this buyer
+  // The buyer sees provider status changes as soon as Firestore updates.
   useEffect(() => {
     const q = query(
       collection(db, "requests"),
@@ -525,7 +526,7 @@ function RecentRequestsPanel({
         snapshot.forEach((docSnap) => {
           docs.push({ id: docSnap.id, ...docSnap.data() } as RequestData);
         });
-        // Sort client-side if serverTimestamp is loading/null
+        // Sort here because a new server timestamp can briefly be null.
         docs.sort((a, b) => b.id.localeCompare(a.id));
         setRequests(docs);
         setLoading(false);
@@ -554,7 +555,7 @@ function RecentRequestsPanel({
   const allRequestsHref =
     role === "buyer" ? "/request-service/all" : `/request-service/${role}/all`;
 
-  // Handle accepting work & adding review
+  // Accepting delivered work completes the swap and stores the buyer's review.
   const handleAcceptComplete = async (reqId: string) => {
     try {
       const reqObj = requests.find((r) => r.id === reqId);
@@ -586,7 +587,7 @@ function RecentRequestsPanel({
     }
   };
 
-  // Handle requesting changes / sending revision notes
+  // A revision returns the request to the provider with clear notes.
   const handleRequestRevision = async (reqId: string) => {
     if (!revisionText.trim()) return;
     try {
@@ -733,7 +734,7 @@ function RecentRequestsPanel({
                   </div>
                 )}
 
-                {/* DONE ACTION PANEL - Buyer selects to Approve or Request Updates */}
+                {/* Buyer decision for delivered work */}
                 {item.status === "done" &&
                   !activeReviewId &&
                   !activeRevisionId && (
@@ -758,7 +759,7 @@ function RecentRequestsPanel({
                     </div>
                   )}
 
-                {/* Interactive Rating Form */}
+                {/* Completion review form */}
                 {activeReviewId === item.id && (
                   <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/40 p-3.5 transition">
                     <p className="text-xs font-bold text-slate-800">
@@ -804,7 +805,7 @@ function RecentRequestsPanel({
                   </div>
                 )}
 
-                {/* Interactive Revision Form */}
+                {/* Revision request form */}
                 {activeRevisionId === item.id && (
                   <div className="mt-4 rounded-xl border border-red-200 bg-red-50/40 p-3.5 transition">
                     <p className="text-xs font-bold text-slate-800">
@@ -835,7 +836,7 @@ function RecentRequestsPanel({
                   </div>
                 )}
 
-                {/* Completed Details */}
+                {/* Completed swap details */}
                 {(item.status === "completed" ||
                   item.status === "review_pending") && (
                   <div className="mt-3 space-y-2">

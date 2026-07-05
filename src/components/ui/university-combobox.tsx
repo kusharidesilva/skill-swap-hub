@@ -43,6 +43,7 @@ export default function UniversityCombobox({
   const inputValue = isLocked ? selectedValue : queryValue;
 
   useEffect(() => {
+    // Clicking outside closes the options without changing the typed value.
     const handlePointerDown = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
         setIsOpen(false);
@@ -54,6 +55,7 @@ export default function UniversityCombobox({
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
+  // Search the full institution name while the user types.
   const filteredUniversities = useMemo(() => {
     const query = inputValue.trim().toLowerCase();
     if (!query) return UNIVERSITIES;
@@ -88,6 +90,7 @@ export default function UniversityCombobox({
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    // Arrow keys, Enter, Escape, and Tab make the custom field keyboard friendly.
     if (isLocked) {
       if (event.key === "Escape") {
         setIsOpen(false);
@@ -135,6 +138,7 @@ export default function UniversityCombobox({
     (university) => university.toLowerCase() === inputValue.trim().toLowerCase(),
   );
 
+  // Limit the open menu for faster rendering while the user is typing.
   const renderedOptions = filteredUniversities.slice(0, 60);
 
   return (

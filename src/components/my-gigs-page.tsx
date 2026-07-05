@@ -41,6 +41,7 @@ function getFallbackImage(index: number) {
   return "/img/package%201.jpg";
 }
 
+// Convert both the current gig format and older skill-only profiles into one card shape.
 function buildGigs(profile: UserProfile): Gig[] {
   const providerProfile = profile.providerProfile;
   const storedGigs = providerProfile?.gigs || [];
@@ -116,6 +117,7 @@ export default function MyGigsPageContent({
       return;
     }
 
+    // Request activity drives the performance summary shown above the gig list.
     const providerId = userProfile.uid;
     const requestsQuery = query(collection(db, "requests"), where("providerId", "==", providerId));
 
@@ -167,6 +169,7 @@ export default function MyGigsPageContent({
       },
     );
 
+    // The second listener keeps gig edits and deletions visible immediately.
     const unsubscribeUser = onSnapshot(
       doc(db, "users", providerId),
       (userSnap) => {
@@ -199,6 +202,7 @@ export default function MyGigsPageContent({
       const existingSkills = (userProfile.providerProfile?.skills || []) as string[];
       const existingImages = (userProfile.providerProfile?.gigImages || []) as string[];
       const existingGigs = [...(userProfile.providerProfile?.gigs || [])];
+      // All three arrays use the same index, so they must be removed together.
       const updatedSkills = existingSkills.filter((_, idx) => idx !== rawIndex);
       const updatedImages = existingImages.filter((_, idx) => idx !== rawIndex);
       const updatedGigs = existingGigs.filter((_, idx) => idx !== rawIndex);
@@ -241,10 +245,12 @@ export default function MyGigsPageContent({
 
   const totalPages = Math.ceil(gigs.length / cardsPerPage);
   const safeCurrentPage = Math.min(currentPage, Math.max(1, totalPages));
+  // Only the current slice is rendered, while the full list remains in memory.
   const currentGigs = gigs.slice((safeCurrentPage - 1) * cardsPerPage, safeCurrentPage * cardsPerPage);
 
   return (
     <section className="space-y-6 pb-10">
+      {/* Provider performance summary */}
       {deleteNotice ? (
         <div className="fixed right-5 top-5 z-50 w-[min(92vw,360px)] rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_18px_50px_-24px_rgba(15,23,42,0.45)]">
           <p className="text-sm font-semibold text-slate-900">{deleteNotice}</p>
@@ -267,6 +273,7 @@ export default function MyGigsPageContent({
         <MetricCard title="Avg. Response" value={stats.avgResponse} sub="Highly Responsive" />
       </div>
 
+      {/* Offered gigs and management actions */}
       <section>
         <div className="flex items-center gap-6 border-b border-slate-200">
           <Link

@@ -86,7 +86,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 1. Check/create conversation when peerId is passed in URL query parameter
+  // Opening chat from a profile creates the conversation only if it does not exist.
   useEffect(() => {
     if (!userProfile || !peerIdParam) return;
 
@@ -115,7 +115,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
         if (existingChatId) {
           setActiveId(existingChatId);
         } else {
-          // Fetch peer info to initialize the chat doc
+          // Store a small peer snapshot so the chat list can render quickly.
           const peerSnap = await getDoc(doc(db, "users", peerId));
           let peerName = "Student Partner";
           let peerUniv = "University";
@@ -164,7 +164,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
     initializeConversation();
   }, [userProfile, peerIdParam, subjectParam]);
 
-  // 2. Load list of conversations in real-time from Firestore
+  // Listen to every conversation that includes the current user.
   useEffect(() => {
     if (!userProfile) return;
 
@@ -245,7 +245,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   const activeConversation =
     conversations.find((conversation) => conversation.id === activeId) || null;
 
-  // 3. Load messages for the active conversation in real-time
+  // Switching conversations also switches this message listener.
   useEffect(() => {
     if (!activeId) return;
 
@@ -288,7 +288,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
     return () => unsubscribe();
   }, [activeId, userProfile, activeConversation?.name, activeConversation?.peerRole]);
 
-  // 4. Send Message Handler
+  // Save the message first, then update the chat preview shown in both inboxes.
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = draftMessage.trim();
@@ -409,7 +409,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="grid min-h-[720px] lg:grid-cols-[320px_minmax(0,1fr)]">
-        {/* Sidebar */}
+        {/* Conversation search and inbox */}
         <aside className="border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
           <div className="border-b border-slate-100 p-5">
             <div className="flex items-center justify-between gap-3">
@@ -454,7 +454,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           </div>
         </aside>
 
-        {/* Conversation Pane */}
+        {/* Active conversation and message composer */}
         {activeConversation ? (
           <div className="flex min-h-[720px] flex-col bg-[#eef2ff]">
             <ChatHeader conversation={activeConversation} role={role} />

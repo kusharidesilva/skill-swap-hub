@@ -18,7 +18,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
   useEffect(() => {
     if (!userProfile) return;
 
-    // Fetch requests where user is either buyer or provider
+    // Both request directions are needed to build one complete activity summary.
     const q1 = query(
       collection(db, "requests"),
       where("providerId", "==", userProfile.uid),
@@ -97,10 +97,10 @@ export default function Profile({ role: propRole }: { role: Role }) {
     );
   }
 
-  // Derive role
+  // The route may request a view, but the saved profile is the source of truth.
   const displayRole = userProfile.role || propRole;
 
-  // Derive data fields from Firestore profile
+  // Normalize optional profile fields before passing them into the UI.
   const name = userProfile.name || "";
   const university = userProfile.university || "";
   const degree = userProfile.degree || "";
@@ -111,15 +111,15 @@ export default function Profile({ role: propRole }: { role: Role }) {
       : `Hey there! I'm a ${degree} student passionate about sharing knowledge. I believe the best way to learn is to teach someone else.`
   );
 
-  // Skills
+  // Provider skills come from the nested provider profile.
   const offeredSkills = userProfile.providerProfile?.skills || [];
   const neededSkills = userProfile.neededSkills || [];
 
-  // Show sections based on role
+  // Each role sees only the profile sections that apply to their activity.
   const showOffered = displayRole === "provider" || displayRole === "both";
   const showNeeded = displayRole === "buyer" || displayRole === "both";
 
-  // Availability Mapping
+  // Convert saved time values into the labels displayed on the profile.
   const availabilitySlots = userProfile.providerProfile?.availability || ["Weekdays", "Evenings"];
   const activeDays = new Set<string>();
   if (availabilitySlots.includes("Weekdays") || availabilitySlots.includes("Evenings")) {

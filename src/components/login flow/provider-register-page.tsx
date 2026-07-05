@@ -68,7 +68,7 @@ export default function ProviderRegisterPage() {
 
   useEffect(() => {
     if (userProfile) {
-      // If the user has already upgraded, redirect them to the correct dashboard
+      // Returning providers skip this form and go straight to their own dashboard.
       if (userProfile.role === "both") {
         checkBuyerHistory(userProfile.uid).then((hasHistory) => {
           if (hasHistory) {
@@ -102,7 +102,7 @@ export default function ProviderRegisterPage() {
   const universityValue = useWatch({ control, name: "university" }) || "";
   const yearOfStudyValue = useWatch({ control, name: "yearOfStudy" }) || "1st Year";
 
-  // ── Skill tag helpers ────────────────────────────────────────────────────────
+  // These helpers keep skill and availability selection separate from the form fields.
 
   const addSkill = (skill: string) => {
     const trimmed = skill.trim();
@@ -126,7 +126,7 @@ export default function ProviderRegisterPage() {
     setValue("availability", next, { shouldValidate: true });
   };
 
-  // ── Submit ───────────────────────────────────────────────────────────────────
+  // Validate the university email again before changing the account role.
 
   const onSubmit = async (data: ProviderValues) => {
     setServerError("");
@@ -148,9 +148,7 @@ export default function ProviderRegisterPage() {
         availability: data.availability,
         bio: data.bio,
       });
-      // Refresh the in-memory profile so AuthContext reflects the new "both"
-      // role immediately — without this, the cached "buyer" role stays stale
-      // until the user logs out and back in.
+      // Refresh the shared profile so navigation sees the new role immediately.
       await refreshProfile();
       setUpgradeSuccess(true);
       setTimeout(() => {
@@ -190,7 +188,7 @@ export default function ProviderRegisterPage() {
             <CloseIcon className="h-5 w-5" />
           </button>
 
-          {/* ── Left info panel ── */}
+          {/* Upgrade explanation and progress */}
           <section className="px-8 py-10">
             <span className="inline-flex w-fit items-center rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
               Become a Provider
@@ -250,7 +248,7 @@ export default function ProviderRegisterPage() {
             </div>
           </section>
 
-          {/* ── Right form panel ── */}
+          {/* Provider profile form */}
           <section className="border-l border-slate-200 px-8 py-10">
             {serverError && (
               <div className="mb-5 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 border border-red-200">
@@ -275,7 +273,7 @@ export default function ProviderRegisterPage() {
             )}
 
             <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-              {/* ── Academic Profile ── */}
+              {/* Academic profile */}
               <section>
                 <p className="text-xs font-semibold text-slate-500">
                   Academic Profile
@@ -327,7 +325,7 @@ export default function ProviderRegisterPage() {
                 </div>
               </section>
 
-              {/* ── Skills & Services ── */}
+              {/* Skills and services */}
               <section>
                 <p className="text-xs font-semibold text-slate-500">
                   Skills & Services

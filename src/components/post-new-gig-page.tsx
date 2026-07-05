@@ -36,11 +36,11 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   const { userProfile, refreshProfile } = useAuth();
   const isEditMode = mode === "edit";
 
-  // Derive the skill index from gigId (gigId format: "gig-N")
+  // Edit routes use "gig-N", so this converts the URL value back to an array index.
   const skillIndex =
     isEditMode && gigId ? parseInt(gigId.replace("gig-", ""), 10) : -1;
 
-  // Form state
+  // Main gig details are kept together so create and edit mode share one form.
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [summary, setSummary] = useState("");
@@ -49,11 +49,11 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   const [selectedImage, setSelectedImage] = useState("/img/package%201.jpg");
   const [availability, setAvailability] = useState<string[]>([]);
 
-  // Tags state
+  // Tags use a separate input because users can add several values.
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
 
-  // UI state
+  // These values only control validation and progress feedback.
   const [isSaving, setIsSaving] = useState(false);
   const [didAttemptSubmit, setDidAttemptSubmit] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
@@ -61,7 +61,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   const backHref =
     role === "both" ? "/my-gigs/both?tab=manage" : "/my-gigs/provider?tab=manage";
 
-  // Pre-fill form in edit mode from current userProfile data
+  // Edit mode copies the selected saved gig into the form once the profile loads.
   useEffect(() => {
     if (!isEditMode || !userProfile || skillIndex < 0) return;
     const gigs = userProfile.providerProfile?.gigs || [];
@@ -150,7 +150,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
         image: selectedImage,
       };
 
-      // Ensure existingImages length matches existingSkills length to prevent index misalignment
+      // Pad the image list so each skill keeps the image at the same index.
       while (existingImages.length < existingSkills.length) {
         existingImages.push("/img/package%201.jpg");
       }
@@ -168,12 +168,12 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
       }
 
       if (isEditMode && skillIndex >= 0) {
-        // Replace the skill and image at the specific index
+        // Edit only the selected gig and leave the rest of the profile untouched.
         existingSkills[skillIndex] = gigLabel;
         existingImages[skillIndex] = selectedImage;
         existingGigs[skillIndex] = gigData;
       } else {
-        // Add a new skill
+        // New gigs are appended to the provider's existing list.
         if (existingSkills.includes(gigLabel)) {
           setFeedback({ type: "error", msg: "A gig with this title already exists." });
           setIsSaving(false);

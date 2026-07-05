@@ -119,6 +119,7 @@ export default function GigPreviewPage({
     }
 
     try {
+      // The stable gig key prevents duplicate saves for the same card.
       const favorites = (userProfile.favorites || []) as Record<string, unknown>[];
       let updatedFavorites;
 
@@ -170,6 +171,7 @@ export default function GigPreviewPage({
 
     async function loadGig() {
       try {
+        // Load provider details first, then subscribe to completed swap reviews.
         const providerSnap = await getDoc(doc(db, "users", selectedProviderId));
         if (!providerSnap.exists()) return;
 
@@ -262,6 +264,7 @@ export default function GigPreviewPage({
     };
   }, [providerId, skillIndex]);
 
+  // Package details are derived from the current gig rather than stored separately.
   const packageItems = useMemo(
     () => [
       `${gig.skill} guidance`,
@@ -288,6 +291,7 @@ export default function GigPreviewPage({
 
   return (
     <div className="pb-10">
+      {/* Back navigation and gig breadcrumb */}
       <div className="mb-3">
         <Link
           href={backHref ?? `/post-gig/${role}`}
@@ -305,6 +309,7 @@ export default function GigPreviewPage({
 
       <div className="mt-3 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <main className="min-w-0 space-y-4">
+          {/* Gig cover and overview */}
           <h1 className="break-words text-2xl font-bold leading-tight text-slate-900 lg:text-[1.8rem]">{gig.title}</h1>
 
           <section className="overflow-hidden rounded-lg border border-slate-200 bg-[#9d6a2e] shadow-sm">
@@ -554,6 +559,7 @@ function Requirement({ title, detail }: { title: string; detail: string }) {
 }
 
 function ReviewsSection({ reviews }: { reviews: ReviewData[] }) {
+  // Demo reviews keep the layout useful until a new provider receives feedback.
   const visibleReviews = reviews.length > 0 ? reviews : fallbackGig.reviewCards;
 
   return (

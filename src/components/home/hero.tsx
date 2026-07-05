@@ -51,6 +51,7 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
   };
 
   return (
+    // The first screen introduces the platform and directs users to the right action.
     <section className="relative overflow-hidden bg-[#ebf5f0]">
       <div
         className="absolute -left-24 top-8 h-64 w-64 rounded-full bg-white/70 blur-3xl"

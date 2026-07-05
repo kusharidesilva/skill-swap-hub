@@ -11,6 +11,7 @@ type EditGigPageProps = {
 export default async function EditGigPage({ params }: EditGigPageProps) {
   const { role, gigId } = await params;
 
+  // Buyers cannot edit gigs, and malformed IDs should render the normal 404 page.
   if (!isRole(role) || role === "buyer" || typeof gigId !== "string" || !gigId) {
     notFound();
   }

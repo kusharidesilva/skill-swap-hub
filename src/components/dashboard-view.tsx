@@ -16,7 +16,7 @@ type DashboardViewProps = {
 export default function DashboardView({ role }: DashboardViewProps) {
   const { userProfile, loading } = useAuth();
 
-  // Stats States
+  // These totals are calculated from the current user's request history.
   const [buyerActiveRequests, setBuyerActiveRequests] = useState(0);
   const [buyerCompletedRequests, setBuyerCompletedRequests] = useState(0);
   const [providerIncomingRequests, setProviderIncomingRequests] = useState(0);
@@ -30,7 +30,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
 
     async function fetchStats() {
       try {
-        // 1. Fetch Buyer Stats
+        // Buyer stats come from requests this user created.
         const buyerQuery = query(
           collection(db, "requests"),
           where("buyerId", "==", uid),
@@ -49,7 +49,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
         setBuyerActiveRequests(activeB);
         setBuyerCompletedRequests(completedB);
 
-        // 2. Fetch Provider Stats
+        // Provider stats come from requests assigned to this user.
         const providerQuery = query(
           collection(db, "requests"),
           where("providerId", "==", uid),
@@ -125,7 +125,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
   return (
     <ProfileShell role={userRole}>
       <div className="space-y-6">
-        {/* Main Banner */}
+        {/* Welcome banner */}
         <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-wide text-[#2f66e7]">
             Dashboard Overview
@@ -141,7 +141,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                 : "Track your active swap requests, saved providers, and ratings from one place."}
           </p>
 
-          {/* Dynamic Stat Cards */}
+          {/* Live activity totals */}
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
             {userRole === "buyer" && (
               <>
@@ -242,10 +242,10 @@ export default function DashboardView({ role }: DashboardViewProps) {
           </div>
         </section>
 
-        {/* Both Details Section (If user is both Buyer and Provider) */}
+        {/* Dual-role activity */}
         {userRole === "both" && (
           <section className="grid gap-6 md:grid-cols-2">
-            {/* Buyer Details Sub-section */}
+            {/* Buyer activity */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-[#2f66e7]/40 transition-colors">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
@@ -295,7 +295,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
               </div>
             </div>
 
-            {/* Provider Details Sub-section */}
+            {/* Provider activity */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:border-[#1caa88]/40 transition-colors">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
@@ -348,7 +348,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
           </section>
         )}
 
-        {/* Become a Seller callout (If Buyer Dashboard) */}
+        {/* Provider upgrade callout */}
         {userRole === "buyer" && (
           <div className="overflow-hidden rounded-2xl border border-blue-100 bg-[#f8faff] p-6 shadow-sm relative">
             <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-48 h-48 bg-blue-100/30 rounded-full blur-2xl pointer-events-none" />
@@ -376,7 +376,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
           </div>
         )}
 
-        {/* Become a Buyer callout (If Provider Dashboard) */}
+        {/* Buyer-mode callout */}
         {userRole === "provider" && (
           <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-[#f7fdfb] p-6 shadow-sm relative">
             <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-48 h-48 bg-emerald-100/30 rounded-full blur-2xl pointer-events-none" />

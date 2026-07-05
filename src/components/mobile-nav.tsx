@@ -14,7 +14,7 @@ type NavItem = {
   icon: ComponentType<IconProps>;
 };
 
-// SVG Icon Definitions matching desktop side-nav icons exactly
+// Mobile uses the same icon language as the desktop sidebar.
 function DashboardIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
@@ -112,6 +112,7 @@ function InboxIcon(props: IconProps) {
   );
 }
 
+// Keep the compact mobile labels mapped to the same role-aware routes.
 const navConfig: Record<Role, NavItem[]> = {
   buyer: [
     { label: "Dashboard", href: "/dashboard/buyer", section: "default", icon: DashboardIcon },
@@ -151,7 +152,7 @@ export default function MobileNav({ role }: { role: Role }) {
   const pathname = usePathname();
   const items = navConfig[role];
 
-  // Helper to render an individual navigation link
+  // One renderer keeps active and sign-out styling consistent for every group.
   const renderItem = (item: NavItem) => {
     const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
     const isSignOut = item.label === "Sign Out";

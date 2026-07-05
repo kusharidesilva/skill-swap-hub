@@ -88,9 +88,11 @@ export default function AllRequestServicePage({
       where("buyerId", "==", userProfile.uid),
     );
 
+    // This live query keeps the buyer's full request history in sync.
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
+        // Normalize each Firestore status into the labels and actions used by the card.
         const docs: RequestCardData[] = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
@@ -177,7 +179,8 @@ export default function AllRequestServicePage({
             providerReview: data.providerReview,
           });
         });
-        setRequestState({ uid: userProfile.uid, requests: docs.reverse() }); // latest first
+        // Reverse once so the newest activity appears first.
+        setRequestState({ uid: userProfile.uid, requests: docs.reverse() });
       },
       (err) => {
         console.error("Error fetching requests:", err);
@@ -225,6 +228,7 @@ export default function AllRequestServicePage({
     },
   ];
 
+  // Tabs filter the already loaded list, so changing tabs needs no new query.
   const visibleRequests =
     activeFilter === "All Requests"
       ? requests
@@ -232,6 +236,7 @@ export default function AllRequestServicePage({
 
   return (
     <div className="flex w-full max-w-[1080px] flex-col gap-8 pb-10">
+      {/* Page heading and quick action */}
       <section className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
@@ -251,6 +256,7 @@ export default function AllRequestServicePage({
         </Link>
       </section>
 
+      {/* Status filters */}
       <section className="flex flex-wrap gap-3">
         {filters.map((filter) => (
           <button
@@ -268,12 +274,14 @@ export default function AllRequestServicePage({
         ))}
       </section>
 
+      {/* Request cards */}
       <section className="grid gap-6 xl:grid-cols-3 xl:auto-rows-fr">
         {visibleRequests.map((request) => (
           <RequestCard key={request.id} request={request} role={role} />
         ))}
       </section>
 
+      {/* Matching tips */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
         <h2 className="text-xl font-semibold text-slate-900">
           Tips for Better Matches
@@ -349,6 +357,7 @@ function RequestCard({
   const handleAcceptComplete = async () => {
     setSubmitting(true);
     try {
+      // Completion stores the buyer review on the same request for later ratings.
       await updateDoc(doc(db, "requests", request.id), {
         status: "review_pending",
         updatedAt: serverTimestamp(),
@@ -371,6 +380,7 @@ function RequestCard({
     if (!revisionText.trim()) return;
     setSubmitting(true);
     try {
+      // Revision notes move delivered work back into an active provider task.
       await updateDoc(doc(db, "requests", request.id), {
         status: "revision",
         revisionNotes: revisionText.trim(),

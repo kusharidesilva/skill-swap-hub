@@ -18,6 +18,7 @@ const steps = [
 
 export default function HowItWorksSection() {
   return (
+    // Three steps explain the complete skill-swap journey at a glance.
     <section id="how-it-works" className="bg-white py-16 sm:py-24 scroll-mt-20">
       <div className="relative z-10 mx-auto max-w-6xl px-6">
         <div className="text-center">

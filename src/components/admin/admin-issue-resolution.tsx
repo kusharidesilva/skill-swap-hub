@@ -8,6 +8,7 @@ type IssueRow = {
   status: "Pending" | "Resolved" | "Rejected";
 };
 
+// Issue records are sample admin data until the moderation collection is connected.
 const stats = [
   { label: "Pending Reports", value: "24", tone: "orange" },
   { label: "Pending Follow-ups", value: "12", tone: "blue" },
@@ -56,6 +57,7 @@ const issues: IssueRow[] = [
 export default function AdminIssueResolution() {
   return (
     <div className="px-6 py-10">
+      {/* Page heading and report filters */}
       <section className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="max-w-3xl">
           <h1 className="text-[30px] font-semibold leading-tight tracking-tight text-slate-900">
@@ -85,12 +87,14 @@ export default function AdminIssueResolution() {
         </div>
       </section>
 
+      {/* Issue status summary */}
       <section className="mt-6 grid gap-4 xl:grid-cols-3">
         {stats.map((stat) => (
           <StatCard key={stat.label} stat={stat} />
         ))}
       </section>
 
+      {/* Moderation queue */}
       <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="grid grid-cols-[0.8fr_0.95fr_0.95fr_1fr_1fr_0.8fr_0.8fr_0.55fr] border-b border-slate-200 bg-[#f6f7ff] px-4 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
           <span>Report ID</span>

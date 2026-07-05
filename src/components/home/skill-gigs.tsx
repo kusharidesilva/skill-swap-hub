@@ -53,6 +53,7 @@ export default function SkillGigsSection() {
         : "/explore-services";
 
   useEffect(() => {
+    // A completed swap triggers a fresh calculation of the featured ratings.
     const unsubscribe = onSnapshot(
       query(collection(db, "requests"), where("status", "==", "completed")),
       () => setRatingsVersion((value) => value + 1),
@@ -63,6 +64,7 @@ export default function SkillGigsSection() {
   }, []);
 
   useEffect(() => { 
+    // Combine provider profiles with completed-request ratings into the gig cards.
     async function fetchGigs() { 
       try { 
         const usersSnap = await getDocs(collection(db, "users")); 
@@ -167,6 +169,7 @@ export default function SkillGigsSection() {
 
   return (
     <section id="explore-skills" className="bg-white scroll-mt-20">
+      {/* Featured live service gigs */}
       <div className="mx-auto max-w-6xl px-6 py-14">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -283,6 +286,7 @@ function GigCard({ gig }: { gig: LiveGig }) {
         ];
       }
 
+      // Favorites are saved on the user profile and refreshed in shared auth state.
       await updateDoc(doc(db, "users", userProfile.uid), {
         favorites: updatedFavorites,
       });

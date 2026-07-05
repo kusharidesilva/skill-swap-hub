@@ -18,6 +18,7 @@ export default async function RoleChatsPage({ params }: RolePageProps) {
 
   return ( 
     <ProfileShell role={role}> 
+      {/* Chat reads URL search values on the client, so it loads inside Suspense. */}
       <Suspense fallback={ 
         <div className="flex h-[400px] items-center justify-center rounded-2xl border border-slate-200 bg-white"> 
           <div className="flex flex-col items-center gap-3"> 

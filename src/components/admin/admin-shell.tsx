@@ -32,6 +32,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const title = pageTitles[pathname] ?? "Dashboard";
 
   useEffect(() => {
+    // Close the account menu when the admin clicks anywhere outside it.
     function handleClickOutside(event: MouseEvent) {
       if (!menuRef.current?.contains(event.target as Node)) {
         setMenuOpen(false);
@@ -44,6 +45,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="grid h-screen overflow-hidden lg:grid-cols-[255px_minmax(0,1fr)]">
+      {/* Admin navigation */}
       <aside className="flex h-screen flex-col border-r border-slate-300 bg-[#eef0ff] px-4 py-7">
         <div className="px-2">
           <h1 className="text-[29px] font-semibold tracking-[-0.04em] text-slate-900">
@@ -104,6 +106,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
+      {/* Current admin page and account menu */}
       <main className="min-w-0 bg-[#f8f7ff]">
         <header className="flex h-[74px] items-center justify-between border-b border-slate-300 bg-white px-12 shadow-[0_2px_10px_rgba(15,23,42,0.05)]">
           <h2 className="text-[25px] font-medium text-slate-900">{title}</h2>

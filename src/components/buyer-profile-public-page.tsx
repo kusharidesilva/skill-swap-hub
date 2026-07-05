@@ -100,6 +100,7 @@ export default function BuyerProfilePublicPage({
 
         const member = userSnap.data() as FirestoreUserProfile;
         const isOwnerViewing = userProfile?.uid === buyerId;
+        // A private profile is still visible to its owner.
         if (member.settings?.profileVisibility === false && !isOwnerViewing) {
           setIsPrivateProfile(true);
           setProfile(null);
@@ -109,6 +110,7 @@ export default function BuyerProfilePublicPage({
 
         setIsPrivateProfile(false);
 
+        // This page is intentionally limited to buyer-only community members.
         const isProviderMember =
           member.role === "provider" ||
           member.role === "both" ||
@@ -120,6 +122,7 @@ export default function BuyerProfilePublicPage({
           return;
         }
 
+        // Completed swaps provide the public ratings and activity totals.
         const requestsSnap = await getDocs(
           query(
             collection(db, "requests"),
@@ -161,6 +164,7 @@ export default function BuyerProfilePublicPage({
     ? `${scopedHref("/report-issue", role)}/${buyerId}`
     : "/get-started";
 
+  // Keep public pages compact by showing only the six latest reviews in each direction.
   const recentReceived = useMemo(
     () => profile?.reviewsReceived.slice(0, 6) || [],
     [profile?.reviewsReceived]
@@ -211,6 +215,7 @@ export default function BuyerProfilePublicPage({
 
   return (
     <div className="flex w-full flex-col gap-4 pb-6">
+      {/* Identity, study details, and contact actions */}
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-[96px_minmax(0,1fr)]">
           <MemberAvatar image={profile.image} name={profile.name} />
@@ -254,6 +259,7 @@ export default function BuyerProfilePublicPage({
         </div>
       </section>
 
+      {/* Buyer activity summary */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Completed Swaps" value={String(profile.completedSwaps)} sub="Buyer activity" accent />
         <MetricCard title="Avg. Rating" value={profile.avgRatingReceived} sub="Received from providers" teal />
@@ -261,6 +267,7 @@ export default function BuyerProfilePublicPage({
         <MetricCard title="Reviews Given" value={String(profile.reviewsGiven.length)} sub="Shared by this buyer" />
       </section>
 
+      {/* Bio and requested skills */}
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
         <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-slate-700">About {profile.name.split(" ")[0]}</h2>
@@ -286,6 +293,7 @@ export default function BuyerProfilePublicPage({
         </article>
       </section>
 
+      {/* Reviews received and given */}
       <section className="grid gap-4 xl:grid-cols-2">
         <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
@@ -434,6 +442,7 @@ function EmptyPanel({ message, compact = false }: { message: string; compact?: b
   );
 }
 
+// Split review directions while calculating the buyer's public activity summary.
 function buildBuyerProfile(
   member: FirestoreUserProfile,
   completedRequests: FirebaseRequestDoc[]

@@ -22,33 +22,30 @@ export default function AuthGuard({ requiredRole, children }: AuthGuardProps) {
   const router = useRouter();
 
   useEffect(() => {
+    // These checks run in order so the user always lands on the most useful next step.
     if (loading) return;
 
-    // 1. Not authenticated at all
+    // Guests must sign in before any protected content is shown.
     if (!firebaseUser) {
       router.replace("/login");
       return;
     }
 
-    // 2. Email not verified yet
+    // Signed-in students still need to prove ownership of their university email.
     if (!firebaseUser.emailVerified) {
       router.replace("/verify-email");
       return;
     }
 
-    // 3. Role mismatch (only if requiredRole is set and profile is loaded)
+    // Check role access only after the Firestore profile has arrived.
     if (requiredRole && userProfile) {
       const role = userProfile.role;
 
-      // Access matrix:
-      // "both"     → can access any page (buyer OR provider)
-      // "provider" → can access both provider AND buyer pages
-      //              (providers can browse & buy skills too)
-      // "buyer"    → can only access buyer pages, NOT provider pages
+      // Dual-role users can open everything, while providers may also browse buyer pages.
       const hasAccess =
         role === "both" ||
         role === requiredRole ||
-        role === "provider"; // providers can freely browse buyer pages
+        role === "provider";
 
       if (!hasAccess) {
         router.replace(dashboardHref(role));
@@ -56,7 +53,7 @@ export default function AuthGuard({ requiredRole, children }: AuthGuardProps) {
     }
   }, [loading, firebaseUser, userProfile, requiredRole, router]);
 
-  // Show nothing while redirecting
+  // Keep protected content hidden while Firebase loads or a redirect is happening.
   if (loading || !firebaseUser || !firebaseUser.emailVerified) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f5f7ff]">

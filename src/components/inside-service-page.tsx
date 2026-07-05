@@ -10,12 +10,14 @@ type InsideServicePageProps = {
 export default function InsideServicePage({ role }: InsideServicePageProps) {
   return (
     <div className="flex w-full flex-col gap-6 pb-10">
+      {/* Service breadcrumb */}
       <p className="text-xs font-semibold text-slate-500">
         Graphics & Design <span className="px-1 text-slate-400">›</span> Book Design{" "}
         <span className="px-1 text-slate-400">›</span> Book Cover Design
       </p>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        {/* Main service details and shared files */}
         <section className="space-y-5">
           <h1 className="text-2xl font-semibold leading-tight text-slate-900 md:text-[2.1rem]">
             Creative Book Cover Design - KDP & eBook
@@ -167,6 +169,7 @@ export default function InsideServicePage({ role }: InsideServicePageProps) {
               </div>
             </article>
 
+            {/* Session notes */}
             <section className="space-y-3">
               <h3 className="text-2xl font-semibold text-slate-900">
                 What people say about this swap

@@ -23,6 +23,7 @@ const strongPasswordSchema = z
     strongPasswordMessage,
   );
 
+// The same schema powers validation messages and the TypeScript form type.
 const registerSchema = z
   .object({
     name: z.string().min(2, "Enter your full name."),
@@ -69,6 +70,7 @@ export default function RegisterPage() {
     setLoading(true);
     setServerError("");
     try {
+      // The auth helper creates the account, profile document, and verification email.
       await registerBuyer({
         name: data.name,
         email: data.email,
@@ -101,6 +103,7 @@ export default function RegisterPage() {
       <div className="fixed inset-0 bg-black/25 backdrop-blur-sm" aria-hidden="true" />
       <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
         <div className="grid w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
+          {/* Buyer registration form */}
           <section className="relative bg-white px-10 py-10">
             <Link
               href="/"
@@ -267,6 +270,7 @@ export default function RegisterPage() {
             </div>
           </section>
 
+          {/* Registration benefits */}
           <section className="flex items-center justify-center bg-[#eef1ff] px-8 py-10">
             <div className="max-w-sm rounded-3xl bg-[#e4e9ff] p-6 text-center shadow-sm">
               <div className="overflow-hidden rounded-2xl bg-white shadow-lg">

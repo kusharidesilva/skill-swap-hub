@@ -17,6 +17,7 @@ type SideNavProps = {
   role?: Role;
 };
 
+// Each role gets only the workflows that make sense for that account.
 const navConfig: Record<Role, NavItem[]> = {
   buyer: [
     { label: "Dashboard", href: "/dashboard/buyer", icon: DashboardIcon },
@@ -165,6 +166,7 @@ const navConfig: Record<Role, NavItem[]> = {
 export default function SideNav({ role: roleProp }: SideNavProps) {
   const pathname = usePathname();
 
+  // The explicit shell role wins; the pathname is only a safe fallback.
   const role: Role = roleProp
     ? roleProp
     : pathname.includes("/provider")
@@ -175,6 +177,7 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
 
   const links = navConfig[role];
 
+  // Grouping adds clear labels without duplicating separate navigation components.
   const defaultItems = links.filter((item) => !item.section || item.section === "default");
   const provideItems = links.filter((item) => item.section === "provide");
   const findItems    = links.filter((item) => item.section === "find");

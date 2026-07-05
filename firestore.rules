@@ -2,17 +2,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if user is authenticated
+    // Most app data is private to signed-in community members.
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Helper function to check if user owns the document
+    // Ownership always comes from the trusted Firebase UID.
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Users collection rules
+    // Users can update their own profile, but profiles are not deleted from the client.
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isOwner(userId);
@@ -20,14 +20,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Gigs/listings rules
+    // A provider may only create or change listings that belong to them.
     match /gigs/{gigId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.providerId == request.auth.uid;
       allow update, delete: if isAuthenticated() && resource.data.providerId == request.auth.uid;
     }
 
-    // Requests rules
+    // Requests are shared between the buyer, assigned provider, or the open request board.
     match /requests/{requestId} {
       allow read: if isAuthenticated() && (
         resource.data.buyerId == request.auth.uid ||
@@ -44,7 +44,7 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.buyerId == request.auth.uid;
     }
 
-    // Chats rules
+    // Only participants listed on a chat document can open or update it.
     match /chats/{chatId} {
       allow read: if isAuthenticated() && (
         request.auth.uid in resource.data.participants
@@ -58,7 +58,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Messages inside chats rules
+    // Messages inherit access from the parent chat and cannot be edited later.
     match /chats/{chatId}/messages/{messageId} {
       allow read: if isAuthenticated() && (
         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
@@ -70,7 +70,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Notifications rules
+    // Recipients manage their own notifications; signed-in features may create them.
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated();
@@ -79,7 +79,7 @@ service cloud.firestore {
       );
     }
 
-    // Reports rules
+    // Reporters can submit and track reports, while moderation controls status changes.
     match /reports/{reportId} {
       allow create: if isAuthenticated() && request.resource.data.reporterId == request.auth.uid;
       allow read: if isAuthenticated() && resource.data.reporterId == request.auth.uid;

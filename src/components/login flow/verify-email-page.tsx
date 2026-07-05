@@ -25,12 +25,12 @@ export default function VerifyEmailPage({ searchParams }: Props) {
   const [verifySuccess, setVerifySuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // ── Check if user has clicked the email link and verified ────────────────────
+  // Reload the account because verification may have happened in another browser tab.
   const handleCheckVerification = useCallback(async () => {
     setChecking(true);
     setErrorMsg("");
     try {
-      // Reload the Firebase user to get fresh emailVerified status
+      // Firebase keeps a cached user until reload is requested.
       const currentUser = auth.currentUser;
       if (!currentUser) {
         setErrorMsg("No active session. Please log in again.");
@@ -55,7 +55,7 @@ export default function VerifyEmailPage({ searchParams }: Props) {
     }
   }, [isProvider, router]);
 
-  // ── Resend verification email ─────────────────────────────────────────────────
+  // Resending is rate-limited in the UI to avoid accidental repeated emails.
   const handleResend = async () => {
     setResending(true);
     setResendSuccess(false);

@@ -39,6 +39,7 @@ export default function FavoritesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
+  // Favorites are stored inside the user's profile, so no extra query is needed.
   const savedSkills = useMemo(() => {
     return (userProfile?.favorites || []) as SavedSkill[];
   }, [userProfile]);
@@ -46,6 +47,7 @@ export default function FavoritesPage() {
   const handleRemoveFavorite = async (favoriteKey: string) => {
     if (!userProfile) return;
     try {
+      // New favorites use a gig key; the provider check supports older saved records.
       const updated = savedSkills.filter(
         (fav) =>
           fav.gigId !== favoriteKey &&
@@ -63,6 +65,7 @@ export default function FavoritesPage() {
   const visibleSkills = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
 
+    // A card must satisfy both the selected category and the search text.
     return savedSkills.filter((skill) => {
       const matchesFilter =
         activeFilter === "All" ||
@@ -93,6 +96,7 @@ export default function FavoritesPage() {
 
   return (
     <section className="space-y-6">
+      {/* Page summary and controls */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl">
@@ -169,6 +173,7 @@ export default function FavoritesPage() {
         </div>
       </div>
 
+      {/* Saved gig results or the matching empty state */}
       {visibleSkills.length > 0 ? (
         <div className={viewMode === "grid" ? "grid grid-cols-1 gap-5 xl:grid-cols-2" : "flex flex-col gap-3"}>
           {visibleSkills.map((skill) => (

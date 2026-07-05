@@ -76,6 +76,7 @@ function CheckIcon() {
   );
 }
 
+// Accept simple strings and detailed options through one component API.
 function normalizeOption(option: SelectOption): NormalizedOption {
   if (typeof option === "string") {
     return { value: option, label: option, disabled: false };
@@ -115,6 +116,7 @@ export default function SelectField({
   const selectedLabel = selectedOption?.label || value || placeholder || "";
 
   useEffect(() => {
+    // Clicking elsewhere closes the custom menu like a native select.
     const handlePointerDown = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
         setIsOpen(false);
@@ -129,6 +131,7 @@ export default function SelectField({
   const findEnabledIndex = (startIndex: number, direction: 1 | -1) => {
     if (normalizedOptions.length === 0) return -1;
 
+    // Wrap around the list while skipping options the user cannot choose.
     let index = startIndex;
     for (let count = 0; count < normalizedOptions.length; count += 1) {
       index = (index + direction + normalizedOptions.length) % normalizedOptions.length;
@@ -159,6 +162,7 @@ export default function SelectField({
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    // Mirror native select keyboard behaviour inside the custom popover.
     if (disabled) return;
 
     if (event.key === "Escape") {

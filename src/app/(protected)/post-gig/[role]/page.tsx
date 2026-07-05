@@ -11,6 +11,7 @@ type RolePostGigPageProps = {
 export default async function RolePostGigPage({ params }: RolePostGigPageProps) {
   const { role } = await params;
 
+  // Only provider-capable roles can publish a service gig.
   if (!isRole(role) || role === "buyer") {
     notFound();
   }

@@ -13,6 +13,7 @@ export default function BecomeSellerModal() {
   const { userProfile, loading } = useAuth();
 
   useEffect(() => {
+    // Already-upgraded accounts should never see the onboarding introduction again.
     if (userProfile) {
       if (userProfile.role === "both") {
         checkBuyerHistory(userProfile.uid).then((hasHistory) => {
@@ -28,6 +29,7 @@ export default function BecomeSellerModal() {
     }
   }, [userProfile, router]);
 
+  // Keep the modal hidden while the role check redirects an existing provider.
   const isUpgraded = userProfile && (userProfile.role === "both" || userProfile.role === "provider");
 
   if (loading || isUpgraded) {
@@ -67,6 +69,7 @@ export default function BecomeSellerModal() {
         </button>
 
         <div className="grid grid-cols-1 gap-10 p-8 md:grid-cols-[1.2fr_0.8fr] md:p-12">
+          {/* Provider benefits */}
           <div className="space-y-8">
             <span className="inline-flex w-fit items-center rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
               Become a Provider
@@ -126,6 +129,7 @@ export default function BecomeSellerModal() {
             </div>
           </div>
 
+          {/* Onboarding steps */}
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg">
             <h2 className="text-lg font-semibold text-slate-900">Setup Progress</h2>
             <div className="mt-6 space-y-6">

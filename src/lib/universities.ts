@@ -1,5 +1,5 @@
 export const UNIVERSITY_DOMAINS: Record<string, string[]> = {
-  // UGC Universities
+  // Public universities recognized by the UGC.
   "University of Colombo": ["cmb.ac.lk"],
   "University of Peradeniya": ["pdn.ac.lk"],
   "University of Sri Jayewardenepura": ["sjp.ac.lk"],
@@ -19,7 +19,7 @@ export const UNIVERSITY_DOMAINS: Record<string, string[]> = {
   "Gampaha Wickramarachchi University of Indigenous Medicine": ["gwu.ac.lk"],
   "Institute of Technology, University of Moratuwa": ["itum.mrt.ac.lk"],
 
-  // Other Government Universities / Higher Education Institutes
+  // Other government higher-education institutes.
   "General Sir John Kotelawala Defence University": ["kdu.ac.lk"],
   "Buddhist and Pali University of Sri Lanka": ["bpu.ac.lk"],
   "Buddhasravaka Bhiksu University": ["busl.ac.lk"],
@@ -34,7 +34,7 @@ export const UNIVERSITY_DOMAINS: Record<string, string[]> = {
   "National Institute of Fundamental Studies": ["nifs.ac.lk"],
   "National Institute of Education": ["nie.lk"],
 
-  // Ministry-recognized Degree-awarding Institutes
+  // Ministry-recognized degree-awarding institutes.
   "Institute of Surveying and Mapping": ["ism.ac.lk"],
   "Sri Lanka Institute of Information Technology (SLIIT)": ["sliit.lk"],
   "Sri Lanka Institute of Development Administration (SLIDA)": ["slida.lk"],
@@ -71,6 +71,7 @@ export const UNIVERSITY_DOMAINS: Record<string, string[]> = {
 
 export const UNIVERSITIES = Object.keys(UNIVERSITY_DOMAINS);
 
+// Registration uses the selected university, so the email must match that exact institution.
 export function isEmailAllowedForUniversity(email: string, universityName: string): boolean {
   const allowedDomains = UNIVERSITY_DOMAINS[universityName];
   if (!allowedDomains) return false;
@@ -79,6 +80,7 @@ export function isEmailAllowedForUniversity(email: string, universityName: strin
   if (parts.length !== 2) return false;
   const emailDomain = parts[1];
 
+  // Subdomains are accepted because some faculties issue their own email domain.
   return allowedDomains.some(
     (domain) => emailDomain === domain || emailDomain.endsWith("." + domain)
   );
@@ -89,6 +91,7 @@ export function isUniversityEmail(email: string): boolean {
   if (parts.length !== 2) return false;
   const emailDomain = parts[1];
 
+  // Login only needs to know whether the address belongs to any supported institute.
   return Object.values(UNIVERSITY_DOMAINS).some((domains) =>
     domains.some((domain) => emailDomain === domain || emailDomain.endsWith("." + domain))
   );

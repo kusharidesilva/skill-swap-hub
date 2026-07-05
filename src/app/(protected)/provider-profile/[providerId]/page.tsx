@@ -21,6 +21,7 @@ export default async function ProviderProfilePage({
   const query = await searchParams;
   const requestedRole = query?.role;
   const requestedTab = query?.tab;
+  // Query values are treated as untrusted input before they reach the component.
   const role = isRole(requestedRole) ? requestedRole : undefined;
   const activeTab = requestedTab === "reviews" ? "reviews" : "gigs";
 

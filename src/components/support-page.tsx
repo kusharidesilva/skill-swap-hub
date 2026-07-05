@@ -82,6 +82,7 @@ const faqs = [
 export default function SupportPage() {
   return (
     <main className="bg-white">
+      {/* Help page introduction */}
       <section className="bg-[#eef1ff]">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-6 py-14 text-center lg:py-20">
           <span className="inline-flex items-center gap-2 rounded-full bg-[#e3e9ff] px-3 py-1 text-xs font-semibold text-[#2b54d6]">
@@ -99,6 +100,7 @@ export default function SupportPage() {
         </div>
       </section>
 
+      {/* Support categories */}
       <section className="bg-white">
         <div className="mx-auto max-w-6xl px-6 py-14">
           <h2 className="text-[18px] font-semibold leading-none text-slate-900 sm:text-[19px]">
@@ -132,6 +134,7 @@ export default function SupportPage() {
         </div>
       </section>
 
+      {/* Frequently asked questions */}
       <section className="bg-white">
         <div className="mx-auto max-w-4xl px-6 pb-6 pt-4 text-center">
           <h2 className="text-xl font-semibold text-slate-900">
@@ -161,6 +164,7 @@ export default function SupportPage() {
         </div>
       </section>
 
+      {/* Contact support options */}
       <section id="contact-section" className="bg-white pb-16 scroll-mt-20">
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid gap-8 rounded-[30px] bg-[#1654d1] px-10 py-10 text-white shadow-lg lg:grid-cols-[1.15fr_0.85fr] lg:items-center">

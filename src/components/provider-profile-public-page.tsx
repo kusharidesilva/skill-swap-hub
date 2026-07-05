@@ -129,6 +129,7 @@ export default function ProviderProfilePublicPage({
         const member = userSnap.data() as FirestoreUserProfile;
         const isOwnerViewing = userProfile?.uid === providerId;
 
+        // Privacy settings hide the page from others but never from its owner.
         if (member.settings?.profileVisibility === false && !isOwnerViewing) {
           setIsPrivateProfile(true);
           setProfile(null);
@@ -138,6 +139,7 @@ export default function ProviderProfilePublicPage({
 
         setIsPrivateProfile(false);
 
+        // Reject buyer-only records instead of showing an empty provider profile.
         const isProviderMember =
           member.role === "provider" ||
           member.role === "both" ||
@@ -149,6 +151,7 @@ export default function ProviderProfilePublicPage({
           return;
         }
 
+        // Completed requests are the source for rating, reviews, and swap totals.
         const requestsSnap = await getDocs(
           query(
             collection(db, "requests"),
@@ -195,6 +198,7 @@ export default function ProviderProfilePublicPage({
       const favorites = (userProfile.favorites || []) as Record<string, unknown>[];
       let updatedFavorites;
 
+      // Profile favorites are kept for compatibility with older saved items.
       if (isFavorited) {
         updatedFavorites = favorites.filter(
           (fav) =>
@@ -246,6 +250,7 @@ export default function ProviderProfilePublicPage({
 
     try {
       const favorites = (userProfile.favorites || []) as Record<string, unknown>[];
+      // A provider can have many gigs, so each one receives its own stable key.
       const favoriteKey = getGigFavoriteKey(gig.id);
       const updatedFavorites = isGigFavorited(gig.id)
         ? favorites.filter((fav) => (fav as { gigId?: string }).gigId !== favoriteKey)
@@ -332,6 +337,7 @@ export default function ProviderProfilePublicPage({
 
   return (
     <div className="flex w-full flex-col gap-4 pb-6">
+      {/* Provider identity and quick actions */}
       <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-[96px_minmax(0,1fr)]">
           <MemberAvatar image={profile.image} name={profile.name} />
@@ -394,6 +400,7 @@ export default function ProviderProfilePublicPage({
         </div>
       </section>
 
+      {/* Trust and performance summary */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Trust Score" value={profile.trustScore} sub="Completion Rate" accent />
         <MetricCard title="Total Swaps" value={profile.totalSwaps} sub="Completed" />
@@ -406,6 +413,7 @@ export default function ProviderProfilePublicPage({
         <MetricCard title="Avg. Response" value={profile.avgResponse} sub="Highly Responsive" />
       </section>
 
+      {/* Tabbed gig catalogue or review history */}
       <section>
         <div className="flex items-center gap-6 border-b border-slate-200">
           <Link
@@ -598,6 +606,7 @@ function EmptyPanel({ message }: { message: string }) {
   );
 }
 
+// Convert profile and request documents into display-ready public data.
 function buildProviderProfile(
   member: FirestoreUserProfile,
   providerId: string,

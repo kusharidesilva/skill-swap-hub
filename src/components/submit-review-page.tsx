@@ -36,6 +36,7 @@ export default function SubmitReviewPage({ role, peer = "alex" }: SubmitReviewPa
   const [feedback, setFeedback] = useState("");
   const [selectedHighlights, setSelectedHighlights] = useState<string[]>(["Professionalism"]);
 
+  // This label lets screen-reader users hear the current star selection.
   const starLabel = useMemo(() => `Tap to rate (${rating}/5 Stars selected)`, [rating]);
 
   return (
@@ -51,6 +52,7 @@ export default function SubmitReviewPage({ role, peer = "alex" }: SubmitReviewPa
         </p>
       </header>
 
+      {/* Review form */}
       <section className="rounded-xl border border-slate-300 bg-white p-5 shadow-sm">
         <article className="rounded-xl border border-slate-300 bg-[#f4f5ff] p-5">
           <div className="flex items-center gap-4">
@@ -149,6 +151,7 @@ export default function SubmitReviewPage({ role, peer = "alex" }: SubmitReviewPa
         </div>
       </section>
 
+      {/* Community reminder */}
       <section className="rounded-xl border border-teal-300 bg-[#d8f4ef] p-5">
         <p className="text-base font-semibold text-teal-800">Pro Tip for Reviews</p>
         <p className="mt-1 text-[1.1rem] text-slate-700">

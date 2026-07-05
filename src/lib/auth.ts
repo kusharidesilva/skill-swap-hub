@@ -20,7 +20,7 @@ import {
 import { auth, db } from "./firebase";
 import { dashboardHref, homeHref, type Role } from "./role-routes";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// This is the shared shape of a user document stored in Firestore.
 
 export interface UserProfile {
   uid: string;
@@ -61,8 +61,7 @@ export interface ProviderGig {
   image: string;
 }
 
-// ─── Register Buyer ───────────────────────────────────────────────────────────
-
+// Creates both the Firebase login and its matching Firestore profile.
 export async function registerBuyer(data: {
   name: string;
   email: string;
@@ -79,7 +78,7 @@ export async function registerBuyer(data: {
 
   const user = credential.user;
 
-  // Save user profile to Firestore
+  // The UID joins the authentication account to the application profile.
   await setDoc(doc(db, "users", user.uid), {
     uid: user.uid,
     name: data.name,
@@ -92,18 +91,13 @@ export async function registerBuyer(data: {
     createdAt: serverTimestamp(),
   });
 
-  // Send email verification
+  // Access remains limited until the student verifies this address.
   await sendEmailVerification(user);
 
   return user;
 }
 
-// ─── Check Buyer History ──────────────────────────────────────────────────────
-
-/**
- * Checks Firestore to see if the user has any active/completed service requests
- * as a buyer.
- */
+// A request made as a buyer is what turns a provider account into a dual-role account.
 export async function checkBuyerHistory(uid: string): Promise<boolean> {
   const requestsQuery = query(
     collection(db, "requests"),
@@ -113,8 +107,7 @@ export async function checkBuyerHistory(uid: string): Promise<boolean> {
   return !requestsSnap.empty;
 }
 
-// ─── Login with Smart Redirect ────────────────────────────────────────────────
-
+// Signs the user in and chooses the first screen from their saved role and activity.
 export async function loginUser(
   email: string,
   password: string,
@@ -125,7 +118,7 @@ export async function loginUser(
   const credential = await signInWithEmailAndPassword(auth, email, password);
   const user = credential.user;
 
-  // Fetch user profile from Firestore
+  // Authentication stores credentials; the application role lives in Firestore.
   const userDoc = await getDoc(doc(db, "users", user.uid));
   if (!userDoc.exists()) {
     throw new Error("User profile not found. Please contact support.");
@@ -134,6 +127,7 @@ export async function loginUser(
   const profile = userDoc.data() as UserProfile;
   const role = profile.role;
 
+  // A dual-role user with buyer activity returns to the combined dashboard.
   if (role === "both") {
     const hasBuyerHistory = await checkBuyerHistory(user.uid);
     return {
@@ -150,8 +144,7 @@ export async function loginUser(
   };
 }
 
-// ─── Upgrade Buyer → Provider ─────────────────────────────────────────────────
-
+// Adds provider details to an existing account without creating a second user.
 export async function upgradeToProvider(
   uid: string,
   providerData: {
@@ -171,10 +164,7 @@ export async function upgradeToProvider(
     throw new Error("User not found.");
   }
 
-  // Only grant "both" role if the user has actual buyer request history.
-  // Without history they stay as "provider" so the navbar/shell renders
-  // the correct provider-only UI. The role is upgraded to "both"
-  // automatically when they submit their first buyer request.
+  // Buyer history preserves both modes; otherwise this becomes provider-only for now.
   const hasBuyerHistory = await checkBuyerHistory(uid);
   const newRole = hasBuyerHistory ? "both" : "provider";
 
@@ -194,13 +184,10 @@ export async function upgradeToProvider(
   return hasBuyerHistory ? homeHref("both") : homeHref("provider");
 }
 
-// ─── Forgot Password ──────────────────────────────────────────────────────────
-
+// Firebase sends the secure reset link, so no password is handled by this app.
 export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email);
 }
-
-// ─── Resend Email Verification ────────────────────────────────────────────────
 
 export async function resendVerificationEmail(): Promise<void> {
   const user = auth.currentUser;
@@ -208,14 +195,11 @@ export async function resendVerificationEmail(): Promise<void> {
   await sendEmailVerification(user);
 }
 
-// ─── Sign Out ─────────────────────────────────────────────────────────────────
-
 export async function signOut(): Promise<void> {
   await firebaseSignOut(auth);
 }
 
-// ─── Get Current User Profile ─────────────────────────────────────────────────
-
+// Returns null when authentication exists but its profile document is missing.
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const userDoc = await getDoc(doc(db, "users", uid));
   if (!userDoc.exists()) return null;

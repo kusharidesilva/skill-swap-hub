@@ -10,10 +10,12 @@ service firebase.storage {
     }
 
     match /profile-images/{userId}/{allPaths=**} {
+      // Profile images stay inside a folder named with the owner's UID.
       allow read, write: if isOwner(userId);
     }
 
     match /reports/{userId}/{allPaths=**} {
+      // Evidence is private to the reporter at the storage layer.
       allow read, write: if isOwner(userId);
     }
 

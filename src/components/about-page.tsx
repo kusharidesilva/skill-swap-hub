@@ -48,6 +48,7 @@ export default function AboutPage({
 }: AboutPageProps) {
   return (
     <main className="bg-white">
+      {/* Mission statement */}
       <section className="relative overflow-hidden bg-[#eef1ff]">
         <div
           className="absolute -left-24 top-8 h-64 w-64 rounded-full bg-white/70 blur-3xl"
@@ -103,6 +104,7 @@ export default function AboutPage({
         </div>
       </section>
 
+      {/* Platform story and purpose */}
       <section id="story" className="bg-white scroll-mt-20">
         <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1fr_1.05fr]">
           <div className="grid grid-cols-2 gap-4">
@@ -174,6 +176,7 @@ export default function AboutPage({
         </div>
       </section>
 
+      {/* Community values */}
       <section className="bg-white">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="text-center">
@@ -205,6 +208,7 @@ export default function AboutPage({
         </div>
       </section>
 
+      {/* Join the community call to action */}
       <section className="bg-white pb-16">
         <div className="mx-auto max-w-6xl px-6">
           <div className="relative overflow-hidden rounded-3xl bg-[#0f4cbf] px-8 py-10 text-center text-white shadow-lg">

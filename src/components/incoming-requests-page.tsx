@@ -66,17 +66,17 @@ export default function IncomingRequestsPageContent({
   const [requests, setRequests] = useState<RequestData[]>([]);
   const [fetching, setFetching] = useState(true);
 
-  // Real-time subscription to requests targeted at this provider OR general requests
+  // Keep both direct and open requests live without making the provider refresh.
   useEffect(() => {
     if (!userProfile) return;
 
-    // Query 1: Requests specifically for this provider
+    // Direct requests were sent to this provider from their profile or gig.
     const specificProviderQuery = query(
       collection(db, "requests"),
       where("providerId", "==", userProfile.uid),
     );
 
-    // Query 2: General/unassigned requests (providerId == "general")
+    // General requests are open opportunities that any provider can accept.
     const generalRequestsQuery = query(
       collection(db, "requests"),
       where("providerId", "==", "general"),
@@ -84,7 +84,7 @@ export default function IncomingRequestsPageContent({
 
     const mergedRequests: Map<string, RequestData> = new Map();
 
-    // Subscribe to specific provider requests
+    // Each listener updates its own list, then the page merges them below.
     const unsubscribeSpecific = onSnapshot(
       specificProviderQuery,
       (snapshot) => {
@@ -102,7 +102,7 @@ export default function IncomingRequestsPageContent({
       },
     );
 
-    // Subscribe to general requests
+    // The second listener follows the shared request board.
     const unsubscribeGeneral = onSnapshot(
       generalRequestsQuery,
       (snapshot) => {
@@ -186,6 +186,7 @@ export default function IncomingRequestsPageContent({
 
   return (
     <section className="space-y-6 pb-10">
+      {/* Page summary */}
       <header>
         <h1 className="text-xl font-bold text-slate-900">Skill Requests</h1>
         <p className="mt-1 text-xs text-slate-500">
@@ -193,6 +194,7 @@ export default function IncomingRequestsPageContent({
         </p>
       </header>
 
+      {/* Request status navigation */}
       <div className="flex items-center gap-6 border-b border-slate-200">
         <TabLink
           href={tabHref("new")}
@@ -216,6 +218,7 @@ export default function IncomingRequestsPageContent({
         />
       </div>
 
+      {/* Only the selected workflow stage is rendered below. */}
       {activeTab === "new" && (
         <NewRequestsView
           requests={requests.filter((r) => r.status === "pending")}
@@ -327,7 +330,7 @@ function NewRequestsView({
     );
   }, [searchParams]);
 
-  // Filtering
+  // Apply the selected tab and search text before rendering the cards.
   const filteredRequests = useMemo(() => {
     return requests.filter((request) => {
       const categoryOk =

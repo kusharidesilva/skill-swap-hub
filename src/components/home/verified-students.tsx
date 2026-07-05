@@ -36,6 +36,7 @@ const features: Feature[] = [
 
 export default function VerifiedStudentsSection() {
   return (
+    // This section explains the trust checks behind the student community.
     <section id="trust-section" className="bg-[#f3f5ff] py-16 sm:py-20 scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center">

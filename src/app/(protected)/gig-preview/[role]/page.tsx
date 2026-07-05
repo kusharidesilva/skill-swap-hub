@@ -17,6 +17,7 @@ type GigPreviewByRolePageProps = {
 };
 
 export default async function GigPreviewByRolePage({ params, searchParams }: GigPreviewByRolePageProps) {
+  // Next.js provides both the role segment and preview options as promises.
   const { role } = await params;
   const query = await searchParams;
   const source = query.source;
@@ -29,6 +30,7 @@ export default async function GigPreviewByRolePage({ params, searchParams }: Gig
     notFound();
   }
 
+  // Return the user to the page that originally opened this preview.
   const backHref =
     source === "edit" && typeof gigId === "string" && gigId
       ? `/edit-gig/${role}/${gigId}`
@@ -47,6 +49,7 @@ export default async function GigPreviewByRolePage({ params, searchParams }: Gig
     />
   );
 
+  // Home previews use the public shell; dashboard previews keep the profile shell.
   if (source === "home") {
     return (
       <div className="min-h-screen bg-[#f5f7ff] text-slate-900">

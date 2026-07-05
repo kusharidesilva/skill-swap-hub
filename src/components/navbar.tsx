@@ -28,7 +28,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   const { userProfile } = useAuth();
   const [activeSection, setActiveSection] = useState("Home");
 
-  // Determine the active role based on prop or pathname auto-detection
+  // Prefer the page's role, then infer it from the URL for shared screens.
   let role: SiteRole = propRole || "guest";
   if (!propRole) {
     const pathSegments = pathname.split("/");
@@ -44,7 +44,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
     }
   }
 
-  // Set up nav links dynamically based on role
+  // Guests and signed-in roles receive different destinations from the same navbar.
   const getNavLinks = () => {
     const roleHomeHref = homeHref(role);
     const roleAboutHref = aboutHref(role);
@@ -98,7 +98,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
     pathname === notificationsHref ||
     pathname.startsWith(`${notificationsHref}/`);
 
-  // Scroll spy active section effect
+  // On home pages, highlight the section currently visible below the fixed header.
   useEffect(() => {
     const isHomePage =
       pathname === "/" ||
@@ -111,7 +111,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
     }
 
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 200; // offset for navbar height
+      const scrollPosition = window.scrollY + 200; // Allow for the fixed navbar height.
 
       const exploreSection = document.getElementById("explore-skills");
       const howItWorksSection = document.getElementById("how-it-works");
@@ -133,7 +133,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
     };
   }, [pathname]);
 
-  // Dynamically compute active section for non-home pages during render (avoids cascading render warning)
+  // Non-home pages can determine their active link directly from the pathname.
   const isHomePage =
     pathname === "/" ||
     pathname === "/home/buyer" ||
@@ -169,7 +169,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
             />
           </Link>
 
-          {/* Desktop Navigation */}
+          {/* Desktop navigation links */}
           <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
             {navLinks.map((link) => {
               const isActive = currentActiveSection === link.name;

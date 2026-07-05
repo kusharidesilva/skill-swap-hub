@@ -17,6 +17,7 @@ type StatItem = {
   note?: string;
 };
 
+// These rows are placeholder admin data until verification records are connected.
 const stats: StatItem[] = [
   { label: "Verified Users", value: "8,402", tone: "teal" },
   { label: "Pending Verification", value: "145", tone: "blue" },
@@ -66,6 +67,7 @@ const rows: VerificationRow[] = [
 export default function AdminVerifications() {
   return (
     <div className="px-6 py-10">
+      {/* Page heading and search tools */}
       <section className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <h1 className="text-[30px] font-semibold leading-tight tracking-tight text-slate-900">
@@ -88,12 +90,14 @@ export default function AdminVerifications() {
         </div>
       </section>
 
+      {/* Verification status summary */}
       <section className="mt-6 grid gap-4 xl:grid-cols-4">
         {stats.map((stat) => (
           <StatCard key={stat.label} stat={stat} />
         ))}
       </section>
 
+      {/* Verification review table */}
       <section className="mt-8 overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.05)]">
         <div className="grid grid-cols-[1.2fr_1.55fr_0.95fr_0.9fr_0.8fr_0.9fr_0.55fr] gap-4 border-b border-slate-300 bg-[#f0f1ff] px-8 py-5 text-[13px] font-medium text-slate-700">
           <span>Student Name</span>

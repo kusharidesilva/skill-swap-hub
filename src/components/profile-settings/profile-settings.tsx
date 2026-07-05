@@ -142,7 +142,7 @@ function ProfileSettingsForm({
         ? "Manage your profile details, skills requested, and dashboard security options."
         : "Manage your profile details, skills offered, availability, and dashboard security options.";
 
-  // Basic Information States
+  // Basic profile fields are initialized from the shared auth profile.
   const [name, setName] = useState(userProfile.name || "");
   const [university, setUniversity] = useState(userProfile.university || "");
   const [degree, setDegree] = useState(userProfile.degree || "");
@@ -156,7 +156,7 @@ function ProfileSettingsForm({
   const [selectedProfileImageFile, setSelectedProfileImageFile] =
     useState<File | null>(null);
 
-  // Skills States
+  // Provider skills are edited as tags before being saved as one array.
   const [offeredSkills, setOfferedSkills] = useState<string[]>(
     userProfile.providerProfile?.skills || [],
   );
@@ -171,12 +171,12 @@ function ProfileSettingsForm({
   const [newOfferedSkill, setNewOfferedSkill] = useState("");
   const [newNeededSkill, setNewNeededSkill] = useState("");
 
-  // Availability State
+  // Availability is stored as a list of selected time slots.
   const [availability, setAvailability] = useState<string[]>(
     userProfile.providerProfile?.availability || [],
   );
 
-  // Account settings state
+  // These switches map directly to the nested Firestore settings object.
   const [emailNotifications, setEmailNotifications] = useState(
     userProfile.settings?.emailNotifications ?? true,
   );
@@ -187,13 +187,13 @@ function ProfileSettingsForm({
     userProfile.settings?.profileVisibility ?? true,
   );
 
-  // UX Feedback States
+  // Saving and message state keeps the form feedback clear to the user.
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"success" | "error" | "">("");
   const [errorMessage, setErrorMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Save changes handler
+  // Build one update payload so Firestore receives an atomic profile change.
   const handleSaveProfile = async () => {
     setIsSaving(true);
     setSaveStatus("");
@@ -223,7 +223,7 @@ function ProfileSettingsForm({
         },
       };
 
-      // If user is a provider or has dual role, update provider details
+      // Buyer-only accounts do not have provider fields to update.
       if (showOffered) {
         updates.providerProfile = {
           ...userProfile.providerProfile,
@@ -274,7 +274,7 @@ function ProfileSettingsForm({
     setProfileImageUrl(URL.createObjectURL(file));
   };
 
-  // Helper additions
+  // Small helpers keep tag and availability updates out of the JSX.
   const addOfferedSkill = (skill: string) => {
     const trimmed = skill.trim();
     if (trimmed && !offeredSkills.includes(trimmed)) {
@@ -301,6 +301,7 @@ function ProfileSettingsForm({
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-8 pb-10">
+      {/* Page title and save feedback */}
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
@@ -321,7 +322,7 @@ function ProfileSettingsForm({
         )}
       </header>
 
-      {/* Profile Header section */}
+      {/* Profile photo and save action */}
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
@@ -383,9 +384,9 @@ function ProfileSettingsForm({
         </div>
       </section>
 
-      {/* Main Settings Grid */}
+      {/* Editable account settings */}
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.28fr)_minmax(320px,0.92fr)]">
-        {/* Left Column */}
+        {/* Basic details, availability, and security */}
         <div className="grid min-w-0 gap-5">
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <SectionTitle
@@ -500,7 +501,7 @@ function ProfileSettingsForm({
           <LoginSecurity />
         </div>
 
-        {/* Right Column */}
+        {/* Skills, notifications, privacy, and account removal */}
         <div className="grid min-w-0 gap-5 self-start">
           {showOffered && (
             <section className="min-w-0 rounded-xl border border-slate-200 border-l-4 border-l-emerald-600 bg-white p-5 shadow-sm">

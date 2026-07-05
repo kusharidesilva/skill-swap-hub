@@ -33,6 +33,7 @@ const sidebarItems = [
   { label: "Issue Resolution", icon: <TriangleIcon /> },
 ];
 
+// Dashboard figures are presentation data ready to be replaced by admin queries.
 const topStats: StatCard[] = [
   {
     label: "Total Users",
@@ -125,18 +126,21 @@ const actions: ActionRow[] = [
 export default function AdminDashboard() {
   return (
     <div className="px-6 py-10">
+      {/* Main platform totals */}
       <section className="grid gap-6 xl:grid-cols-4">
         {topStats.map((stat) => (
           <StatCardBlock key={stat.label} stat={stat} />
         ))}
       </section>
 
+      {/* Request and moderation totals */}
       <section className="mt-6 grid gap-6 xl:mx-auto xl:max-w-[810px] xl:grid-cols-3">
         {secondaryStats.map((stat) => (
           <StatCardBlock key={stat.label} stat={stat} />
         ))}
       </section>
 
+      {/* Growth chart and top skill categories */}
       <section className="mt-10 grid gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-3">
@@ -166,6 +170,7 @@ export default function AdminDashboard() {
         </article>
       </section>
 
+      {/* Recent admin actions */}
       <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-3">
           <h3 className="text-xl font-semibold text-slate-900">Action Required</h3>

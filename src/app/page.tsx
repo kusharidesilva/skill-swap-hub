@@ -10,6 +10,7 @@ export default function Home() {
     <div className="min-h-screen bg-[#f5f7ff] text-slate-900">
       <Navbar />
       <main>
+        {/* Landing page sections */}
         <HeroSection />
         <SkillGigsSection />
         <VerifiedStudentsSection />

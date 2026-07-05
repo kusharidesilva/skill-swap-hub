@@ -10,6 +10,7 @@ type UserRow = {
   rating: string;
 };
 
+// This table currently uses sample users and is ready for a Firestore admin query.
 const users: UserRow[] = [
   {
     name: "Sarah Jenkins",
@@ -43,6 +44,7 @@ const users: UserRow[] = [
 export default function AdminUserManagement() {
   return (
     <div className="px-6 py-10">
+      {/* Page heading and export action */}
       <section className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-[30px] font-semibold tracking-tight text-slate-900">User Management</h1>
@@ -60,6 +62,7 @@ export default function AdminUserManagement() {
         </button>
       </section>
 
+      {/* User filters */}
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr_1fr_1fr_auto]">
           <Field label="Search Users">
@@ -84,6 +87,7 @@ export default function AdminUserManagement() {
         </div>
       </section>
 
+      {/* User management table */}
       <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="grid grid-cols-[1.6fr_1.4fr_0.85fr_0.8fr_0.75fr_0.4fr] border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
           <span>Student Name &amp; Email</span>

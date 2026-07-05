@@ -124,7 +124,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
 
         usersSnapshot.forEach((docSnap) => {
           const user = docSnap.data() as UserProfile;
-          // Exclude current logged-in user from search results
+          // A provider should not see their own service in the marketplace.
           if (userProfile && user.uid === userProfile.uid) return;
 
           const profile = user.providerProfile;
@@ -205,7 +205,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
   const filteredGigs = useMemo(() => {
     return gigs
       .filter((gig) => {
-        // Exclude current user's own gigs/profiles from search
+        // Keep the same self-filter when applying search and category filters.
         if (userProfile && gig.providerId === userProfile.uid) {
           return false;
         }
@@ -247,6 +247,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
       .sort((a, b) => b.match - a.match);
   }, [availabilityFilter, categoryFilter, gigs, ratingFilter, searchQuery, universityFilter, userProfile]);
 
+  // Pagination happens after filtering so page counts always match the results.
   const cardsPerPage = 4;
   const totalPages = Math.ceil(filteredGigs.length / cardsPerPage);
   const currentGigs = filteredGigs.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage);
@@ -265,6 +266,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
           <LoadingCard />
         ) : (
           <div className="space-y-6">
+            {/* Filtered service results */}
             <section className="grid gap-4 md:grid-cols-2">
               {currentGigs.length > 0 ? (
                 currentGigs.map((gig) => (
@@ -501,6 +503,7 @@ function FiltersSidebar(props: {
 }) {
   return (
     <aside className="w-full shrink-0 order-1 lg:order-2 lg:w-72">
+      {/* Search and matching filters */}
       <div className="sticky top-24 space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_26px_rgba(15,23,42,0.03)]">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Find Gig Profiles</h1>
