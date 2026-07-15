@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { UNIVERSITIES } from "@/lib/universities";
+import { useLookupOptions } from "@/lib/lookups";
 
 const MAX_VISIBLE_RESULTS = 6;
 
@@ -38,6 +38,7 @@ export default function UniversityCombobox({
   const [isOpen, setIsOpen] = useState(false);
   const [queryValue, setQueryValue] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
+  const universities = useLookupOptions("universities");
   const selectedValue = value && value !== emptyValue ? value : "";
   const isLocked = Boolean(selectedValue);
   const inputValue = isLocked ? selectedValue : queryValue;
@@ -58,11 +59,11 @@ export default function UniversityCombobox({
   // Search the full institution name while the user types.
   const filteredUniversities = useMemo(() => {
     const query = inputValue.trim().toLowerCase();
-    if (!query) return UNIVERSITIES;
-    return UNIVERSITIES.filter((university) =>
+    if (!query) return universities;
+    return universities.filter((university) =>
       university.toLowerCase().includes(query),
     );
-  }, [inputValue]);
+  }, [inputValue, universities]);
 
   const commitValue = (nextValue: string) => {
     const normalized = nextValue.trim();

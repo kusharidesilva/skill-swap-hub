@@ -8,6 +8,8 @@ export interface CreateNotificationParams {
   type: "request" | "message" | "review" | "system" | "match";
   icon: string;
   tone: "blue" | "emerald" | "green" | "teal" | "indigo" | "red";
+  href?: string;
+  destination?: string;
 }
 
 // All features use this helper so notifications share the same Firestore shape.

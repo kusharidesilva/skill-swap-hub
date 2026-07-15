@@ -8,10 +8,11 @@ import { collection, doc, getDocs, onSnapshot, query, updateDoc, where } from "f
 
 import { db } from "@/lib/firebase";
 import { formatRatingLabel } from "@/lib/ratings";
-import { scopedHref, type Role } from "@/lib/role-routes";
+import { type Role } from "@/lib/role-routes";
 import type { ProviderGig, UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
-import { UNIVERSITIES } from "@/lib/universities";
+import { AVAILABILITY_TIME_SLOTS, inferServiceCategory } from "@/lib/platform";
+import { useLookupOptions } from "@/lib/lookups";
 import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
 
@@ -26,7 +27,9 @@ type GigCardData = {
   providerImage?: string;
   title: string;
   category: string;
+  price: number | string;
   summary: string;
+  description?: string;
   availability: string | string[];
   rating: number;
   reviews: number;
@@ -36,29 +39,6 @@ type GigCardData = {
   tags: string[];
   serviceType: string;
 };
-
-const ALL_SKILLS = [
-  "Programming",
-  "UX Design",
-  "Graphic Design",
-  "Mathematics",
-  "Photography",
-  "Video Editing",
-  "Data Analysis",
-  "Web Development",
-  "Content Writing",
-  "Music",
-];
-
-const filterConfig = [
-  { label: "Category", options: ["All Categories", ...ALL_SKILLS] },
-  {
-    label: "University",
-    options: ["Any University", ...UNIVERSITIES],
-  },
-  { label: "Rating", options: ["Any Rating", "4.5+", "4.0+"] },
-  { label: "Availability", options: ["Any Time", "Weekends", "Evenings", "Weekdays"] },
-];
 
 const gigImages = [
   "/img/package%201.jpg",
@@ -78,6 +58,9 @@ type FindServicesPageContentProps = {
 export default function FindServicesPageContent({ role }: FindServicesPageContentProps) {
   const { userProfile } = useAuth();
   const searchParams = useSearchParams();
+  const serviceCategories = useLookupOptions("serviceCategories");
+  const timeSlotOptions = useLookupOptions("availabilityTimeSlots");
+  const availabilityFilters = ["Any Time", ...(timeSlotOptions.length ? timeSlotOptions : [...AVAILABILITY_TIME_SLOTS])];
   const [gigs, setGigs] = useState<GigCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [ratingsVersion, setRatingsVersion] = useState(0);
@@ -140,13 +123,17 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
           const gigEntries: Array<{
             title: string;
             category: string;
+            price: number | string;
             summary: string;
+            description?: string;
             image: string;
           }> = storedGigs.length
             ? storedGigs.map((gig: ProviderGig, skillIndex) => ({
                 title: gig.title || `I will do ${skills[skillIndex] || "Student Support"}`,
                 category: gig.category || inferCategory(skills[skillIndex] || gig.title || "Support"),
+                price: gig.price || "",
                 summary: gig.summary || gig.description || `Practical support from a verified student.`,
+                description: gig.description || gig.summary || "",
                 image:
                   gig.image ||
                   (profile.gigImages && profile.gigImages[skillIndex]) ||
@@ -155,7 +142,9 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
             : skills.map((skill, skillIndex) => ({
                 title: `I will do ${skill}`,
                 category: inferCategory(skill),
+                price: "",
                 summary: profile.bio || `Practical ${skill.toLowerCase()} support from a verified student skill swap provider.`,
+                description: profile.bio || "",
                 image:
                   (profile.gigImages && profile.gigImages[skillIndex]) ||
                   gigImages[skillIndex % gigImages.length],
@@ -163,7 +152,8 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
 
           gigEntries.forEach((gigEntry, skillIndex) => {
             dbGigs.push({
-              id: `${user.uid}-${slugify(gigEntry.title)}-${skillIndex}`,
+              id: storedGigs[skillIndex]?.id || `${user.uid}-${slugify(gigEntry.title)}-${skillIndex}`,
+              gigId: storedGigs[skillIndex]?.id,
               providerId: user.uid,
               skillIndex,
               providerName: user.name || "Anonymous Member",
@@ -172,7 +162,9 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
               providerImage: user.profileImageUrl || "",
               title: gigEntry.title,
               category: gigEntry.category,
+              price: gigEntry.price,
               summary: gigEntry.summary,
+              description: gigEntry.description,
               availability: profile.availability || "Flexible",
               rating,
               reviews: ratingData?.count || 0,
@@ -180,7 +172,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
               image: gigEntry.image,
               points: 20 + (skillIndex % 3) * 5,
               tags: [gigEntry.category, ...(skills.slice(0, 2))].slice(0, 3),
-              serviceType: "Skill Exchange",
+              serviceType: "Service Gig",
             });
           });
         });
@@ -252,11 +244,9 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
   const totalPages = Math.ceil(filteredGigs.length / cardsPerPage);
   const currentGigs = filteredGigs.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage);
 
-  const requestHref = (providerId: string) =>
-    role ? `${scopedHref("/request-service", role)}?providerId=${providerId}` : "/get-started";
   const previewHref = (gig: GigCardData) =>
     role
-      ? `/gig-preview/${role}?source=find&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=${gig.skillIndex}`
+      ? `/gig-preview/${role}?source=find&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=${gig.skillIndex}${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}`
       : "/get-started";
 
   return (
@@ -273,7 +263,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
                   <GigCard
                     key={gig.id}
                     gig={gig}
-                    requestHref={requestHref(gig.providerId)}
+                    requestHref={previewHref(gig)}
                     previewHref={previewHref(gig)}
                   />
                 ))
@@ -321,6 +311,8 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
         setRatingFilter={(value) => updateFilters(() => setRatingFilter(value))}
         availabilityFilter={availabilityFilter}
         setAvailabilityFilter={(value) => updateFilters(() => setAvailabilityFilter(value))}
+        serviceCategories={serviceCategories}
+        availabilityOptions={availabilityFilters}
       />
     </div>
   );
@@ -336,6 +328,7 @@ function GigCard({
   previewHref: string;
 }) {
   const { userProfile, refreshProfile } = useAuth();
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const availability = Array.isArray(gig.availability) ? gig.availability.join(", ") : gig.availability;
   const isFavorited = Boolean(
     userProfile?.favorites?.some(
@@ -399,6 +392,7 @@ function GigCard({
   };
 
   return (
+    <>
     <article className="flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
       <div className="relative h-40 bg-slate-100">
         <Image src={gig.image} alt={gig.title} fill className="object-cover" sizes="(min-width: 1024px) 320px, 100vw" />
@@ -450,26 +444,105 @@ function GigCard({
           <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
             <span className="truncate">{availability}</span>
             <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-[#dff2f4] px-2 py-0.5 text-[10px] font-semibold leading-none text-teal-800">
-              {gig.serviceType}
+              {formatPrice(gig.price)}
             </span>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <Link
-              href={previewHref}
+            <button
+              type="button"
+              onClick={() => setDetailsOpen(true)}
               className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               View Gig
-            </Link>
+            </button>
             <Link
               href={requestHref}
               className="inline-flex h-9 items-center justify-center rounded-lg bg-[#2f66e7] px-2 text-xs font-semibold text-white transition hover:bg-[#2557cf]"
             >
-              Request
+              Request Now
             </Link>
           </div>
         </div>
       </div>
     </article>
+    {detailsOpen ? (
+      <GigDetailsModal
+        gig={gig}
+        availability={availability}
+        previewHref={previewHref}
+        onClose={() => setDetailsOpen(false)}
+      />
+    ) : null}
+    </>
+  );
+}
+
+function GigDetailsModal({
+  gig,
+  availability,
+  previewHref,
+  onClose,
+}: {
+  gig: GigCardData;
+  availability: string;
+  previewHref: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-[2px]">
+      <article className="relative grid max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl md:grid-cols-[0.95fr_1.05fr]">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close gig details"
+          className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-500 shadow-sm transition hover:text-slate-900"
+        >
+          <CloseIcon className="h-4 w-4" />
+        </button>
+        <div className="relative min-h-64 bg-slate-100">
+          <Image src={gig.image} alt={gig.title} fill className="object-cover" sizes="(min-width: 768px) 360px, 100vw" />
+        </div>
+        <div className="min-w-0 overflow-y-auto p-6">
+          <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#1453c4]">
+            {gig.category}
+          </span>
+          <h2 className="mt-3 text-xl font-bold leading-7 text-slate-900">{gig.title}</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">{gig.description || gig.summary}</p>
+
+          <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+            <InfoItem label="Price" value={formatPrice(gig.price)} />
+            <InfoItem label="Availability" value={availability || "Flexible"} />
+            <InfoItem label="Provider" value={gig.providerName} />
+            <InfoItem label="Rating" value={`${formatRatingLabel(gig.rating)} (${gig.reviews} reviews)`} />
+          </dl>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href={previewHref}
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#2f66e7] px-5 text-sm font-semibold text-white transition hover:bg-[#2557cf]"
+            >
+              View Full Details
+            </Link>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function InfoItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-slate-50 px-3 py-2">
+      <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</dt>
+      <dd className="mt-1 break-words text-sm font-semibold text-slate-800">{value}</dd>
+    </div>
   );
 }
 
@@ -500,7 +573,16 @@ function FiltersSidebar(props: {
   setRatingFilter: (value: string) => void;
   availabilityFilter: string;
   setAvailabilityFilter: (value: string) => void;
+  serviceCategories: string[];
+  availabilityOptions: string[];
 }) {
+  const filterConfig = [
+    { label: "Category", options: ["All Categories", ...props.serviceCategories] },
+    { label: "University", options: ["Any University"] },
+    { label: "Rating", options: ["Any Rating", "4.5+", "4.0+"] },
+    { label: "Availability", options: props.availabilityOptions },
+  ];
+
   return (
     <aside className="w-full shrink-0 order-1 lg:order-2 lg:w-72">
       {/* Search and matching filters */}
@@ -633,19 +715,13 @@ function LoadingCard() {
 }
 
 function inferCategory(skill: string) {
-  const value = skill.toLowerCase();
-  if (["ux", "ui", "figma", "prototype"].some((term) => value.includes(term))) return "UX Design";
-  if (["graphic", "logo", "poster", "illustrator", "photoshop"].some((term) => value.includes(term))) {
-    return "Graphic Design";
-  }
-  if (["math", "calculus", "algebra", "statistics"].some((term) => value.includes(term))) return "Mathematics";
-  if (["photo", "camera", "lightroom"].some((term) => value.includes(term))) return "Photography";
-  if (["video", "premiere", "film"].some((term) => value.includes(term))) return "Video Editing";
-  if (["data", "sql", "excel", "analytics"].some((term) => value.includes(term))) return "Data Analysis";
-  if (["web", "react", "next", "html", "css", "node"].some((term) => value.includes(term))) return "Web Development";
-  if (["write", "content", "essay", "copy"].some((term) => value.includes(term))) return "Content Writing";
-  if (["music", "guitar", "piano", "audio"].some((term) => value.includes(term))) return "Music";
-  return "Programming";
+  return inferServiceCategory(skill);
+}
+
+function formatPrice(value: number | string | undefined) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return "Price on chat";
+  return `LKR ${numeric.toLocaleString("en-LK")}`;
 }
 
 function slugify(value: string) {
@@ -660,6 +736,15 @@ function SearchIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <circle cx="11" cy="11" r="7" />
       <path d="M20 20l-3-3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CloseIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M6 6l12 12" strokeLinecap="round" />
+      <path d="M18 6L6 18" strokeLinecap="round" />
     </svg>
   );
 }

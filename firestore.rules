@@ -1,88 +1,321 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function authorizedAdminEmail() {
+      return 'kusharidesilva3@gmail.com';
+    }
 
-    // Most app data is private to signed-in community members.
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Ownership always comes from the trusted Firebase UID.
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Users can update their own profile, but profiles are not deleted from the client.
+    function signedInProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasProfile() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return hasProfile() &&
+        signedInProfile().data.role == 'admin' &&
+        signedInProfile().data.email == authorizedAdminEmail();
+    }
+
+    function hasActiveAccount() {
+      return hasProfile() && signedInProfile().data.accountStatus != 'suspended';
+    }
+
+    function isVerifiedProvider() {
+      return hasActiveAccount() &&
+        signedInProfile().data.providerVerificationStatus == 'approved' &&
+        signedInProfile().data.canSellServices == true;
+    }
+
+    function canSelfConfirmEmail(userId) {
+      return isOwner(userId) &&
+        resource.data.accountStatus == 'pending_email_verification' &&
+        request.auth.token.email_verified == true &&
+        request.resource.data.accountStatus == 'active' &&
+        request.resource.data.emailVerified == true &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'accountStatus',
+          'emailVerified',
+          'canBuyServices',
+          'updatedAt'
+        ]);
+    }
+
+    function protectedUserFields() {
+      return [
+        'role',
+        'accountStatus',
+        'providerVerificationStatus',
+        'canSellServices',
+        'verifiedStudentProvider',
+        'studentProof',
+        'adminNote',
+        'providerApprovedAt',
+        'emailVerified'
+      ];
+    }
+
+    function canSelfBecomeBuyer(userId) {
+      return isOwner(userId) &&
+        resource.data.role == 'provider' &&
+        resource.data.providerVerificationStatus == 'approved' &&
+        request.resource.data.role == 'both' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']);
+    }
+
+    function canBootstrapAuthorizedAdmin(userId) {
+      return isOwner(userId) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.email == authorizedAdminEmail() &&
+        request.resource.data.role == 'admin';
+    }
+
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isOwner(userId);
+      allow read: if hasActiveAccount() || isAdmin() || isOwner(userId);
+      allow create: if isOwner(userId) &&
+        request.resource.data.uid == request.auth.uid &&
+        (
+          (
+            request.resource.data.role == 'buyer' &&
+            request.resource.data.canSellServices == false
+          ) ||
+          (
+            request.resource.data.role == 'provider' &&
+            request.resource.data.accountType == 'student' &&
+            request.resource.data.providerVerificationStatus == 'pending' &&
+            request.resource.data.canSellServices == false &&
+            request.resource.data.accountStatus in [
+              'pending_admin_verification',
+              'pending_verification'
+            ]
+          ) ||
+          canBootstrapAuthorizedAdmin(userId)
+        );
+      allow update: if isAdmin() || canBootstrapAuthorizedAdmin(userId) || canSelfBecomeBuyer(userId) || canSelfConfirmEmail(userId) || (
+        isOwner(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedUserFields())
+      );
       allow delete: if false;
     }
 
-    // A provider may only create or change listings that belong to them.
-    match /gigs/{gigId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.providerId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.providerId == request.auth.uid;
+    match /providerProfiles/{providerId} {
+      allow read: if hasActiveAccount();
+      allow create, update: if isAdmin() || (
+        isVerifiedProvider() &&
+        request.auth.uid == providerId
+      );
+      allow delete: if false;
     }
 
-    // Requests are shared between the buyer, assigned provider, or the open request board.
+    match /providerServiceCategories/{itemId} {
+      allow read: if hasActiveAccount();
+      allow create, update: if isAdmin() || (
+        isVerifiedProvider() &&
+        request.resource.data.providerId == request.auth.uid
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /providerAvailability/{availabilityId} {
+      allow read: if hasActiveAccount();
+      allow create, update: if isAdmin() || (
+        isVerifiedProvider() &&
+        request.resource.data.providerId == request.auth.uid
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /providerVerifications/{verificationId} {
+      allow create: if isOwner(request.resource.data.userId) &&
+        request.resource.data.status == 'pending';
+      allow read: if isAdmin() || isOwner(resource.data.userId);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /serviceCategories/{categoryId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /universities/{universityId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /issueTypes/{issueTypeId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /yearOfStudyOptions/{yearOptionId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /availabilityTimeSlots/{timeSlotId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /gigs/{gigId} {
+      allow read: if hasActiveAccount() && resource.data.status != 'removed';
+      allow create: if isVerifiedProvider() &&
+        request.resource.data.providerId == request.auth.uid;
+      allow update: if isAdmin() || (
+        isVerifiedProvider() &&
+        resource.data.providerId == request.auth.uid &&
+        request.resource.data.providerId == resource.data.providerId
+      );
+      allow delete: if isAdmin();
+    }
+
     match /requests/{requestId} {
-      allow read: if isAuthenticated() && (
+      allow read: if hasActiveAccount() && (
+        isAdmin() ||
         resource.data.buyerId == request.auth.uid ||
         resource.data.providerId == request.auth.uid ||
         resource.data.providerId == 'general' ||
         resource.data.status == 'completed'
       );
-      allow create: if isAuthenticated() && request.resource.data.buyerId == request.auth.uid;
-      allow update: if isAuthenticated() && (
+      allow create: if hasActiveAccount() &&
+        request.resource.data.buyerId == request.auth.uid;
+      allow update: if hasActiveAccount() && (
+        isAdmin() ||
         resource.data.buyerId == request.auth.uid ||
         resource.data.providerId == request.auth.uid ||
         resource.data.providerId == 'general'
       );
-      allow delete: if isAuthenticated() && resource.data.buyerId == request.auth.uid;
+      allow delete: if isAdmin() || (
+        hasActiveAccount() && resource.data.buyerId == request.auth.uid
+      );
     }
 
-    // Only participants listed on a chat document can open or update it.
+    match /providerGeneralRequests/{responseId} {
+      allow read: if hasActiveAccount();
+      allow create: if isVerifiedProvider() &&
+        request.resource.data.providerId == request.auth.uid;
+      allow update: if isAdmin() || (
+        hasActiveAccount() &&
+        resource.data.providerId == request.auth.uid
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /directServiceRequests/{requestId} {
+      allow read: if hasActiveAccount() && (
+        isAdmin() ||
+        resource.data.buyerUserId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid
+      );
+      allow create: if hasActiveAccount() &&
+        request.resource.data.buyerUserId == request.auth.uid &&
+        request.resource.data.providerId != request.auth.uid;
+      allow update: if hasActiveAccount() && (
+        isAdmin() ||
+        resource.data.buyerUserId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /serviceOrders/{orderId} {
+      allow read: if hasActiveAccount() && (
+        isAdmin() ||
+        resource.data.buyerUserId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid
+      );
+      allow create: if hasActiveAccount() &&
+        request.resource.data.buyerUserId == request.auth.uid &&
+        request.resource.data.providerId != request.auth.uid;
+      allow update: if hasActiveAccount() && (
+        isAdmin() ||
+        resource.data.buyerUserId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid
+      );
+      allow delete: if isAdmin();
+    }
+
     match /chats/{chatId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid in resource.data.participants
+      allow read: if hasActiveAccount() && (
+        isAdmin() || request.auth.uid in resource.data.participants
       );
-      allow create: if isAuthenticated() && (
-        request.auth.uid in request.resource.data.participants
-      );
-      allow update: if isAuthenticated() && (
-        request.auth.uid in resource.data.participants
+      allow create: if hasActiveAccount() &&
+        request.auth.uid in request.resource.data.participants;
+      allow update: if hasActiveAccount() && (
+        isAdmin() || request.auth.uid in resource.data.participants
       );
       allow delete: if false;
     }
 
-    // Messages inherit access from the parent chat and cannot be edited later.
     match /chats/{chatId}/messages/{messageId} {
-      allow read: if isAuthenticated() && (
+      allow read: if hasActiveAccount() && (
+        isAdmin() ||
         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
       );
-      allow create: if isAuthenticated() && (
+      allow create: if hasActiveAccount() &&
         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants &&
-        request.resource.data.senderId == request.auth.uid
-      );
+        request.resource.data.senderId == request.auth.uid;
       allow update, delete: if false;
     }
 
-    // Recipients manage their own notifications; signed-in features may create them.
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && (
-        (resource == null || resource.data.userId == request.auth.uid)
+      allow read: if hasActiveAccount() && (
+        isAdmin() || resource.data.userId == request.auth.uid
+      );
+      allow create: if hasActiveAccount() || isAdmin();
+      allow update, delete: if hasActiveAccount() && (
+        isAdmin() || resource.data.userId == request.auth.uid
       );
     }
 
-    // Reporters can submit and track reports, while moderation controls status changes.
     match /reports/{reportId} {
-      allow create: if isAuthenticated() && request.resource.data.reporterId == request.auth.uid;
-      allow read: if isAuthenticated() && resource.data.reporterId == request.auth.uid;
+      allow create: if hasActiveAccount() &&
+        request.resource.data.reporterId == request.auth.uid;
+      allow read: if hasActiveAccount() && (
+        isAdmin() ||
+        resource.data.reporterId == request.auth.uid ||
+        resource.data.reportedUserId == request.auth.uid ||
+        resource.data.reportedUser == request.auth.uid
+      );
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /reportEvidence/{evidenceId} {
+      allow read: if hasActiveAccount();
+      allow create: if hasActiveAccount() &&
+        request.resource.data.uploadedBy == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if hasActiveAccount();
+      allow create: if hasActiveAccount() &&
+        request.resource.data.reviewerId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /ratingReviews/{reviewId} {
+      allow read: if hasActiveAccount();
+      allow create: if hasActiveAccount() &&
+        request.resource.data.fromUserId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /adminActions/{actionId} {
+      allow read, create: if isAdmin();
       allow update, delete: if false;
     }
   }

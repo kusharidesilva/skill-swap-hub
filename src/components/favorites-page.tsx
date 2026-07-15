@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
+import { SERVICE_CATEGORIES } from "@/lib/platform";
 import { formatRatingLabel } from "@/lib/ratings";
 import { doc, updateDoc } from "firebase/firestore";
 
@@ -23,15 +24,7 @@ type SavedSkill = {
   description: string;
 };
 
-const filterOptions = [
-  "All",
-  "Programming",
-  "UX Design",
-  "Graphic Design",
-  "Mathematics",
-  "Languages",
-  "Communication",
-];
+const filterOptions = ["All", ...SERVICE_CATEGORIES];
 
 export default function FavoritesPage() {
   const { userProfile, loading, refreshProfile } = useAuth();
@@ -69,10 +62,7 @@ export default function FavoritesPage() {
     return savedSkills.filter((skill) => {
       const matchesFilter =
         activeFilter === "All" ||
-        skill.category.toLowerCase() === activeFilter.toLowerCase() ||
-        (activeFilter === "Programming" &&
-          (skill.category.toLowerCase().includes("programming") ||
-            skill.category.toLowerCase().includes("development")));
+        skill.category.toLowerCase() === activeFilter.toLowerCase();
       const matchesSearch =
         query.length === 0 ||
         [skill.title, skill.category, skill.instructor].some((value) =>

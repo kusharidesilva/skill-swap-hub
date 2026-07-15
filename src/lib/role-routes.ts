@@ -1,4 +1,5 @@
 export type Role = "buyer" | "provider" | "both";
+export type UserRole = Role | "admin";
 export type SiteRole = Role | "guest";
 
 const roles = ["buyer", "provider", "both"] as const;

@@ -4,7 +4,9 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
 import {
   aboutHref,
   dashboardHref,
@@ -27,6 +29,8 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   const pathname = usePathname();
   const { userProfile } = useAuth();
   const [activeSection, setActiveSection] = useState("Home");
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const showUnreadNotifications = Boolean(userProfile && hasUnreadNotifications);
 
   // Prefer the page's role, then infer it from the URL for shared screens.
   let role: SiteRole = propRole || "guest";
@@ -97,6 +101,26 @@ export default function Navbar({ role: propRole }: NavbarProps) {
   const isNotificationsPage =
     pathname === notificationsHref ||
     pathname.startsWith(`${notificationsHref}/`);
+
+  useEffect(() => {
+    if (!userProfile) {
+      return;
+    }
+
+    const unreadQuery = query(
+      collection(db, "notifications"),
+      where("userId", "==", userProfile.uid),
+      where("read", "==", false),
+    );
+
+    const unsubscribe = onSnapshot(
+      unreadQuery,
+      (snapshot) => setHasUnreadNotifications(!snapshot.empty),
+      () => setHasUnreadNotifications(false),
+    );
+
+    return () => unsubscribe();
+  }, [userProfile]);
 
   // On home pages, highlight the section currently visible below the fixed header.
   useEffect(() => {
@@ -211,13 +235,16 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                 <Link
                   href={notificationsHref}
                   aria-label="Notifications"
-                  className={`rounded-full p-2 transition hover:bg-slate-100 ${
+                  className={`relative rounded-full p-2 transition hover:bg-slate-100 ${
                     isNotificationsPage
                       ? "text-[#0758d8]"
                       : "text-slate-500 hover:text-slate-900"
                   }`}
                 >
                   <BellIcon className="h-5 w-5" />
+                  {showUnreadNotifications ? (
+                    <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-[#2f66e7] ring-2 ring-white" />
+                  ) : null}
                 </Link>
                 <Link
                   href={favoritesHref}
@@ -337,9 +364,12 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                 <>
                   <Link
                     href={notificationsHref}
-                    className="text-slate-600 hover:text-slate-900"
+                    className="flex items-center gap-2 text-slate-600 hover:text-slate-900"
                   >
                     Notifications
+                    {showUnreadNotifications ? (
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#2f66e7]" />
+                    ) : null}
                   </Link>
                   <Link
                     href={favoritesHref}

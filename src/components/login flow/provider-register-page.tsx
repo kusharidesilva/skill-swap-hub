@@ -8,25 +8,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { upgradeToProvider, checkBuyerHistory } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
-import { isEmailAllowedForUniversity } from "@/lib/universities";
+import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
 import { homeHref } from "@/lib/role-routes";
 import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
-const ALL_SKILLS = [
-  "Programming",
-  "UX Design",
-  "Graphic Design",
-  "Mathematics",
-  "Photography",
-  "Video Editing",
-  "Data Analysis",
-  "Web Development",
-  "Content Writing",
-  "Music",
-];
+import { useLookupOptions } from "@/lib/lookups";
 
 const LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
-const AVAILABILITY_OPTIONS = ["Weekdays", "Evenings", "Weekends"] as const;
 
 const providerSchema = z.object({
   university: z.string().min(2, "Enter your university name."),
@@ -46,6 +34,14 @@ export default function ProviderRegisterPage() {
   const [serverError, setServerError] = useState("");
   const [upgradeSuccess, setUpgradeSuccess] = useState(false);
   const [skillInput, setSkillInput] = useState("");
+  const serviceCategories = useLookupOptions("serviceCategories");
+  const yearOptions = useLookupOptions("yearOfStudyOptions");
+  const timeSlotOptions = useLookupOptions("availabilityTimeSlots");
+  const availabilityOptions = AVAILABILITY_DAYS.flatMap((day) =>
+    (timeSlotOptions.length ? timeSlotOptions : [...AVAILABILITY_TIME_SLOTS]).map(
+      (slot) => `${day} ${slot}`,
+    ),
+  );
 
   const {
     register,
@@ -126,16 +122,12 @@ export default function ProviderRegisterPage() {
     setValue("availability", next, { shouldValidate: true });
   };
 
-  // Validate the university email again before changing the account role.
+  // Provider activation is controlled by the admin verification status saved on the user profile.
 
   const onSubmit = async (data: ProviderValues) => {
     setServerError("");
     if (!firebaseUser) {
       setServerError("You must be logged in to upgrade your account.");
-      return;
-    }
-    if (firebaseUser.email && !isEmailAllowedForUniversity(firebaseUser.email, data.university)) {
-      setServerError("Your registered email domain does not match the selected university.");
       return;
     }
     try {
@@ -318,7 +310,7 @@ export default function ProviderRegisterPage() {
                         shouldValidate: true,
                       })
                     }
-                    options={["1st Year", "2nd Year", "3rd Year", "4th Year"]}
+                    options={yearOptions}
                     labelClassName="text-[11px] font-semibold text-slate-500"
                     className="text-xs"
                   />
@@ -368,7 +360,7 @@ export default function ProviderRegisterPage() {
                     </div>
                     {/* Quick-add suggestions */}
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {ALL_SKILLS.filter((s) => !selectedSkills.includes(s)).map(
+                      {serviceCategories.filter((s) => !selectedSkills.includes(s)).map(
                         (s) => (
                           <button
                             key={s}
@@ -421,7 +413,7 @@ export default function ProviderRegisterPage() {
                       Availability
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {AVAILABILITY_OPTIONS.map((slot) => (
+                      {availabilityOptions.map((slot) => (
                         <button
                           key={slot}
                           type="button"

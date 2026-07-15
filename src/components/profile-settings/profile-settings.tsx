@@ -12,22 +12,11 @@ import {
 import type { UserProfile } from "@/lib/auth";
 import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
+import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
+import { useLookupOptions } from "@/lib/lookups";
 
 export type Role = "buyer" | "provider" | "both";
 
-const AVAILABILITY_OPTIONS = ["Weekdays", "Evenings", "Weekends"] as const;
-const ALL_SKILLS_SUGGESTIONS = [
-  "Programming",
-  "UX Design",
-  "Graphic Design",
-  "Mathematics",
-  "Photography",
-  "Video Editing",
-  "Data Analysis",
-  "Web Development",
-  "Content Writing",
-  "Music",
-];
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const PROFILE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
@@ -134,6 +123,14 @@ function ProfileSettingsForm({
   const showOffered = role === "provider" || role === "both";
   const showNeeded = role === "buyer" || role === "both";
   const showAvailability = role === "provider" || role === "both";
+  const serviceCategories = useLookupOptions("serviceCategories");
+  const yearOptions = useLookupOptions("yearOfStudyOptions");
+  const timeSlotOptions = useLookupOptions("availabilityTimeSlots");
+  const availabilityOptions = AVAILABILITY_DAYS.flatMap((day) =>
+    (timeSlotOptions.length ? timeSlotOptions : [...AVAILABILITY_TIME_SLOTS]).map(
+      (slot) => `${day} ${slot}`,
+    ),
+  );
 
   const description =
     role === "both"
@@ -161,12 +158,7 @@ function ProfileSettingsForm({
     userProfile.providerProfile?.skills || [],
   );
   const [neededSkills, setNeededSkills] = useState<string[]>(
-    userProfile.neededSkills || [
-      "Data Analysis",
-      "Tableau",
-      "Public Speaking",
-      "Econometrics",
-    ],
+    userProfile.neededSkills || [],
   );
   const [newOfferedSkill, setNewOfferedSkill] = useState("");
   const [newNeededSkill, setNewNeededSkill] = useState("");
@@ -437,7 +429,7 @@ function ProfileSettingsForm({
                   label="Year of Study"
                   value={yearOfStudy}
                   onChange={setYearOfStudy}
-                  options={["1st Year", "2nd Year", "3rd Year", "4th Year"]}
+                  options={yearOptions}
                   labelClassName="text-xs font-semibold text-slate-600"
                   className="h-9 px-3 text-xs font-medium text-slate-800"
                 />
@@ -466,7 +458,7 @@ function ProfileSettingsForm({
               />
 
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {AVAILABILITY_OPTIONS.map((slot) => {
+                {availabilityOptions.map((slot) => {
                   const isChecked = availability.includes(slot);
                   return (
                     <button
@@ -561,7 +553,7 @@ function ProfileSettingsForm({
                   Suggestions:
                 </p>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {ALL_SKILLS_SUGGESTIONS.filter(
+                  {serviceCategories.filter(
                     (s) => !offeredSkills.includes(s),
                   ).map((s) => (
                     <button

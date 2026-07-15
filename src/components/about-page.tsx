@@ -18,7 +18,7 @@ const values = [
   { 
     title: "Trusted Student Community",
     description:
-      "Every student is verified using their official university email and verification code, keeping the community safe.",
+      "Student providers are verified through uploaded proof documents reviewed by admin, keeping the service community safe.",
     icon: "shield",
   },
   {

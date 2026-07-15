@@ -2,18 +2,22 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { collection, doc, getDoc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
 import { formatRatingLabel } from "@/lib/ratings";
 import { scopedHref } from "@/lib/role-routes";
 import type { UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
+import { createNotification } from "@/lib/notifications";
+import { inferServiceCategory } from "@/lib/platform";
 
 type GigPreviewPageProps = {
   role: "buyer" | "provider" | "both";
   backHref?: string;
+  gigId?: string;
   providerId?: string;
   skillIndex?: number;
 };
@@ -36,6 +40,7 @@ type GigPreviewData = {
   title: string;
   category: string;
   summary: string;
+  price: number | string;
   availability: string;
   rating: number;
   reviews: number;
@@ -67,9 +72,10 @@ const fallbackGig: GigPreviewData = {
   skill: "Book Cover Design",
   skills: ["Book Cover Design", "KDP Formatting", "Creative Design"],
   title: "Creative Book Cover Design - KDP & eBook",
-  category: "Graphics & Design",
+  category: "Graphic Design",
   summary:
     "A great book deserves a cover that grabs attention and reflects its story.",
+  price: 5000,
   availability: "3-Day Delivery",
   rating: 0,
   reviews: 68,
@@ -88,7 +94,7 @@ const fallbackGig: GigPreviewData = {
     },
   ],
   image: "/img/package%201.jpg",
-  value: "$20 Value",
+  value: "LKR 5,000",
   delivery: "3-Day Delivery",
   match: 92,
 };
@@ -96,12 +102,15 @@ const fallbackGig: GigPreviewData = {
 export default function GigPreviewPage({
   role,
   backHref,
+  gigId,
   providerId,
   skillIndex = 0,
 }: GigPreviewPageProps) {
+  const router = useRouter();
   const { userProfile, refreshProfile } = useAuth();
   const [gig, setGig] = useState<GigPreviewData>(fallbackGig);
   const [loading, setLoading] = useState(Boolean(providerId));
+  const [requesting, setRequesting] = useState(false);
   const isFavorited = Boolean(
     userProfile?.favorites?.some(
       (fav) =>
@@ -181,6 +190,8 @@ export default function GigPreviewPage({
         const safeSkillIndex = Math.min(Math.max(skillIndex, 0), skills.length - 1);
         const skill = skills[safeSkillIndex] || skills[0];
         const storedGig = profile?.gigs?.[safeSkillIndex];
+        const normalizedGigSnap = gigId ? await getDoc(doc(db, "gigs", gigId)) : null;
+        const normalizedGig = normalizedGigSnap?.exists() ? normalizedGigSnap.data() : null;
 
         const requestsQuery = query(
           collection(db, "requests"),
@@ -215,7 +226,7 @@ export default function GigPreviewPage({
           });
 
           const nextGig: GigPreviewData = {
-          gigId: `${user.uid}-${safeSkillIndex}`,
+          gigId: gigId || storedGig?.id || `${user.uid}-${safeSkillIndex}`,
           providerId: user.uid,
           providerName: user.name || "Anonymous Member",
           providerDegree: user.degree || "Undergraduate",
@@ -223,23 +234,33 @@ export default function GigPreviewPage({
           proficiency: profile?.proficiency || "Skilled",
           skill,
           skills,
-          title: storedGig?.title || `I will do ${skill}`,
-          category: storedGig?.category || inferCategory(skill),
+          title: String(normalizedGig?.title || storedGig?.title || `I will do ${skill}`),
+          category: String(normalizedGig?.category || storedGig?.category || inferCategory(skill)),
           summary:
-            storedGig?.summary ||
+            String(
+              normalizedGig?.summary ||
+              normalizedGig?.description ||
+              storedGig?.summary ||
             storedGig?.description ||
             normalizeSummary(profile?.bio) ||
-            `Practical ${skill} support from a verified student skill swap provider.`,
+              `Practical ${skill} support from a verified student service provider.`,
+            ),
+          price: (normalizedGig?.price as number | string | undefined) || storedGig?.price || "",
           availability:
+            (Array.isArray(normalizedGig?.availability) && normalizedGig.availability.join(", ")) ||
             (storedGig?.availability && storedGig.availability.join(", ")) ||
             formatAvailability(profile?.availability),
           rating: reviewCount > 0 ? Number((totalRating / reviewCount).toFixed(1)) : 0,
           reviews: reviewCount,
           reviewCards,
           image:
-            storedGig?.image ||
+            String(
+              normalizedGig?.sampleWorkUrl ||
+              normalizedGig?.image ||
+              storedGig?.image ||
             (profile?.gigImages && profile.gigImages[safeSkillIndex]) ||
-            gigImages[safeSkillIndex % gigImages.length],
+              gigImages[safeSkillIndex % gigImages.length],
+            ),
           value: `${20 + (safeSkillIndex % 3) * 5}`,
           delivery:
             storedGig?.delivery || formatAvailability(profile?.availability) || "Flexible",
@@ -262,7 +283,7 @@ export default function GigPreviewPage({
       active = false;
       if (unsubscribeRatings) unsubscribeRatings();
     };
-  }, [providerId, skillIndex]);
+  }, [gigId, providerId, skillIndex]);
 
   // Package details are derived from the current gig rather than stored separately.
   const packageItems = useMemo(
@@ -277,9 +298,128 @@ export default function GigPreviewPage({
 
   const isOwnGig = userProfile && userProfile.uid === gig.providerId;
   const editHref = `/edit-gig/${role}/gig-${skillIndex}`;
-
-  const requestHref = `${scopedHref("/request-service", role)}?providerId=${encodeURIComponent(gig.providerId)}`;
   const chatHref = `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(gig.providerId)}&subject=${encodeURIComponent(gig.title)}`;
+
+  const handleRequestNow = async () => {
+    if (!userProfile) {
+      router.push("/get-started");
+      return;
+    }
+
+    if (isOwnGig || requesting) return;
+
+    setRequesting(true);
+
+    try {
+      const buyerId = userProfile.uid;
+      const providerIdValue = gig.providerId;
+      const serviceContext = {
+        gigId: gig.gigId,
+        title: gig.title,
+        category: gig.category,
+        price: gig.price || "",
+        providerName: gig.providerName,
+      };
+      const directRequestRef = doc(collection(db, "directServiceRequests"));
+      const orderRef = doc(collection(db, "serviceOrders"));
+      const chatId = `${buyerId}_${providerIdValue}_${slugSegment(gig.gigId)}`;
+
+      await setDoc(directRequestRef, {
+        directRequestId: directRequestRef.id,
+        buyerUserId: buyerId,
+        buyerName: userProfile.name || "Buyer",
+        providerId: providerIdValue,
+        providerName: gig.providerName,
+        gigId: gig.gigId,
+        requestStatus: "active",
+        serviceTitle: gig.title,
+        serviceCategory: gig.category,
+        price: gig.price || "",
+        createdAt: serverTimestamp(),
+      });
+
+      await setDoc(orderRef, {
+        orderId: orderRef.id,
+        buyerUserId: buyerId,
+        buyerName: userProfile.name || "Buyer",
+        providerId: providerIdValue,
+        providerName: gig.providerName,
+        gigId: gig.gigId,
+        directRequestId: directRequestRef.id,
+        agreedPrice: gig.price || "",
+        orderStatus: "active",
+        serviceTitle: gig.title,
+        serviceCategory: gig.category,
+        startedAt: serverTimestamp(),
+      });
+
+      await setDoc(
+        doc(db, "chats", chatId),
+        {
+          participants: [buyerId, providerIdValue],
+          participantNames: {
+            [buyerId]: userProfile.name || "Buyer",
+            [providerIdValue]: gig.providerName,
+          },
+          participantUniversities: {
+            [buyerId]: userProfile.university || "",
+            [providerIdValue]: gig.university || "",
+          },
+          participantRoles: {
+            [buyerId]: "buyer",
+            [providerIdValue]: "provider",
+          },
+          participantSkills: {
+            [buyerId]: gig.title,
+            [providerIdValue]: gig.title,
+          },
+          orderId: orderRef.id,
+          directRequestId: directRequestRef.id,
+          gigId: gig.gigId,
+          serviceContext,
+          lastMessage: `Gig: ${gig.title}`,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      await addDoc(collection(db, `chats/${chatId}/messages`), {
+        senderId: buyerId,
+        senderName: userProfile.name || "Buyer",
+        senderRole: "buyer",
+        text: `Gig: ${gig.title}\nCategory: ${gig.category}\nPrice: ${formatPrice(gig.price)}\nProvider: ${gig.providerName}`,
+        serviceContext,
+        attachments: [],
+        createdAt: serverTimestamp(),
+      });
+
+      await createNotification({
+        userId: providerIdValue,
+        title: "New Direct Service Request",
+        description: `${userProfile.name || "Buyer"} requested "${gig.title}".`,
+        type: "request",
+        icon: "request",
+        tone: "blue",
+        href: `${scopedHref("/chats", "provider")}?chatId=${chatId}`,
+      });
+
+      if (userProfile.role === "provider") {
+        await updateDoc(doc(db, "users", buyerId), {
+          role: "both",
+          canBuyServices: true,
+          updatedAt: serverTimestamp(),
+        });
+        await refreshProfile();
+      }
+
+      router.push(`${scopedHref("/chats", role)}?chatId=${encodeURIComponent(chatId)}`);
+    } catch (error) {
+      console.error("Error creating direct request:", error);
+    } finally {
+      setRequesting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -382,10 +522,11 @@ export default function GigPreviewPage({
           <PackageCard
             gig={gig}
             packageItems={packageItems}
-            requestHref={requestHref}
             chatHref={chatHref}
             isOwnGig={Boolean(isOwnGig)}
             editHref={editHref}
+            requesting={requesting}
+            onRequestNow={handleRequestNow}
           />
         </aside>
       </div>
@@ -425,17 +566,19 @@ function ProviderCard({ gig, role }: { gig: GigPreviewData; role: string }) {
 function PackageCard({
   gig,
   packageItems,
-  requestHref,
   chatHref,
   isOwnGig,
   editHref,
+  requesting,
+  onRequestNow,
 }: {
   gig: GigPreviewData;
   packageItems: string[];
-  requestHref: string;
   chatHref: string;
   isOwnGig: boolean;
   editHref: string;
+  requesting: boolean;
+  onRequestNow: () => void;
 }) {
   return (
     <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -445,7 +588,7 @@ function PackageCard({
 
       <div className="space-y-3 p-3 lg:p-3.5">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xl font-bold text-slate-900">{gig.value}</p>
+          <p className="text-xl font-bold text-slate-900">{formatPrice(gig.price)}</p>
           <p className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700">
             <ClockIcon className="h-3.5 w-3.5" /> {gig.delivery}
           </p>
@@ -471,12 +614,14 @@ function PackageCard({
           </Link>
         ) : (
           <>
-            <Link
-              href={requestHref}
+            <button
+              type="button"
+              onClick={onRequestNow}
+              disabled={requesting}
               className="inline-flex h-9 w-full items-center justify-center rounded-md bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
             >
-              Request Skill
-            </Link>
+              {requesting ? "Opening Chat..." : "Request Now"}
+            </button>
             <Link
               href={chatHref}
               className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
@@ -608,19 +753,22 @@ function ReviewCard({
 }
 
 function inferCategory(skill: string) {
-  const value = skill.toLowerCase();
-  if (["ux", "ui", "figma", "prototype"].some((term) => value.includes(term))) return "UX Design";
-  if (["graphic", "logo", "poster", "illustrator", "photoshop", "book", "cover"].some((term) => value.includes(term))) {
-    return "Graphics & Design";
-  }
-  if (["math", "calculus", "algebra", "statistics"].some((term) => value.includes(term))) return "Mathematics";
-  if (["photo", "camera", "lightroom"].some((term) => value.includes(term))) return "Photography";
-  if (["video", "premiere", "film"].some((term) => value.includes(term))) return "Video Editing";
-  if (["data", "sql", "excel", "analytics"].some((term) => value.includes(term))) return "Data Analysis";
-  if (["web", "react", "next", "html", "css", "node"].some((term) => value.includes(term))) return "Web Development";
-  if (["write", "content", "essay", "copy"].some((term) => value.includes(term))) return "Content Writing";
-  if (["music", "guitar", "piano", "audio"].some((term) => value.includes(term))) return "Music";
-  return "Programming";
+  return inferServiceCategory(skill);
+}
+
+function formatPrice(value: number | string | undefined) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return "Price on chat";
+  return `LKR ${numeric.toLocaleString("en-LK")}`;
+}
+
+function slugSegment(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "gig";
 }
 
 function formatAvailability(availability?: string[]) {

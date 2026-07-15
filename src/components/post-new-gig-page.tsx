@@ -3,27 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import type { ProviderGig } from "@/lib/auth";
 import SelectField from "@/components/ui/select-field";
-
-const CATEGORIES = [
-  "Programming",
-  "UX Design",
-  "Graphic Design",
-  "Mathematics",
-  "Photography",
-  "Video Editing",
-  "Data Analysis",
-  "Web Development",
-  "Content Writing",
-  "Music",
-];
+import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
+import { useLookupOptions } from "@/lib/lookups";
 
 const DELIVERY_OPTIONS = ["1 Day", "2 Days", "3 Days", "5 Days", "7 Days", "14 Days"];
-const AVAILABILITY_OPTIONS = ["Weekdays", "Evenings", "Weekends"];
+const MAX_SAMPLE_IMAGE_BYTES = 8 * 1024 * 1024;
+const SAMPLE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 type PostNewGigPageProps = {
   role: "provider" | "both";
@@ -35,6 +26,13 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   const router = useRouter();
   const { userProfile, refreshProfile } = useAuth();
   const isEditMode = mode === "edit";
+  const serviceCategories = useLookupOptions("serviceCategories");
+  const timeSlotOptions = useLookupOptions("availabilityTimeSlots");
+  const availabilityOptions = AVAILABILITY_DAYS.flatMap((day) =>
+    (timeSlotOptions.length ? timeSlotOptions : [...AVAILABILITY_TIME_SLOTS]).map(
+      (slot) => `${day} ${slot}`,
+    ),
+  );
 
   // Edit routes use "gig-N", so this converts the URL value back to an array index.
   const skillIndex =
@@ -42,11 +40,13 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
 
   // Main gig details are kept together so create and edit mode share one form.
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState(serviceCategories[0] || "Photography");
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
   const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0]);
   const [selectedImage, setSelectedImage] = useState("/img/package%201.jpg");
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [availability, setAvailability] = useState<string[]>([]);
 
   // Tags use a separate input because users can add several values.
@@ -60,6 +60,9 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
 
   const backHref =
     role === "both" ? "/my-gigs/both?tab=manage" : "/my-gigs/provider?tab=manage";
+  const selectedCategory = serviceCategories.includes(category)
+    ? category
+    : serviceCategories[0] || "Photography";
 
   // Edit mode copies the selected saved gig into the form once the profile loads.
   useEffect(() => {
@@ -73,9 +76,10 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
     
     const timer = setTimeout(() => {
       setTitle(resolvedTitle);
-      setCategory(existingGig?.category || CATEGORIES[0]);
+      setCategory(existingGig?.category || serviceCategories[0] || "Photography");
       setSummary(existingGig?.summary || "");
       setDescription(existingGig?.description || "");
+      setPrice(existingGig?.price ? String(existingGig.price) : "");
       setDelivery(existingGig?.delivery || DELIVERY_OPTIONS[0]);
       setTags(existingGig?.tags || []);
       setAvailability(existingGig?.availability || userProfile.providerProfile?.availability || []);
@@ -89,11 +93,15 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [isEditMode, userProfile, skillIndex]);
+  }, [isEditMode, userProfile, skillIndex, serviceCategories]);
 
   useEffect(() => {
     if (!userProfile) return;
-    setAvailability((current) => current.length ? current : (userProfile.providerProfile?.availability || []));
+    const timer = setTimeout(() => {
+      setAvailability((current) => current.length ? current : (userProfile.providerProfile?.availability || []));
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [userProfile]);
 
   const addTag = () => {
@@ -114,13 +122,32 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
 
   const isTitleInvalid = didAttemptSubmit && !title.trim();
   const isSummaryInvalid = didAttemptSubmit && !summary.trim();
+  const normalizedPrice = Number(price);
+  const isPriceInvalid = didAttemptSubmit && (!price.trim() || !Number.isFinite(normalizedPrice) || normalizedPrice <= 0);
+
+  const resolveSampleImage = async (gigDocumentId: string) => {
+    if (!userProfile || !selectedImageFile) return selectedImage;
+
+    if (
+      !SAMPLE_IMAGE_TYPES.has(selectedImageFile.type) ||
+      selectedImageFile.size > MAX_SAMPLE_IMAGE_BYTES
+    ) {
+      throw new Error("Sample work image must be PNG, JPG, or WEBP and under 8 MB.");
+    }
+
+    const safeName = selectedImageFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const storagePath = `gig-samples/${userProfile.uid}/${gigDocumentId}-${safeName}`;
+    const imageRef = ref(storage, storagePath);
+    await uploadBytes(imageRef, selectedImageFile, { contentType: selectedImageFile.type });
+    return getDownloadURL(imageRef);
+  };
 
   const handlePublish = async () => {
     if (!userProfile) return;
 
     setDidAttemptSubmit(true);
 
-    if (!title.trim() || !summary.trim()) {
+    if (!title.trim() || !summary.trim() || !price.trim() || !Number.isFinite(normalizedPrice) || normalizedPrice <= 0) {
       setFeedback({
         type: "error",
         msg: "Please fill in the required fields highlighted in red.",
@@ -137,17 +164,25 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
       const existingSkills: string[] = [...(userProfile.providerProfile?.skills || [])];
       const existingImages: string[] = [...(userProfile.providerProfile?.gigImages || [])];
       const existingGigs: ProviderGig[] = [...(userProfile.providerProfile?.gigs || [])];
+      const existingGigId = isEditMode && skillIndex >= 0 ? existingGigs[skillIndex]?.id : undefined;
+      const gigDocumentId =
+        existingGigId || `${userProfile.uid}-${Date.now()}-${slugify(title.trim() || "gig")}`;
+      const imageUrl = await resolveSampleImage(gigDocumentId);
 
       const gigLabel = title.trim();
       const gigData: ProviderGig = {
+        id: gigDocumentId,
         title: gigLabel,
-        category,
+        category: selectedCategory,
         summary: summary.trim(),
         description: description.trim(),
+        price: normalizedPrice,
         delivery,
         availability,
         tags,
-        image: selectedImage,
+        image: imageUrl,
+        sampleWorkUrl: imageUrl,
+        status: "active",
       };
 
       // Pad the image list so each skill keeps the image at the same index.
@@ -157,20 +192,20 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
       while (existingGigs.length < existingSkills.length) {
         existingGigs.push({
           title: existingSkills[existingGigs.length] || gigLabel,
-          category,
+          category: selectedCategory,
           summary: summary.trim(),
           description: description.trim(),
           delivery,
           availability,
           tags,
-          image: selectedImage,
+          image: imageUrl,
         });
       }
 
       if (isEditMode && skillIndex >= 0) {
         // Edit only the selected gig and leave the rest of the profile untouched.
         existingSkills[skillIndex] = gigLabel;
-        existingImages[skillIndex] = selectedImage;
+        existingImages[skillIndex] = imageUrl;
         existingGigs[skillIndex] = gigData;
       } else {
         // New gigs are appended to the provider's existing list.
@@ -180,7 +215,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
           return;
         }
         existingSkills.push(gigLabel);
-        existingImages.push(selectedImage);
+        existingImages.push(imageUrl);
         existingGigs.push(gigData);
       }
 
@@ -190,6 +225,35 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
         "providerProfile.availability": availability,
         "providerProfile.gigs": existingGigs,
       });
+
+      await setDoc(
+        doc(db, "gigs", gigDocumentId),
+        {
+          gigId: gigDocumentId,
+          providerId: userProfile.uid,
+          providerName: userProfile.name || "Provider",
+          university: userProfile.university || "",
+          degreeName: userProfile.degree || "",
+          yearOfStudy: userProfile.yearOfStudy || "",
+          categoryId: slugify(selectedCategory),
+          category: selectedCategory,
+          title: gigLabel,
+          description: description.trim() || summary.trim(),
+          summary: summary.trim(),
+          price: normalizedPrice,
+          currency: "LKR",
+          availability,
+          sampleWorkUrl: imageUrl,
+          image: imageUrl,
+          tags,
+          delivery,
+          gigStatus: "active",
+          status: "active",
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
 
       await refreshProfile();
 
@@ -261,7 +325,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                     ? "border-red-400 bg-red-50 text-slate-700 focus:border-red-500 focus:ring-red-100"
                     : "border-slate-200 text-slate-700 focus:border-[#1453c4] focus:ring-blue-100"
                 }`}
-                placeholder="e.g., I will help you with Web Development projects"
+                placeholder="e.g., I will capture birthday photography"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -273,10 +337,10 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
             {/* Category */}
             <div className="grid gap-4 sm:grid-cols-2">
               <SelectField
-                label="Category (Optional)"
-                value={category}
+                label="Service Category"
+                value={selectedCategory}
                 onChange={setCategory}
-                options={CATEGORIES}
+                options={serviceCategories}
                 labelClassName="text-sm font-semibold text-slate-700"
                 className="h-11 px-4 text-base text-slate-700"
               />
@@ -290,6 +354,26 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                 className="h-11 px-4 text-base text-slate-700"
               />
             </div>
+
+            <label className="block text-sm font-semibold text-slate-700">
+              Price (LKR) *
+              <input
+                type="number"
+                min="1"
+                step="1"
+                className={`mt-2 h-11 w-full rounded-lg border px-4 text-base outline-none transition focus:ring-2 ${
+                  isPriceInvalid
+                    ? "border-red-400 bg-red-50 text-slate-700 focus:border-red-500 focus:ring-red-100"
+                    : "border-slate-200 text-slate-700 focus:border-[#1453c4] focus:ring-blue-100"
+                }`}
+                placeholder="e.g., 5000"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+              />
+            </label>
+            <p className={`-mt-3 text-xs font-medium ${isPriceInvalid ? "text-red-500" : "text-slate-400"}`}>
+              Add the expected service price in Sri Lankan rupees.
+            </p>
 
             {/* Tags */}
             <div>
@@ -369,7 +453,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
               Select when students can expect you to be available for this gig. This is optional.
             </p>
             <div className="flex flex-wrap gap-3 rounded-2xl border border-transparent bg-transparent p-3">
-              {AVAILABILITY_OPTIONS.map((slot) => {
+              {availabilityOptions.map((slot) => {
                 const isSelected = availability.includes(slot);
                 return (
                   <button
@@ -402,15 +486,18 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
             {/* Presets */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               {[
-                { label: "Web & Coding", src: "/img/package%201.jpg" },
+                { label: "Photography", src: "/img/package%201.jpg" },
                 { label: "Design", src: "/img/package%202.jpg" },
-                { label: "Business", src: "/img/package%203.jpg" },
-                { label: "Academic", src: "/img/package%204.jpg" },
+                { label: "Crafts", src: "/img/package%203.jpg" },
+                { label: "Events", src: "/img/package%204.jpg" },
               ].map((preset) => (
                 <button
                   key={preset.src}
                   type="button"
-                  onClick={() => setSelectedImage(preset.src)}
+                  onClick={() => {
+                    setSelectedImage(preset.src);
+                    setSelectedImageFile(null);
+                  }}
                   className={`relative overflow-hidden rounded-xl border-4 transition ${
                     selectedImage === preset.src || decodeURIComponent(selectedImage).endsWith(preset.src.replace("/img/", ""))
                       ? "border-[#1453c4] scale-105"
@@ -436,17 +523,20 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                 <p className="text-xs text-slate-500">Support JPG, PNG. Image will be converted for profile display.</p>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        if (typeof reader.result === "string") {
-                          setSelectedImage(reader.result);
-                        }
-                      };
-                      reader.readAsDataURL(file);
+                      if (!SAMPLE_IMAGE_TYPES.has(file.type) || file.size > MAX_SAMPLE_IMAGE_BYTES) {
+                        setFeedback({
+                          type: "error",
+                          msg: "Sample work image must be PNG, JPG, or WEBP and under 8 MB.",
+                        });
+                        return;
+                      }
+
+                      setSelectedImageFile(file);
+                      setSelectedImage(URL.createObjectURL(file));
                     }
                   }}
                   className="hidden"
@@ -531,4 +621,14 @@ function StepItem({
 
 function Connector() {
   return <div className="-mt-8 h-px flex-1 bg-slate-200" />;
+}
+
+function slugify(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
 }

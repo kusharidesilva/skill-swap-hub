@@ -6,8 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { loginUser } from "@/lib/auth";
-import { isUniversityEmail } from "@/lib/universities";
+import { accountNeedsEmailVerification, loginUser } from "@/lib/auth";
 
 type Badge = {
   label: string;
@@ -15,8 +14,8 @@ type Badge = {
 };
 
 const badges: Badge[] = [
-  { label: "Verified student Emails", icon: "shield" },
-  { label: "University Exclusive", icon: "cap" },
+  { label: "Verified student providers", icon: "shield" },
+  { label: "Open for buyers", icon: "cap" },
 ];
 
 const strongPasswordHint =
@@ -24,13 +23,9 @@ const strongPasswordHint =
 
 const loginSchema = z
   .object({
-    email: z.string().email("Enter a valid university email."),
+    email: z.string().email("Enter a valid email."),
     password: z.string().min(6, "Password must be at least 6 characters."),
     remember: z.boolean().optional(),
-  })
-  .refine((v) => isUniversityEmail(v.email), {
-    message: "Only official campus emails are allowed to sign in.",
-    path: ["email"],
   });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -56,10 +51,10 @@ export default function LoginPage() {
     setServerError("");
     try {
       // The helper returns a role-aware destination after checking Firestore.
-      const { user, redirectPath } = await loginUser(data.email, data.password);
+      const { user, profile, redirectPath } = await loginUser(data.email, data.password);
 
-      // Unverified accounts stay signed in so they can resend or recheck the email.
-      if (!user.emailVerified) {
+      // Non-student accounts must finish email verification before entering the app.
+      if (accountNeedsEmailVerification(profile.accountType) && !user.emailVerified) {
         router.push("/verify-email?from=buyer");
         return;
       }
@@ -107,8 +102,8 @@ export default function LoginPage() {
                   Elevate your academic journey through peer-to-peer exchange.
                 </h1>
                 <p className="mt-4 max-w-md text-sm text-white/80">
-                  Join a trusted student-only platform to share skills, request
-                  support, and connect with verified university students.
+                  Join a trusted service platform where verified student providers
+                  offer creative, non-technical services to buyers.
                 </p>
               </div>
             </div>
@@ -145,7 +140,7 @@ export default function LoginPage() {
                 Welcome back
               </h2>
               <p className="mt-2 text-sm text-slate-600">
-                Please enter your university credentials to continue
+                Please enter your account credentials to continue
               </p>
 
               {serverError && (
@@ -174,14 +169,14 @@ export default function LoginPage() {
                 {/* Email */}
                 <div>
                   <label className="text-sm font-semibold text-slate-700">
-                    University Email
+                    Email
                   </label>
                   <div className="mt-2 flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2">
                     <MailIcon className="h-5 w-5 text-slate-400" />
                     <input
                       id="login-email"
                       type="email"
-                      placeholder="student.name@uom.ac.lk"
+                      placeholder="name@example.com"
                       {...register("email")}
                       className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
                     />

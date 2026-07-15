@@ -22,6 +22,7 @@ export default async function GigPreviewByRolePage({ params, searchParams }: Gig
   const query = await searchParams;
   const source = query.source;
   const gigId = query.gigId;
+  const selectedGigId = typeof gigId === "string" ? gigId : undefined;
   const providerId = typeof query.providerId === "string" ? query.providerId : undefined;
   const skillIndex = 
     typeof query.skillIndex === "string" ? Number.parseInt(query.skillIndex, 10) : undefined; 
@@ -44,6 +45,7 @@ export default async function GigPreviewByRolePage({ params, searchParams }: Gig
     <GigPreviewPage
       role={role}
       backHref={backHref}
+      gigId={selectedGigId}
       providerId={providerId}
       skillIndex={Number.isFinite(skillIndex) ? skillIndex : undefined}
     />

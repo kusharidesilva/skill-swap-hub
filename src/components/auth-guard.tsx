@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { accountNeedsEmailVerification } from "@/lib/auth";
+import { isPendingAdminVerificationStatus } from "@/lib/platform";
 import { dashboardHref, type Role } from "@/lib/role-routes";
 
 interface AuthGuardProps {
@@ -31,8 +33,20 @@ export default function AuthGuard({ requiredRole, children }: AuthGuardProps) {
       return;
     }
 
-    // Signed-in students still need to prove ownership of their university email.
-    if (!firebaseUser.emailVerified) {
+    if (
+      isPendingAdminVerificationStatus(userProfile?.accountStatus) ||
+      userProfile?.providerVerificationStatus === "pending"
+    ) {
+      router.replace("/pending-verification");
+      return;
+    }
+
+    // Non-student accounts still need to prove ownership of their email address.
+    if (
+      userProfile &&
+      accountNeedsEmailVerification(userProfile.accountType) &&
+      !firebaseUser.emailVerified
+    ) {
       router.replace("/verify-email");
       return;
     }
@@ -40,6 +54,11 @@ export default function AuthGuard({ requiredRole, children }: AuthGuardProps) {
     // Check role access only after the Firestore profile has arrived.
     if (requiredRole && userProfile) {
       const role = userProfile.role;
+
+      if (role === "admin") {
+        router.replace("/admin");
+        return;
+      }
 
       // Dual-role users can open everything, while providers may also browse buyer pages.
       const hasAccess =
@@ -54,7 +73,15 @@ export default function AuthGuard({ requiredRole, children }: AuthGuardProps) {
   }, [loading, firebaseUser, userProfile, requiredRole, router]);
 
   // Keep protected content hidden while Firebase loads or a redirect is happening.
-  if (loading || !firebaseUser || !firebaseUser.emailVerified) {
+  if (
+    loading ||
+    !firebaseUser ||
+    isPendingAdminVerificationStatus(userProfile?.accountStatus) ||
+    userProfile?.providerVerificationStatus === "pending" ||
+    (userProfile &&
+      accountNeedsEmailVerification(userProfile.accountType) &&
+      !firebaseUser.emailVerified)
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f5f7ff]">
         <div className="flex flex-col items-center gap-4">

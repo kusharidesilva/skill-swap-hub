@@ -120,7 +120,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
     );
   }
 
-  const userRole = userProfile.role || role;
+  const userRole = userProfile.role === "admin" ? role : userProfile.role || role;
 
   return (
     <ProfileShell role={userRole}>
@@ -362,8 +362,8 @@ export default function DashboardView({ role }: DashboardViewProps) {
                 </h3>
                 <p className="max-w-2xl text-xs text-slate-600 leading-relaxed">
                   Join our verified university provider network in Sri Lanka.
-                  List your skills in Programming, Design, Photography, or
-                  Academics, and earn money or swap services.
+                  List services like photography, decoration, writing, design,
+                  video editing, dancing, singing, or handmade crafts.
                 </p>
               </div>
               <Link

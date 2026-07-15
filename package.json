@@ -10,7 +10,11 @@
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "firebase:login": "npx firebase-tools login",
+    "deploy:firestore-rules": "npx firebase-tools deploy --only firestore:rules",
+    "deploy:storage-rules": "npx firebase-tools deploy --only storage",
+    "deploy:rules": "npx firebase-tools deploy --only firestore:rules,storage"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

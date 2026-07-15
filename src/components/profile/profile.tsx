@@ -7,7 +7,15 @@ import { db } from "@/lib/firebase";
 
 export type Role = "buyer" | "provider" | "both";
 
-const availableDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const availableDays = [
+  { short: "Sun", full: "Sunday" },
+  { short: "Mon", full: "Monday" },
+  { short: "Tue", full: "Tuesday" },
+  { short: "Wed", full: "Wednesday" },
+  { short: "Thu", full: "Thursday" },
+  { short: "Fri", full: "Friday" },
+  { short: "Sat", full: "Saturday" },
+];
 
 export default function Profile({ role: propRole }: { role: Role }) {
   const { userProfile, loading } = useAuth();
@@ -120,14 +128,13 @@ export default function Profile({ role: propRole }: { role: Role }) {
   const showNeeded = displayRole === "buyer" || displayRole === "both";
 
   // Convert saved time values into the labels displayed on the profile.
-  const availabilitySlots = userProfile.providerProfile?.availability || ["Weekdays", "Evenings"];
+  const availabilitySlots = userProfile.providerProfile?.availability || [];
   const activeDays = new Set<string>();
-  if (availabilitySlots.includes("Weekdays") || availabilitySlots.includes("Evenings")) {
-    ["Mon", "Tue", "Wed", "Thu", "Fri"].forEach(d => activeDays.add(d));
-  }
-  if (availabilitySlots.includes("Weekends")) {
-    ["Sat", "Sun"].forEach(d => activeDays.add(d));
-  }
+  availableDays.forEach((day) => {
+    if (availabilitySlots.some((slot) => slot.startsWith(day.full))) {
+      activeDays.add(day.short);
+    }
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -153,7 +160,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-xl font-semibold text-slate-900">{name}</h1>
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  {userProfile.emailVerified ? "Verified Student" : "Student Member"}
+                  {userProfile.verifiedStudentProvider ? "Verified Student Provider" : "Buyer"}
                 </span>
               </div>
               <p className="mt-1 text-sm text-slate-500">
@@ -188,7 +195,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
           <div>
             <h2 className="text-sm font-semibold text-emerald-800">Identity Verified</h2>
             <p className="text-xs text-emerald-700">
-              University email ({userProfile.email}) has been verified by Skill Swap Hub
+              Student provider proof is reviewed by admin. Buyers use normal Firebase email verification.
             </p>
           </div>
         </div>
@@ -304,19 +311,19 @@ export default function Profile({ role: propRole }: { role: Role }) {
             Available for Swaps
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            Preferred slots: {availabilitySlots.join(", ")}
+            Preferred slots: {availabilitySlots.length ? availabilitySlots.join(", ") : "Not added yet"}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {availableDays.map((day) => (
               <span
-                key={day}
+                key={day.short}
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                  activeDays.has(day)
+                  activeDays.has(day.short)
                     ? "bg-blue-600 text-white"
                     : "bg-slate-100 text-slate-500"
                 }`}
               >
-                {day}
+                {day.short}
               </span>
             ))}
           </div>

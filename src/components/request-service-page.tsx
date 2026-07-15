@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,7 +12,6 @@ import {
   where,
   onSnapshot,
   doc,
-  getDoc,
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
@@ -22,37 +20,18 @@ import { useAuth } from "@/context/AuthContext";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import { type UserProfile } from "@/lib/auth";
 import { createNotification } from "@/lib/notifications";
-import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
-
-const skillCategories = [
-  "Programming",
-  "UX Design",
-  "Graphic Design",
-  "Mathematics",
-  "Photography",
-  "Video Editing",
-  "Data Analysis",
-  "Web Development",
-  "Content Writing",
-  "Music",
-];
-
-const levelOptions = ["Beginner", "Intermediate", "Advanced"];
-const serviceTypeOptions = ["Free Help", "Skill Exchange", "Paid"] as const;
+import { useLookupOptions } from "@/lib/lookups";
 
 const requestServiceSchema = z.object({
-  title: z.string().trim().min(1, "Skill Needed is required."),
-  category: z.string(),
-  description: z
+  category: z.string().trim().min(1, "Service category is required."),
+  requiredDate: z.string().trim().optional().or(z.literal("")),
+  budgetPrice: z.string().trim().optional().or(z.literal("")),
+  requestNote: z
     .string()
     .trim()
-    .min(1, "Description is required.")
-    .refine((value) => value.length >= 10, "Description must contain at least 10 characters."),
-  level: z.string(),
-  serviceType: z.enum(serviceTypeOptions),
-  time: z.string().trim().optional().or(z.literal("")),
-  preferredUniv: z.string().trim().optional(),
+    .min(1, "Request note is required.")
+    .refine((value) => value.length >= 10, "Request note must contain at least 10 characters."),
 });
 
 type RequestServiceFormValues = z.infer<typeof requestServiceSchema>;
@@ -88,48 +67,9 @@ export default function RequestServiceContent({
   role = "buyer",
 }: RequestServiceContentProps) {
   const { userProfile, loading, refreshProfile } = useAuth();
-  const searchParams = useSearchParams();
-  const providerIdParam = searchParams.get("providerId");
 
-  const [providerName, setProviderName] = useState(() =>
-    providerIdParam ? "" : "General / Public Request",
-  );
-  const [prevProviderIdParam, setPrevProviderIdParam] =
-    useState(providerIdParam);
-
-  if (providerIdParam !== prevProviderIdParam) {
-    setPrevProviderIdParam(providerIdParam);
-    setProviderName(providerIdParam ? "" : "General / Public Request");
-  }
-
-  const targetProviderId = providerIdParam || "general";
-
-  // A provider ID in the URL turns this into a direct request instead of an open one.
-  useEffect(() => {
-    if (!providerIdParam) return;
-
-    const providerId = providerIdParam;
-    let active = true;
-    async function fetchProvider() {
-      try {
-        const providerDoc = await getDoc(doc(db, "users", providerId));
-        if (!active) return;
-        if (providerDoc.exists()) {
-          setProviderName(providerDoc.data().name || "Specified Provider");
-        } else {
-          setProviderName("Direct Request");
-        }
-      } catch (err) {
-        if (!active) return;
-        console.error("Error fetching target provider:", err);
-        setProviderName("Direct Request");
-      }
-    }
-    fetchProvider();
-    return () => {
-      active = false;
-    };
-  }, [providerIdParam]);
+  const targetProviderId = "general";
+  const providerName = "General / Public Request";
 
   if (loading) {
     return (
@@ -162,15 +102,8 @@ export default function RequestServiceContent({
           Request a Service
         </h1>
         <p className="mt-1 text-xs text-slate-500">
-          Describe clearly what help you need so the system can match you or
-          notify the provider.
+          Post a public request so verified providers can respond.
         </p>
-        {providerIdParam && (
-          <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700 border border-blue-100">
-            ✉️ Direct Request to:{" "}
-            <span className="underline">{providerName}</span>
-          </div>
-        )}
       </header>
 
       {/* Request form and recent request timeline */}
@@ -199,6 +132,7 @@ function RequestForm({
   refreshProfile: () => Promise<void>;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const serviceCategories = useLookupOptions("serviceCategories");
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     msg: string;
@@ -213,13 +147,10 @@ function RequestForm({
   } = useForm<RequestServiceFormValues>({
     resolver: zodResolver(requestServiceSchema),
     defaultValues: {
-      title: "",
-      category: skillCategories[0],
-      description: "",
-      level: levelOptions[0],
-      serviceType: "Skill Exchange",
-      time: "",
-      preferredUniv: "",
+      category: serviceCategories[0] || "Photography",
+      requiredDate: "",
+      budgetPrice: "",
+      requestNote: "",
     },
   });
 
@@ -230,22 +161,18 @@ function RequestForm({
         : ""
     }`;
 
-  const selectedServiceType = useWatch({ control, name: "serviceType" });
-  const preferredUniversity = useWatch({ control, name: "preferredUniv" }) || "";
   const selectedCategory = useWatch({ control, name: "category" });
-  const selectedLevel = useWatch({ control, name: "level" });
-  const requestTitle = useWatch({ control, name: "title" }) || "";
-  const requestDescription = useWatch({ control, name: "description" }) || "";
 
   useEffect(() => {
-    if (
-      feedback?.type === "error" &&
-      requestTitle.trim().length > 0 &&
-      requestDescription.trim().length >= 10
-    ) {
-      setFeedback(null);
+    if (!serviceCategories.length) return;
+    const currentCategory = selectedCategory || "";
+    if (!serviceCategories.includes(currentCategory)) {
+      setValue("category", serviceCategories[0], {
+        shouldDirty: false,
+        shouldValidate: true,
+      });
     }
-  }, [feedback, requestTitle, requestDescription]);
+  }, [selectedCategory, serviceCategories, setValue]);
 
   const onInvalidSubmit = () => {
     setFeedback({
@@ -259,7 +186,11 @@ function RequestForm({
     setIsSubmitting(true);
 
     try {
-      const trimmedTitle = data.title.trim();
+      const trimmedCategory = data.category.trim();
+      const trimmedNote = data.requestNote.trim();
+      const trimmedBudget = data.budgetPrice?.trim() || "";
+      const trimmedRequiredDate = data.requiredDate?.trim() || "";
+      const title = `${trimmedCategory} request`;
       await addDoc(collection(db, "requests"), {
         buyerId: buyerProfile.uid,
         buyerName: buyerProfile.name,
@@ -268,14 +199,20 @@ function RequestForm({
         buyerYearOfStudy: buyerProfile.yearOfStudy || "",
         providerId,
         providerName,
-        title: trimmedTitle,
-        category: data.category,
-        description: data.description.trim(),
-        level: data.level,
-        serviceType: data.serviceType,
-        time: data.time?.trim() || "",
-        university: data.preferredUniv?.trim() || "",
-        budget: "Free Swap",
+        requestType: "general",
+        requestStatus: "open",
+        title,
+        category: trimmedCategory,
+        categoryId: slugify(trimmedCategory),
+        description: trimmedNote,
+        requestNote: trimmedNote,
+        requiredDate: trimmedRequiredDate,
+        budgetPrice: trimmedBudget,
+        level: "",
+        serviceType: "General Request",
+        time: trimmedRequiredDate,
+        university: "",
+        budget: trimmedBudget ? `LKR ${trimmedBudget}` : "Open budget",
         status: "pending",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -285,8 +222,8 @@ function RequestForm({
       if (providerId && providerId !== "general") {
         await createNotification({
           userId: providerId,
-          title: "New Swap Request",
-          description: `${buyerProfile.name} requested a swap for "${trimmedTitle}"`,
+          title: "New Service Request",
+          description: `${buyerProfile.name} requested "${title}"`,
           type: "request",
           icon: "◆",
           tone: "blue",
@@ -304,13 +241,10 @@ function RequestForm({
         msg: "Your skill swap request has been submitted successfully!",
       });
       reset({
-        title: "",
-        category: skillCategories[0],
-        description: "",
-        level: levelOptions[0],
-        serviceType: "Skill Exchange",
-        time: "",
-        preferredUniv: "",
+        category: serviceCategories[0] || "Photography",
+        requiredDate: "",
+        budgetPrice: "",
+        requestNote: "",
       });
     } catch (err) {
       console.error("Error submitting request:", err);
@@ -342,51 +276,60 @@ function RequestForm({
           </div>
         )}
 
-        {/* Skill and category */}
+        <SelectField
+          label="Service Category"
+          value={selectedCategory}
+          onChange={(nextValue) =>
+            setValue("category", nextValue, {
+              shouldDirty: true,
+              shouldValidate: true,
+            })
+          }
+          options={serviceCategories}
+          className="text-sm"
+          error={errors.category?.message}
+        />
+
         <div className="grid gap-4 md:grid-cols-2">
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">
-              Skill Needed <span className="text-red-500">*</span>
+              Required Date (Optional)
             </span>
             <input
-              type="text"
-              placeholder="e.g., Python Data Analysis"
-              {...register("title")}
-              aria-invalid={Boolean(errors.title)}
-              className={getFieldClassName(Boolean(errors.title))}
+              type="date"
+              {...register("requiredDate")}
+              aria-invalid={Boolean(errors.requiredDate)}
+              className={getFieldClassName(Boolean(errors.requiredDate))}
             />
-            {errors.title && (
-              <p className="text-xs font-medium text-red-600">
-                {errors.title.message}
-              </p>
-            )}
           </label>
 
-          <SelectField
-            label="Skill Category"
-            value={selectedCategory}
-            onChange={(nextValue) =>
-              setValue("category", nextValue, {
-                shouldDirty: true,
-                shouldValidate: true,
-              })
-            }
-            options={skillCategories}
-            className="text-sm"
-          />
+          <label className="grid min-w-0 gap-1.5">
+            <span className="text-xs font-semibold text-slate-600">
+              Budget Price (Optional, LKR)
+            </span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="e.g., 5000"
+              {...register("budgetPrice")}
+              aria-invalid={Boolean(errors.budgetPrice)}
+              className={getFieldClassName(Boolean(errors.budgetPrice))}
+            />
+          </label>
         </div>
 
         <label className="grid min-w-0 gap-1.5">
           <span className="text-xs font-semibold text-slate-600">
-            Description <span className="text-red-500">*</span>
+            Request Note <span className="text-red-500">*</span>
           </span>
           <textarea
-            rows={4}
-            {...register("description")}
-            placeholder="Describe your need in 10+ characters..."
-            aria-invalid={Boolean(errors.description)}
+            rows={5}
+            {...register("requestNote")}
+            placeholder="Describe what service you need, the event/task details, and any deadline."
+            aria-invalid={Boolean(errors.requestNote)}
             className={`w-full resize-none rounded-lg border px-3 py-2 text-sm leading-relaxed text-slate-700 outline-none transition placeholder:text-slate-400 focus:ring-4 ${
-              errors.description
+              errors.requestNote
                 ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100"
                 : "border-slate-300 bg-[#f7f8ff] focus:border-[#2f66e7] focus:ring-blue-100"
             }`}
@@ -394,85 +337,12 @@ function RequestForm({
           <p className="text-[11px] font-medium text-slate-500">
             Minimum 10 characters.
           </p>
-          {errors.description && (
+          {errors.requestNote && (
             <p className="text-xs font-medium text-red-600">
-              {errors.description.message}
+              {errors.requestNote.message}
             </p>
           )}
         </label>
-
-        {/* Experience level and preferred time */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <SelectField
-            label="Required Level"
-            value={selectedLevel}
-            onChange={(nextValue) =>
-              setValue("level", nextValue, {
-                shouldDirty: true,
-                shouldValidate: true,
-              })
-            }
-            options={levelOptions}
-            className="text-sm"
-          />
-
-          <label className="grid min-w-0 gap-1.5">
-            <span className="text-xs font-semibold text-slate-600">
-              Preferred Time
-            </span>
-            <input
-              type="text"
-              placeholder="e.g., Evenings, 6 PM - 8 PM"
-              {...register("time")}
-              aria-invalid={Boolean(errors.time)}
-              className={getFieldClassName(Boolean(errors.time))}
-            />
-          </label>
-        </div>
-
-        {/* Service type and university preference */}
-        <div className="grid gap-4">
-          <label className="grid min-w-0 gap-1.5">
-            <span className="text-xs font-semibold text-slate-600">
-              Service Type
-            </span>
-            <input type="hidden" {...register("serviceType")} />
-            <div className="grid w-full grid-cols-3 gap-2 pt-1">
-              {serviceTypeOptions.map((type) => (
-                <button
-                  type="button"
-                  key={type}
-                  onClick={() =>
-                    setValue("serviceType", type, {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    })
-                  }
-                  className={`inline-flex min-h-11 w-full items-center justify-center rounded-xl border px-2 text-center text-[11px] font-bold leading-tight transition sm:text-xs ${
-                    selectedServiceType === type
-                      ? "border-[#2f66e7] bg-[#2f66e7] text-white"
-                      : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          </label>
-
-          <UniversityCombobox
-            label="Preferred University"
-            value={preferredUniversity}
-            onSelect={(nextValue) =>
-              setValue("preferredUniv", nextValue, {
-                shouldDirty: true,
-                shouldValidate: true,
-              })
-            }
-            placeholder="Any University"
-            emptyValue=""
-          />
-        </div>
 
         {/* Submit action */}
         <div className="border-t border-slate-200 pt-4">
@@ -948,6 +818,16 @@ function RecentRequestsPanel({
 
 const fieldClassName =
   "h-10 w-full rounded-lg border border-slate-300 bg-[#f7f8ff] px-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100";
+
+function slugify(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
 
 function ChatIcon({ className }: { className?: string }) {
   return (

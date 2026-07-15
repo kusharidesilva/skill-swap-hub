@@ -140,7 +140,7 @@ export default function BecomeSellerModal() {
                 <div>
                   <p className="text-sm font-semibold text-slate-900">1. Verify Identity</p>
                   <p className="text-xs text-slate-500">
-                    Use your official university email to build immediate trust.
+                    Upload student proof and wait for the admin review.
                   </p>
                 </div>
               </div>
@@ -152,14 +152,14 @@ export default function BecomeSellerModal() {
                 <div>
                   <p className="text-sm font-semibold text-slate-900">2. List Skills</p>
                   <p className="text-xs text-slate-500">
-                    Define what you&apos;re good at. Programming, Photography, or even Designing.
+                    Define the non-technical services you can offer.
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700">
-                      Web Dev
+                      Photography
                     </span>
                     <span className="rounded-full bg-sky-50 px-3 py-1 text-[10px] font-semibold text-sky-700">
-                      Math
+                      Crafts
                     </span>
                     <span className="rounded-full border border-dashed border-slate-300 px-3 py-1 text-[10px] font-semibold text-slate-400">
                       Add Skill +
@@ -175,7 +175,7 @@ export default function BecomeSellerModal() {
                 <div>
                   <p className="text-sm font-semibold text-slate-900">3. Set Availability</p>
                   <p className="text-xs text-slate-500">
-                    Manage schedule by marking specific hours you&apos;re free to teach.
+                    Manage the days and time slots you can accept service requests.
                   </p>
                 </div>
               </div>

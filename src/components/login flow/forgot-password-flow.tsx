@@ -9,7 +9,6 @@ import { z } from "zod";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { resetPassword } from "@/lib/auth";
 import { db } from "@/lib/firebase";
-import { isUniversityEmail } from "@/lib/universities";
 
 type Badge = {
   label: string;
@@ -17,21 +16,16 @@ type Badge = {
 };
 
 const badges: Badge[] = [
-  { label: "Verified student Emails", icon: "shield" },
-  { label: "University Exclusive", icon: "cap" },
+  { label: "Verified student providers", icon: "shield" },
+  { label: "Open for buyers", icon: "cap" },
 ];
 
 // The flow switches from the email form to a clear sent-confirmation screen.
 type Step = "recovery" | "sent";
 
-const recoverySchema = z
-  .object({
-    email: z.string().email("Enter a valid university email."),
-  })
-  .refine((value) => isUniversityEmail(value.email), {
-    message: "Only official campus emails can be used for account recovery.",
-    path: ["email"],
-  });
+const recoverySchema = z.object({
+  email: z.string().email("Enter a valid email."),
+});
 
 type RecoveryValues = z.infer<typeof recoverySchema>;
 
@@ -85,7 +79,7 @@ export default function ForgotPasswordFlow() {
 
       if (!hasRegisteredUser) {
         setServerError(
-          "No Skill Swap Hub account was found for that university email.",
+          "No Skill Swap Hub account was found for that email.",
         );
         return;
       }
@@ -98,7 +92,7 @@ export default function ForgotPasswordFlow() {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
       if (msg.includes("user-not-found")) {
         setServerError(
-          "No Skill Swap Hub account was found for that university email.",
+          "No Skill Swap Hub account was found for that email.",
         );
       } else {
         setServerError(msg);
@@ -126,7 +120,7 @@ export default function ForgotPasswordFlow() {
                 </h1>
                 <p className="mt-4 max-w-md text-sm text-white/80">
                   {step === "recovery"
-                    ? "Connect with fellow students to trade knowledge. Teach what you excel at, learn what you are curious about, and build a stronger community."
+                    ? "Use your account email to recover access to Skill Swap Hub."
                     : "A password reset link has been sent. Follow the link in your email to set a new password."}
                 </p>
               </div>
@@ -166,7 +160,7 @@ export default function ForgotPasswordFlow() {
                   Account Recovery
                 </h2>
                 <p className="mt-2 text-sm text-slate-600">
-                  Enter your university email and we will send you a link to
+                  Enter your account email and we will send you a link to
                   reset your password.
                 </p>
 
@@ -182,14 +176,14 @@ export default function ForgotPasswordFlow() {
                 >
                   <div>
                     <label className="text-sm font-semibold text-slate-700">
-                      University Email
+                      Email
                     </label>
                     <div className="mt-2 flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2">
                       <MailIcon className="h-5 w-5 text-slate-400" />
                       <input
                         id="forgot-email"
                         type="email"
-                        placeholder="mail@uni.ac.lk"
+                        placeholder="name@example.com"
                         {...register("email")}
                         className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
                       />
@@ -200,7 +194,7 @@ export default function ForgotPasswordFlow() {
                       </p>
                     )}
                     <p className="mt-2 text-xs text-slate-400">
-                      Must be a valid institutional email address.
+                      Use the same email you registered with.
                     </p>
                   </div>
 

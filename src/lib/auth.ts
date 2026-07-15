@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   sendEmailVerification,
@@ -17,28 +18,77 @@ import {
   getDocs,
   serverTimestamp,
 } from "firebase/firestore";
-import { auth, db } from "./firebase";
-import { dashboardHref, homeHref, type Role } from "./role-routes";
+import { ref, uploadBytes } from "firebase/storage";
+import { auth, db, storage } from "./firebase";
+import {
+  dashboardHref,
+  homeHref,
+  type Role,
+  type UserRole,
+} from "./role-routes";
+import {
+  isAllowedStudentProofFile,
+  type AccountStatus,
+  type AccountType,
+  type AvailabilitySlot,
+  type ProviderVerificationStatus,
+  type ServiceCategory,
+  type StudentProofType,
+  isPendingAdminVerificationStatus,
+} from "./platform";
+
+const STUDENT_PROOF_CONTENT_TYPES: Record<string, string> = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+};
 
 // This is the shared shape of a user document stored in Firestore.
+export interface StudentProofDocument {
+  fileName: string;
+  fileType: StudentProofType;
+  contentType: string;
+  size: number;
+  storagePath: string;
+  downloadUrl?: string;
+  uploadedAt: Date | null;
+}
 
 export interface UserProfile {
   uid: string;
   name: string;
   email: string;
   profileImageUrl?: string;
+  phoneNumber?: string;
   university: string;
   degree: string;
   yearOfStudy: string;
-  role: Role;
+  role: UserRole;
+  accountType?: AccountType;
+  userType?: "student" | "non_student";
+  accountStatus?: AccountStatus;
+  providerVerificationStatus?: ProviderVerificationStatus;
+  canBuyServices?: boolean;
+  canSellServices?: boolean;
+  verifiedStudentProvider?: boolean;
+  studentProof?: StudentProofDocument;
+  adminNote?: string;
   emailVerified: boolean;
   createdAt: Date | null;
+  updatedAt?: Date | null;
   neededSkills?: string[];
   providerProfile?: {
     skills: string[];
+    servicesOffered?: string[];
+    categories?: ServiceCategory[];
     proficiency: string;
     availability: string[];
+    availabilitySlots?: AvailabilitySlot[];
     bio: string;
+    sampleWorkImages?: string[];
     gigImages?: string[];
     gigs?: ProviderGig[];
   };
@@ -55,21 +105,182 @@ export interface ProviderGig {
   category: string;
   summary: string;
   description: string;
+  price?: number | string;
   delivery: string;
   availability: string[];
   tags: string[];
   image: string;
+  images?: string[];
+  id?: string;
+  sampleWorkUrl?: string;
+  status?: "active" | "inactive" | "removed";
 }
 
-// Creates both the Firebase login and its matching Firestore profile.
-export async function registerBuyer(data: {
-  name: string;
-  email: string;
-  password: string;
-  university: string;
-  degree: string;
-  yearOfStudy: string;
-}): Promise<User> {
+export type RegisterUserData =
+  | {
+      accountType: "non-student";
+      name: string;
+      email: string;
+      password: string;
+      phoneNumber?: string;
+    }
+  | {
+      accountType: "student";
+      name: string;
+      email: string;
+      password: string;
+      phoneNumber?: string;
+      university: string;
+      degree: string;
+      yearOfStudy: string;
+      proofType: StudentProofType;
+      proofFile: File;
+    };
+
+export const AUTHORIZED_ADMIN_EMAILS = ["kusharidesilva3@gmail.com"] as const;
+
+export function accountNeedsEmailVerification(accountType?: AccountType) {
+  return accountType !== "student";
+}
+
+export function isAuthorizedAdminEmail(email?: string | null) {
+  const normalizedEmail = email?.trim().toLowerCase();
+  return Boolean(
+    normalizedEmail &&
+    AUTHORIZED_ADMIN_EMAILS.some(
+      (authorizedEmail) => authorizedEmail.toLowerCase() === normalizedEmail,
+    ),
+  );
+}
+
+async function ensureAuthorizedAdminProfile(
+  user: User,
+  existingProfile?: UserProfile | null,
+) {
+  const normalizedEmail = user.email?.trim().toLowerCase();
+  if (!isAuthorizedAdminEmail(normalizedEmail)) {
+    throw new Error("This account is not authorized for admin access.");
+  }
+
+  const userRef = doc(db, "users", user.uid);
+  const isNewProfile = !existingProfile;
+
+  await setDoc(
+    userRef,
+    {
+      uid: user.uid,
+      name: existingProfile?.name || user.displayName || "System Administrator",
+      email: normalizedEmail,
+      university: existingProfile?.university || "",
+      degree: existingProfile?.degree || "",
+      yearOfStudy: existingProfile?.yearOfStudy || "",
+      role: "admin",
+      accountType: existingProfile?.accountType || "non-student",
+      userType: existingProfile?.userType || "non_student",
+      accountStatus: "active",
+      providerVerificationStatus: "not_required",
+      canBuyServices: false,
+      canSellServices: false,
+      verifiedStudentProvider: false,
+      emailVerified: user.emailVerified,
+      settings: existingProfile?.settings || {
+        emailNotifications: true,
+        pushNotifications: true,
+        profileVisibility: false,
+      },
+      favorites: existingProfile?.favorites || [],
+      updatedAt: serverTimestamp(),
+      ...(isNewProfile ? { createdAt: serverTimestamp() } : {}),
+    },
+    { merge: true },
+  );
+
+  const refreshedProfile = await getUserProfile(user.uid);
+  if (!refreshedProfile) {
+    throw new Error("Admin profile could not be created.");
+  }
+
+  return refreshedProfile;
+}
+
+function safeStorageFileName(fileName: string) {
+  return fileName.replace(/[^a-zA-Z0-9._-]/g, "-").replace(/-+/g, "-");
+}
+
+function resolveStudentProofContentType(file: File) {
+  if (
+    file.type &&
+    Object.values(STUDENT_PROOF_CONTENT_TYPES).includes(file.type)
+  ) {
+    return file.type;
+  }
+
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  return (
+    (extension && STUDENT_PROOF_CONTENT_TYPES[extension]) ||
+    "application/octet-stream"
+  );
+}
+
+async function runWithTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  label: string,
+) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out. Please try again.`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+async function uploadStudentProof(
+  userId: string,
+  file: File,
+  proofType: StudentProofType,
+) {
+  if (!isAllowedStudentProofFile(file)) {
+    throw new Error(
+      "Student proof must be PDF, DOC, PNG, JPG, or JPEG and under 8 MB.",
+    );
+  }
+
+  const storagePath = `student-proofs/${userId}/${Date.now()}-${safeStorageFileName(file.name)}`;
+  const proofRef = ref(storage, storagePath);
+  const contentType = resolveStudentProofContentType(file);
+
+  await runWithTimeout(
+    uploadBytes(proofRef, file, {
+      contentType,
+      customMetadata: {
+        proofType,
+        userId,
+      },
+    }),
+    15000,
+    "Student proof upload",
+  );
+
+  return {
+    fileName: file.name,
+    fileType: proofType,
+    contentType,
+    size: file.size,
+    storagePath,
+    uploadedAt: serverTimestamp(),
+  };
+}
+
+// Creates the Firebase login, main user record, and student approval request when needed.
+export async function registerUser(data: RegisterUserData): Promise<User> {
   const credential = await createUserWithEmailAndPassword(
     auth,
     data.email,
@@ -77,24 +288,97 @@ export async function registerBuyer(data: {
   );
 
   const user = credential.user;
+  try {
+    const isStudent = data.accountType === "student";
+    const studentProof = isStudent
+      ? await uploadStudentProof(user.uid, data.proofFile, data.proofType)
+      : null;
 
-  // The UID joins the authentication account to the application profile.
-  await setDoc(doc(db, "users", user.uid), {
-    uid: user.uid,
-    name: data.name,
-    email: data.email,
-    university: data.university,
-    degree: data.degree,
-    yearOfStudy: data.yearOfStudy,
-    role: "buyer",
-    emailVerified: false,
-    createdAt: serverTimestamp(),
-  });
+    await runWithTimeout(
+      setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        name: data.name,
+        email: data.email,
+        phoneNumber: data.phoneNumber || "",
+        university: isStudent ? data.university : "",
+        degree: isStudent ? data.degree : "",
+        yearOfStudy: isStudent ? data.yearOfStudy : "",
+        role: isStudent ? "provider" : "buyer",
+        accountType: data.accountType,
+        userType: isStudent ? "student" : "non_student",
+        accountStatus: isStudent
+          ? "pending_admin_verification"
+          : "pending_email_verification",
+        providerVerificationStatus: isStudent ? "pending" : "not_required",
+        canBuyServices: false,
+        canSellServices: false,
+        verifiedStudentProvider: false,
+        studentProof,
+        emailVerified: false,
+        settings: {
+          emailNotifications: true,
+          pushNotifications: true,
+          profileVisibility: true,
+        },
+        favorites: [],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }),
+      10000,
+      "Account profile setup",
+    );
 
-  // Access remains limited until the student verifies this address.
-  await sendEmailVerification(user);
+    if (isStudent && studentProof) {
+      await runWithTimeout(
+        setDoc(doc(db, "providerVerifications", user.uid), {
+          userId: user.uid,
+          studentName: data.name,
+          email: data.email,
+          phoneNumber: data.phoneNumber || "",
+          university: data.university,
+          degree: data.degree,
+          yearOfStudy: data.yearOfStudy,
+          proof: studentProof,
+          status: "pending",
+          adminNote: "",
+          submittedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }),
+        10000,
+        "Verification request setup",
+      );
+    }
+
+    if (accountNeedsEmailVerification(data.accountType)) {
+      await sendEmailVerification(user);
+    }
+  } catch (error) {
+    try {
+      await deleteUser(user);
+    } catch {
+      // Best-effort cleanup for partially created auth accounts.
+    }
+    throw error;
+  }
 
   return user;
+}
+
+// Kept for older imports; new registration should call registerUser directly.
+export async function registerBuyer(data: {
+  name: string;
+  email: string;
+  password: string;
+  university?: string;
+  degree?: string;
+  yearOfStudy?: string;
+}): Promise<User> {
+  return registerUser({
+    accountType: "non-student",
+    name: data.name,
+    email: data.email,
+    password: data.password,
+  });
 }
 
 // A request made as a buyer is what turns a provider account into a dual-role account.
@@ -113,6 +397,7 @@ export async function loginUser(
   password: string,
 ): Promise<{
   user: User;
+  profile: UserProfile;
   redirectPath: string;
 }> {
   const credential = await signInWithEmailAndPassword(auth, email, password);
@@ -124,24 +409,144 @@ export async function loginUser(
     throw new Error("User profile not found. Please contact support.");
   }
 
-  const profile = userDoc.data() as UserProfile;
-  const role = profile.role;
+  let profile = userDoc.data() as UserProfile;
 
-  // A dual-role user with buyer activity returns to the combined dashboard.
-  if (role === "both") {
-    const hasBuyerHistory = await checkBuyerHistory(user.uid);
-    return {
-      user,
-      redirectPath: hasBuyerHistory
-        ? dashboardHref("both")
-        : homeHref("provider"),
+  if (
+    accountNeedsEmailVerification(profile.accountType) &&
+    user.emailVerified
+  ) {
+    const updates: Partial<UserProfile> = {
+      emailVerified: true,
+      accountStatus: "active",
+      canBuyServices: true,
+    };
+
+    await updateDoc(doc(db, "users", user.uid), {
+      ...updates,
+      updatedAt: serverTimestamp(),
+    });
+
+    profile = {
+      ...profile,
+      ...updates,
     };
   }
 
+  const redirectPath = await getPostLoginRedirect(profile, user.uid);
+
   return {
     user,
-    redirectPath: role === "provider" ? homeHref("provider") : dashboardHref(role),
+    profile,
+    redirectPath,
   };
+}
+
+// Admin login is intentionally stricter than normal login: Firebase proves the
+// password, then Firestore decides whether the account may enter /admin.
+export async function loginAdmin(
+  email: string,
+  password: string,
+): Promise<{
+  user: User;
+  profile: UserProfile;
+}> {
+  if (!isAuthorizedAdminEmail(email)) {
+    throw new Error("This account is not authorized for admin access.");
+  }
+
+  let user: User;
+
+  try {
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    user = credential.user;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "";
+
+    if (
+      message.includes("user-not-found") ||
+      message.includes("invalid-credential") ||
+      message.includes("wrong-password")
+    ) {
+      try {
+        const credential = await createUserWithEmailAndPassword(
+          auth,
+          email.trim(),
+          password,
+        );
+        user = credential.user;
+      } catch (createError: unknown) {
+        const createMessage =
+          createError instanceof Error ? createError.message : "";
+        if (createMessage.includes("email-already-in-use")) {
+          throw error;
+        }
+        throw createError;
+      }
+    } else {
+      throw error;
+    }
+  }
+
+  const profile = await getUserProfile(user.uid);
+
+  const nextProfile =
+    !profile ||
+    profile.role !== "admin" ||
+    !isAuthorizedAdminEmail(profile.email) ||
+    user.email?.trim().toLowerCase() !== profile.email?.trim().toLowerCase()
+      ? await ensureAuthorizedAdminProfile(user, profile)
+      : profile;
+
+  if (
+    !isAuthorizedAdminEmail(nextProfile.email) ||
+    !isAuthorizedAdminEmail(user.email)
+  ) {
+    await firebaseSignOut(auth);
+    throw new Error("This account is not authorized for admin access.");
+  }
+
+  if (nextProfile.accountStatus === "suspended") {
+    await firebaseSignOut(auth);
+    throw new Error("This admin account is suspended.");
+  }
+
+  return { user, profile: nextProfile };
+}
+
+export async function getPostLoginRedirect(
+  profile: UserProfile,
+  uid: string,
+): Promise<string> {
+  if (profile.accountStatus === "suspended") {
+    throw new Error("This account is suspended. Please contact support.");
+  }
+
+  if (profile.role === "admin") {
+    if (
+      !isAuthorizedAdminEmail(profile.email) ||
+      !isAuthorizedAdminEmail(auth.currentUser?.email)
+    ) {
+      await firebaseSignOut(auth);
+      throw new Error("This account is not authorized for admin access.");
+    }
+    return "/admin";
+  }
+
+  if (
+    isPendingAdminVerificationStatus(profile.accountStatus) ||
+    profile.providerVerificationStatus === "pending"
+  ) {
+    return "/pending-verification";
+  }
+
+  if (profile.role === "both") {
+    const hasBuyerHistory = await checkBuyerHistory(uid);
+    return hasBuyerHistory ? dashboardHref("both") : homeHref("provider");
+  }
+
+  return profile.role === "provider"
+    ? homeHref("provider")
+    : dashboardHref(profile.role as Role);
 }
 
 // Adds provider details to an existing account without creating a second user.
@@ -164,22 +569,66 @@ export async function upgradeToProvider(
     throw new Error("User not found.");
   }
 
+  const currentProfile = userDoc.data() as UserProfile;
+  const alreadyProvider =
+    currentProfile.role === "provider" ||
+    currentProfile.role === "both" ||
+    currentProfile.providerVerificationStatus === "approved";
+
+  if (!alreadyProvider) {
+    if (currentProfile.accountType === "non-student") {
+      throw new Error(
+        "Only verified university students can become providers.",
+      );
+    }
+
+    throw new Error(
+      "Your student provider verification is still waiting for admin approval.",
+    );
+  }
+
   // Buyer history preserves both modes; otherwise this becomes provider-only for now.
   const hasBuyerHistory = await checkBuyerHistory(uid);
   const newRole = hasBuyerHistory ? "both" : "provider";
 
   await updateDoc(userRef, {
     role: newRole,
+    accountStatus: "active",
+    providerVerificationStatus: "approved",
+    canSellServices: true,
+    verifiedStudentProvider: true,
     university: providerData.university,
     degree: providerData.degree,
     yearOfStudy: providerData.yearOfStudy,
     providerProfile: {
       skills: providerData.skills,
+      categories: providerData.skills,
       proficiency: providerData.proficiency,
       availability: providerData.availability,
       bio: providerData.bio,
     },
+    updatedAt: serverTimestamp(),
   });
+
+  await setDoc(
+    doc(db, "providerProfiles", uid),
+    {
+      providerId: uid,
+      userId: uid,
+      university: providerData.university,
+      degreeName: providerData.degree,
+      yearOfStudy: providerData.yearOfStudy,
+      providerBio: providerData.bio,
+      serviceCategories: providerData.skills,
+      availability: providerData.availability,
+      providerStatus: "approved",
+      averageRating: 0,
+      totalReviews: 0,
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
 
   return hasBuyerHistory ? homeHref("both") : homeHref("provider");
 }
@@ -193,6 +642,15 @@ export async function resendVerificationEmail(): Promise<void> {
   const user = auth.currentUser;
   if (!user) throw new Error("No user is currently signed in.");
   await sendEmailVerification(user);
+}
+
+export async function activateVerifiedEmailUser(uid: string): Promise<void> {
+  await updateDoc(doc(db, "users", uid), {
+    emailVerified: true,
+    accountStatus: "active",
+    canBuyServices: true,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function signOut(): Promise<void> {

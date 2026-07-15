@@ -13,12 +13,12 @@ type SubmitReviewPageProps = {
 const peerMap: Record<string, { name: string; skill: string; avatar: string }> = {
   alex: {
     name: "Alex Rivera",
-    skill: "Python Data Analysis",
+    skill: "Birthday Photography",
     avatar: "/img/chats/alex-rivera.jpg",
   },
   sarah: {
     name: "Sarah Chen",
-    skill: "Advanced Calculus Tutoring",
+    skill: "Event Decoration Setup",
     avatar: "/img/chats/sarah-chen.jpg",
   },
   marcus: {

@@ -4,20 +4,23 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useCallback } from "react";
-import { resendVerificationEmail } from "@/lib/auth";
+import {
+  activateVerifiedEmailUser,
+  getPostLoginRedirect,
+  getUserProfile,
+  resendVerificationEmail,
+} from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { auth } from "@/lib/firebase";
-import { dashboardHref, homeHref } from "@/lib/role-routes";
 
 interface Props {
   searchParams?: { from?: string; registered?: string };
 }
 
 export default function VerifyEmailPage({ searchParams }: Props) {
-  const isProvider = searchParams?.from === "provider";
   const isRegistered = searchParams?.registered === "true";
   const router = useRouter();
-  const { firebaseUser } = useAuth();
+  const { firebaseUser, refreshProfile } = useAuth();
 
   const [checking, setChecking] = useState(false);
   const [resending, setResending] = useState(false);
@@ -39,9 +42,17 @@ export default function VerifyEmailPage({ searchParams }: Props) {
       }
       await currentUser.reload();
       if (currentUser.emailVerified) {
+        // Firestore rules check the auth token claim, so refresh it after email verification.
+        await currentUser.getIdToken(true);
         setVerifySuccess(true);
+        await activateVerifiedEmailUser(currentUser.uid);
+        await refreshProfile();
+        const profile = await getUserProfile(currentUser.uid);
+        const redirectPath = profile
+          ? await getPostLoginRedirect(profile, currentUser.uid)
+          : "/login";
         setTimeout(() => {
-          router.push(isProvider ? homeHref("provider") : dashboardHref("buyer"));
+          router.push(redirectPath);
         }, 1500);
       } else {
         setErrorMsg(
@@ -53,7 +64,7 @@ export default function VerifyEmailPage({ searchParams }: Props) {
     } finally {
       setChecking(false);
     }
-  }, [isProvider, router]);
+  }, [refreshProfile, router]);
 
   // Resending is rate-limited in the UI to avoid accidental repeated emails.
   const handleResend = async () => {
@@ -81,7 +92,7 @@ export default function VerifyEmailPage({ searchParams }: Props) {
           </div>
 
           <h1 className="mt-4 text-2xl font-semibold text-slate-900">
-            Verify Your University Email
+            Verify Your Email
           </h1>
           <p className="mt-2 text-sm text-slate-500">
             We sent a verification link to{" "}
@@ -90,10 +101,10 @@ export default function VerifyEmailPage({ searchParams }: Props) {
                 {firebaseUser.email}
               </span>
             ) : (
-              "your university email"
+              "your email"
             )}
             . Click the link in the email to activate your account, then return
-            here.
+            here. This email verification step is used for non-student accounts.
           </p>
 
           {/* Main card */}
@@ -109,7 +120,7 @@ export default function VerifyEmailPage({ searchParams }: Props) {
                     <div>
                       <p className="text-xs font-semibold text-emerald-800">Account Created Successfully!</p>
                       <p className="mt-1 text-[11px] text-emerald-600">
-                        Welcome to Skill Swap Hub! We have sent a verification link to your email. Click it to get started.
+                        Welcome to Skill Swap Hub! We have sent a verification link to your email. Click it to continue as a non-student user.
                       </p>
                       <p className="mt-2 rounded-lg bg-[#ecf9ff] px-2.5 py-2 text-[11px] font-medium text-[#137c8a]">
                         If you do not see the email in your inbox, please check your junk or spam folder too.
@@ -198,8 +209,7 @@ export default function VerifyEmailPage({ searchParams }: Props) {
                 <ShieldIcon className="h-3 w-3" />
               </span>
               <span>
-                This step helps keep Skill Swap Hub limited to real university
-                students. Securing our peer-to-peer system.
+                This step confirms the email owner for non-student access. Student provider approval is handled separately by admin proof review.
               </span>
             </div>
           </div>

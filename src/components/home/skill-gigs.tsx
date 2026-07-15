@@ -8,7 +8,6 @@ import { usePathname } from "next/navigation";
 import type { SVGProps } from "react"; 
 import { db } from "@/lib/firebase"; 
 import { formatRatingLabel } from "@/lib/ratings"; 
-import { scopedHref } from "@/lib/role-routes"; 
 import { useAuth } from "@/context/AuthContext"; 
  
 const gigImages = [ 
@@ -149,8 +148,8 @@ export default function SkillGigsSection() {
               summary: gigEntry.summary,
               availability,
               image: gigEntry.image,
-              serviceType: "Skill Exchange",
-              tags: [gigEntry.category, "Skill Exchange", availability],
+              serviceType: "Service Gig",
+              tags: [gigEntry.category, "Service Gig", availability],
             });
           });
         });
@@ -235,7 +234,6 @@ function GigCard({ gig }: { gig: LiveGig }) {
   const isBothHome = pathname === "/home/both";
   const requestRole = isBuyerHome ? "buyer" : isProviderHome ? "provider" : isBothHome ? "both" : "buyer";
   const previewHref = `/gig-preview/${requestRole}?source=home&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0`;
-  const requestHref = `${scopedHref("/request-service", requestRole)}?providerId=${encodeURIComponent(gig.providerId)}`;
   const isFavorited = Boolean(
     userProfile?.favorites?.some(
       (fav) =>
@@ -365,10 +363,10 @@ function GigCard({ gig }: { gig: LiveGig }) {
               View Gig
             </Link>
             <Link
-              href={requestHref}
+              href={previewHref}
               className="inline-flex h-9 items-center justify-center rounded-lg bg-[#2f66e7] px-2 text-xs font-semibold text-white transition hover:bg-[#2557cf]"
             >
-              Request
+              Request Now
             </Link>
           </div>
         </div>

@@ -1,60 +1,209 @@
-import type { ReactNode } from "react";
+"use client";
 
-type UserRow = {
-  name: string;
-  email: string;
-  university: string;
-  programme: string;
-  verification: "Verified" | "Pending ID";
-  account: "Active" | "Suspended";
-  rating: string;
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { collection, doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { createNotification } from "@/lib/notifications";
+
+type TimestampLike =
+  | { toDate?: () => Date; toMillis?: () => number }
+  | Date
+  | string
+  | number
+  | null
+  | undefined;
+
+type ManagedUser = {
+  id: string;
+  uid?: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  accountType?: string;
+  accountStatus?: string;
+  providerVerificationStatus?: string;
+  university?: string;
+  degree?: string;
+  yearOfStudy?: string;
+  createdAt?: TimestampLike;
+  averageRating?: number | string;
+  rating?: number | string;
+  totalReviews?: number;
+  providerProfile?: {
+    skills?: string[];
+    servicesOffered?: string[];
+  };
 };
 
-// This table currently uses sample users and is ready for a Firestore admin query.
-const users: UserRow[] = [
-  {
-    name: "Sarah Jenkins",
-    email: "s.jenkins@mit.edu",
-    university: "Mass. Institute of Technology",
-    programme: "BSc Computer Science",
-    verification: "Verified",
-    account: "Active",
-    rating: "4.9",
-  },
-  {
-    name: "Marcus Rodriguez",
-    email: "m.rodriguez@stanford.edu",
-    university: "Stanford University",
-    programme: "BA Graphic Design",
-    verification: "Pending ID",
-    account: "Active",
-    rating: "New",
-  },
-  {
-    name: "David Chen",
-    email: "d.chen@oxford.ac.uk",
-    university: "Oxford University",
-    programme: "MA Linguistics",
-    verification: "Verified",
-    account: "Suspended",
-    rating: "3.2",
-  },
-];
+const accountFilters = ["All Statuses", "Active", "Pending Verification", "Suspended"];
+const verificationFilters = ["All Verifications", "Approved", "Pending", "Rejected", "Not Required"];
+const roleFilters = ["All Roles", "Buyer", "Provider", "Admin"];
+const typeFilters = ["All Types", "Student", "Non-student"];
 
 export default function AdminUserManagement() {
+  const { userProfile } = useAuth();
+  const [users, setUsers] = useState<ManagedUser[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState(roleFilters[0]);
+  const [typeFilter, setTypeFilter] = useState(typeFilters[0]);
+  const [accountFilter, setAccountFilter] = useState(accountFilters[0]);
+  const [verificationFilter, setVerificationFilter] = useState(verificationFilters[0]);
+  const [loading, setLoading] = useState(true);
+  const [busyUserId, setBusyUserId] = useState("");
+  const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "users"),
+      (snapshot) => {
+        const nextUsers = snapshot.docs
+          .map((docSnap) => ({
+            id: docSnap.id,
+            ...(docSnap.data() as Omit<ManagedUser, "id">),
+          }))
+          .sort((left, right) => toMillis(right.createdAt) - toMillis(left.createdAt));
+
+        setUsers(nextUsers);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error loading users:", error);
+        setNotice({ type: "error", text: "Could not load users from Firestore." });
+        setLoading(false);
+      },
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  const filteredUsers = useMemo(() => {
+    const search = searchTerm.trim().toLowerCase();
+
+    return users.filter((user) => {
+      const matchesSearch =
+        !search ||
+        [user.name, user.email, user.university, user.degree, user.role]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(search));
+
+      const accountStatus = normalizeStatus(user.accountStatus || "active");
+      const matchesAccount =
+        accountFilter === "All Statuses" ||
+        (normalizeStatus(accountFilter) === "pending_verification"
+          ? accountStatus.startsWith("pending")
+          : accountStatus === normalizeStatus(accountFilter));
+
+      const role = normalizeStatus(user.role || "buyer");
+      const matchesRole =
+        roleFilter === "All Roles" ||
+        (normalizeStatus(roleFilter) === "buyer" && (role === "buyer" || role === "both")) ||
+        (normalizeStatus(roleFilter) === "provider" && (role === "provider" || role === "both")) ||
+        role === normalizeStatus(roleFilter);
+
+      const accountType = normalizeStatus(user.accountType || "");
+      const matchesType =
+        typeFilter === "All Types" ||
+        accountType === normalizeStatus(typeFilter).replace("_", "-") ||
+        accountType === normalizeStatus(typeFilter);
+
+      const verificationStatus = normalizeStatus(user.providerVerificationStatus || "not_required");
+      const matchesVerification =
+        verificationFilter === "All Verifications" ||
+        verificationStatus === normalizeStatus(verificationFilter);
+
+      return matchesSearch && matchesRole && matchesType && matchesAccount && matchesVerification;
+    });
+  }, [accountFilter, roleFilter, searchTerm, typeFilter, users, verificationFilter]);
+
+  const activeUsers = users.filter((user) => normalizeStatus(user.accountStatus || "active") === "active");
+  const pendingUsers = users.filter(
+    (user) => normalizeStatus(user.accountStatus || "").startsWith("pending"),
+  );
+  const suspendedUsers = users.filter((user) => normalizeStatus(user.accountStatus || "") === "suspended");
+
+  const handleAccountStatus = async (user: ManagedUser, nextStatus: "active" | "suspended") => {
+    const targetUserId = user.uid || user.id;
+
+    if (targetUserId === userProfile?.uid && nextStatus === "suspended") {
+      setNotice({ type: "error", text: "You cannot suspend your own admin account." });
+      return;
+    }
+
+    setBusyUserId(`${targetUserId}-${nextStatus}`);
+    setNotice(null);
+
+    try {
+      await updateDoc(doc(db, "users", targetUserId), {
+        accountStatus: nextStatus,
+        updatedAt: serverTimestamp(),
+      });
+
+      if (targetUserId !== userProfile?.uid) {
+        await createNotification({
+          userId: targetUserId,
+          title: nextStatus === "active" ? "Account activated" : "Account suspended",
+          description:
+            nextStatus === "active"
+              ? "Your Skill Swap Hub account is active again."
+              : "Your Skill Swap Hub account has been suspended by admin.",
+          type: "system",
+          icon: nextStatus === "active" ? "check-circle" : "alert-triangle",
+          tone: nextStatus === "active" ? "emerald" : "red",
+          href: "/notifications",
+          destination: "/notifications",
+        });
+      }
+
+      setNotice({
+        type: "success",
+        text: `${user.name || user.email || "User"} is now ${nextStatus}.`,
+      });
+    } catch (error) {
+      console.error("Error updating account status:", error);
+      setNotice({ type: "error", text: "Could not update the account status." });
+    } finally {
+      setBusyUserId("");
+    }
+  };
+
+  const exportCsv = () => {
+    const headers = ["Name", "Email", "Role", "Account Type", "Account Status", "Verification", "Created"];
+    const rows = filteredUsers.map((user) => [
+      user.name || "",
+      user.email || "",
+      roleLabel(user.role),
+      accountTypeLabel(user.accountType),
+      accountStatusLabel(user.accountStatus),
+      verificationLabel(user.providerVerificationStatus),
+      formatDate(user.createdAt),
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "skill-swap-users.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="px-6 py-10">
-      {/* Page heading and export action */}
       <section className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-[30px] font-semibold tracking-tight text-slate-900">User Management</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            Review, verify, and manage student accounts across all participating universities.
+            Manage buyers, providers, pending students, and admin accounts from the users table.
           </p>
         </div>
 
         <button
           type="button"
+          onClick={exportCsv}
           className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:shadow-md"
         >
           <DownloadIcon />
@@ -62,24 +211,97 @@ export default function AdminUserManagement() {
         </button>
       </section>
 
-      {/* User filters */}
+      <section className="mt-6 grid gap-4 xl:grid-cols-3">
+        <StatCard label="Active Users" value={activeUsers.length} tone="blue" />
+        <StatCard label="Pending Students" value={pendingUsers.length} tone="amber" />
+        <StatCard label="Suspended Users" value={suspendedUsers.length} tone="rose" />
+      </section>
+
+      {notice ? (
+        <div
+          className={`mt-5 rounded-xl border px-4 py-3 text-sm font-medium ${
+            notice.type === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {notice.text}
+        </div>
+      ) : null}
+
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr_1fr_1fr_auto]">
+        <div className="grid gap-4 xl:grid-cols-[1.35fr_0.8fr_0.8fr_1fr_1fr_auto]">
           <Field label="Search Users">
-            <InputLike placeholder="Name or email..." icon={<SearchIcon />} />
+            <div className="flex h-12 items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-slate-500 shadow-sm">
+              <SearchIcon />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Name, email, university..."
+                className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+              />
+            </div>
           </Field>
+
+          <Field label="Role">
+            <select
+              value={roleFilter}
+              onChange={(event) => setRoleFilter(event.target.value)}
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+            >
+              {roleFilters.map((filter) => (
+                <option key={filter}>{filter}</option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Student Type">
+            <select
+              value={typeFilter}
+              onChange={(event) => setTypeFilter(event.target.value)}
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+            >
+              {typeFilters.map((filter) => (
+                <option key={filter}>{filter}</option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Account Status">
+            <select
+              value={accountFilter}
+              onChange={(event) => setAccountFilter(event.target.value)}
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+            >
+              {accountFilters.map((filter) => (
+                <option key={filter}>{filter}</option>
+              ))}
+            </select>
+          </Field>
+
           <Field label="Verification">
-            <SelectLike value="All Statuses" />
+            <select
+              value={verificationFilter}
+              onChange={(event) => setVerificationFilter(event.target.value)}
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+            >
+              {verificationFilters.map((filter) => (
+                <option key={filter}>{filter}</option>
+              ))}
+            </select>
           </Field>
-          <Field label="University">
-            <SelectLike value="All Universities" />
-          </Field>
-          <Field label="Skill Category">
-            <SelectLike value="All Skills" />
-          </Field>
+
           <button
             type="button"
-            className="mt-6 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-700 transition hover:bg-slate-200"
+            onClick={() => {
+              setSearchTerm("");
+              setRoleFilter(roleFilters[0]);
+              setTypeFilter(typeFilters[0]);
+              setAccountFilter(accountFilters[0]);
+              setVerificationFilter(verificationFilters[0]);
+            }}
+            className="mt-6 inline-flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-700 transition hover:bg-slate-200"
             aria-label="Clear filters"
           >
             <FilterOffIcon />
@@ -87,65 +309,107 @@ export default function AdminUserManagement() {
         </div>
       </section>
 
-      {/* User management table */}
       <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid grid-cols-[1.6fr_1.4fr_0.85fr_0.8fr_0.75fr_0.4fr] border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-          <span>Student Name &amp; Email</span>
-          <span>University &amp; Programme</span>
-          <span>Verification</span>
-          <span>Account Status</span>
-          <span>Rating</span>
-          <span>Actions</span>
+        <div className="overflow-x-auto">
+          <div className="min-w-[1080px]">
+            <div className="grid grid-cols-[1.55fr_1.2fr_0.7fr_0.85fr_0.95fr_0.8fr_1fr] border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+              <span>Name &amp; Email</span>
+              <span>University &amp; Programme</span>
+              <span>Role</span>
+              <span>Student Type</span>
+              <span>Status</span>
+              <span>Rating</span>
+              <span>Actions</span>
+            </div>
+
+            {loading ? (
+              <EmptyRow>Loading users...</EmptyRow>
+            ) : filteredUsers.length === 0 ? (
+              <EmptyRow>No users found.</EmptyRow>
+            ) : (
+              filteredUsers.map((user) => {
+                const targetUserId = user.uid || user.id;
+                const isSuspended = normalizeStatus(user.accountStatus || "") === "suspended";
+                const isSelf = targetUserId === userProfile?.uid;
+
+                return (
+                  <div
+                    key={user.id}
+                    className="grid grid-cols-[1.55fr_1.2fr_0.7fr_0.85fr_0.95fr_0.8fr_1fr] items-center border-b border-slate-200 px-6 py-5 text-sm last:border-b-0"
+                  >
+                    <div className="flex min-w-0 items-center gap-4">
+                      <Avatar name={user.name || user.email || "User"} />
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-slate-800">{user.name || "Unnamed user"}</p>
+                        <p className="truncate text-sm text-slate-500">{user.email || "No email"}</p>
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-slate-700">{user.university || "Not added"}</p>
+                      <p className="truncate text-sm text-slate-500">
+                        {[user.degree, user.yearOfStudy].filter(Boolean).join(" - ") || "Not added"}
+                      </p>
+                    </div>
+
+                    <StatusChip tone={roleTone(user.role)}>{roleLabel(user.role)}</StatusChip>
+                    <span className="font-medium text-slate-600">{accountTypeLabel(user.accountType)}</span>
+                    <div className="space-y-1.5">
+                      <StatusChip tone={accountTone(user.accountStatus)}>
+                        {accountStatusLabel(user.accountStatus)}
+                      </StatusChip>
+                      <p className="text-xs font-medium text-slate-400">
+                        {verificationLabel(user.providerVerificationStatus)}
+                      </p>
+                    </div>
+
+                    <p className="flex items-center gap-1 font-medium text-slate-700">
+                      <StarIcon />
+                      {ratingLabel(user)}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <a
+                        href={profileHref(user)}
+                        className="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                      >
+                        Profile
+                      </a>
+                      <a
+                        href={`/admin/issue-resolution?user=${targetUserId}`}
+                        className="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                      >
+                        Reports
+                      </a>
+                      <button
+                        type="button"
+                        disabled={busyUserId !== "" || (isSelf && !isSuspended)}
+                        onClick={() => handleAccountStatus(user, isSuspended ? "active" : "suspended")}
+                        className={`inline-flex h-9 items-center rounded-lg px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                          isSuspended
+                            ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                            : "bg-[#ef295a] text-white hover:bg-[#db1f4d]"
+                        }`}
+                      >
+                        {busyUserId === `${targetUserId}-${isSuspended ? "active" : "suspended"}`
+                          ? "Saving..."
+                          : isSuspended
+                            ? "Activate"
+                            : "Suspend"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
 
-        {users.map((user) => (
-          <div
-            key={user.email}
-            className="grid grid-cols-[1.6fr_1.4fr_0.85fr_0.8fr_0.75fr_0.4fr] items-center border-b border-slate-200 px-6 py-5 last:border-b-0"
-          >
-            <div className="flex items-center gap-4">
-              <Avatar name={user.name} />
-              <div>
-                <p className="font-semibold text-slate-800">{user.name}</p>
-                <p className="text-sm text-slate-500">{user.email}</p>
-              </div>
-            </div>
-
-            <div>
-              <p className="font-medium text-slate-700">{user.university}</p>
-              <p className="text-sm text-slate-500">{user.programme}</p>
-            </div>
-
-            <StatusChip tone={user.verification === "Verified" ? "teal" : "amber"}>{user.verification}</StatusChip>
-            <StatusChip tone={user.account === "Active" ? "indigo" : "rose"}>{user.account}</StatusChip>
-
-            <div>
-              <p className="flex items-center gap-1 font-medium text-slate-700">
-                <StarIcon />
-                {user.rating}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
-              aria-label={`Edit ${user.name}`}
-            >
-              <EditIcon />
-            </button>
-          </div>
-        ))}
-
-        <div className="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 text-sm text-slate-500 lg:flex-row lg:items-center lg:justify-between">
-          <p>Showing 1 to 3 of 1,248 users</p>
-          <div className="flex items-center gap-2">
-            <PagerButton disabled>Previous</PagerButton>
-            <PagerButton active>1</PagerButton>
-            <PagerButton>2</PagerButton>
-            <PagerButton>3</PagerButton>
-            <span className="px-2 text-slate-400">...</span>
-            <PagerButton>Next</PagerButton>
-          </div>
+        <div className="flex flex-col gap-2 border-t border-slate-200 px-6 py-4 text-sm text-slate-500 lg:flex-row lg:items-center lg:justify-between">
+          <p>
+            Showing {filteredUsers.length} of {users.length} users
+          </p>
+          <p>Main user details are stored in the users collection.</p>
         </div>
       </section>
     </div>
@@ -161,35 +425,39 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function InputLike({
-  placeholder,
-  icon,
+function StatCard({
+  label,
+  value,
+  tone,
 }: {
-  placeholder: string;
-  icon: ReactNode;
+  label: string;
+  value: number;
+  tone: "blue" | "amber" | "rose";
 }) {
+  const styles =
+    tone === "blue"
+      ? "border-blue-200 bg-blue-50 text-blue-700"
+      : tone === "amber"
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : "border-rose-200 bg-rose-50 text-rose-700";
+
   return (
-    <div className="flex h-14 items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-slate-500 shadow-sm">
-      {icon}
-      <span className="text-sm text-slate-400">{placeholder}</span>
-    </div>
+    <article className={`rounded-2xl border p-5 shadow-sm ${styles}`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+      <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
+    </article>
   );
 }
 
-function SelectLike({ value }: { value: string }) {
-  return (
-    <div className="flex h-14 items-center justify-between rounded-xl border border-slate-200 bg-white px-4 text-slate-700 shadow-sm">
-      <span className="text-sm">{value}</span>
-      <ChevronDownIcon />
-    </div>
-  );
+function EmptyRow({ children }: { children: ReactNode }) {
+  return <div className="px-6 py-12 text-center text-sm font-medium text-slate-500">{children}</div>;
 }
 
 function StatusChip({
   tone,
   children,
 }: {
-  tone: "teal" | "amber" | "blue" | "indigo" | "rose";
+  tone: "teal" | "amber" | "blue" | "indigo" | "rose" | "slate";
   children: ReactNode;
 }) {
   const styles =
@@ -197,13 +465,19 @@ function StatusChip({
       ? "bg-teal-100 text-teal-700"
       : tone === "amber"
         ? "bg-amber-100 text-amber-700"
-      : tone === "blue"
-        ? "bg-blue-100 text-blue-700"
-      : tone === "indigo"
-        ? "bg-indigo-100 text-indigo-700"
-        : "bg-rose-100 text-rose-700";
+        : tone === "blue"
+          ? "bg-blue-100 text-blue-700"
+          : tone === "indigo"
+            ? "bg-indigo-100 text-indigo-700"
+            : tone === "rose"
+              ? "bg-rose-100 text-rose-700"
+              : "bg-slate-100 text-slate-600";
 
-  return <span className={`inline-flex w-fit rounded-full px-3 py-1 text-sm font-semibold ${styles}`}>{children}</span>;
+  return (
+    <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${styles}`}>
+      {children}
+    </span>
+  );
 }
 
 function Avatar({ name }: { name: string }) {
@@ -214,33 +488,96 @@ function Avatar({ name }: { name: string }) {
     .slice(0, 2)
     .toUpperCase();
 
-  return <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f0d6c6] text-sm font-bold text-[#7a3e1b]">{initials}</div>;
+  return (
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f0d6c6] text-sm font-bold text-[#7a3e1b]">
+      {initials || "U"}
+    </div>
+  );
 }
 
-function PagerButton({
-  children,
-  active,
-  disabled,
-}: {
-  children: ReactNode;
-  active?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      className={`min-w-10 rounded-lg border px-3 py-2 text-sm font-medium transition ${
-        active
-          ? "border-[#2f66e7] bg-[#2f66e7] text-white"
-          : disabled
-            ? "border-slate-200 text-slate-300"
-            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-      }`}
-    >
-      {children}
-    </button>
-  );
+function normalizeStatus(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+}
+
+function accountStatusLabel(status?: string) {
+  const normalized = normalizeStatus(status || "active");
+  if (normalized === "pending_email_verification") return "Pending Email";
+  if (normalized === "pending_admin_verification") return "Pending Admin";
+  if (normalized === "pending_verification") return "Pending Verification";
+  if (normalized === "suspended") return "Suspended";
+  return "Active";
+}
+
+function accountTypeLabel(accountType?: string) {
+  if (accountType === "student") return "Student";
+  if (accountType === "non-student") return "Non-student";
+  return "Not set";
+}
+
+function verificationLabel(status?: string) {
+  const normalized = normalizeStatus(status || "not_required");
+  if (normalized === "approved") return "Approved";
+  if (normalized === "pending") return "Pending";
+  if (normalized === "rejected") return "Rejected";
+  return "Not Required";
+}
+
+function roleLabel(role?: string) {
+  if (role === "both") return "Buyer + Provider";
+  if (role === "provider") return "Provider";
+  if (role === "admin") return "Admin";
+  return "Buyer";
+}
+
+function accountTone(status?: string): "teal" | "amber" | "rose" {
+  const normalized = normalizeStatus(status || "active");
+  if (normalized.startsWith("pending")) return "amber";
+  if (normalized === "suspended") return "rose";
+  return "teal";
+}
+
+function roleTone(role?: string): "blue" | "indigo" | "teal" | "slate" {
+  if (role === "admin") return "indigo";
+  if (role === "provider" || role === "both") return "teal";
+  if (role === "buyer") return "blue";
+  return "slate";
+}
+
+function profileHref(user: ManagedUser) {
+  const userId = user.uid || user.id;
+  return user.role === "provider" || user.role === "both"
+    ? `/provider-profile/${userId}`
+    : `/buyer-profile/${userId}`;
+}
+
+function ratingLabel(user: ManagedUser) {
+  const rating = user.averageRating ?? user.rating;
+  if (typeof rating === "number") return rating.toFixed(1);
+  if (typeof rating === "string" && rating.trim()) return rating;
+  return user.totalReviews ? `${user.totalReviews} reviews` : "New";
+}
+
+function toMillis(value: TimestampLike) {
+  if (!value) return 0;
+  if (typeof value === "object" && "toMillis" in value && typeof value.toMillis === "function") {
+    return value.toMillis();
+  }
+  if (typeof value === "object" && "toDate" in value && typeof value.toDate === "function") {
+    return value.toDate().getTime();
+  }
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "object") return 0;
+  return new Date(value).getTime() || 0;
+}
+
+function formatDate(value: TimestampLike) {
+  const millis = toMillis(value);
+  if (!millis) return "Not recorded";
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(millis));
 }
 
 function SearchIcon() {
@@ -269,23 +606,6 @@ function FilterOffIcon() {
       <path d="M7 12h10" />
       <path d="M10 19h4" />
       <path d="m5 5 14 14" />
-    </svg>
-  );
-}
-
-function ChevronDownIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-
-function EditIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 20h9" />
-      <path d="m16.5 3.5 4 4L8 20l-5 1 1-5z" />
     </svg>
   );
 }

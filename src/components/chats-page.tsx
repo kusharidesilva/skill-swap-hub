@@ -35,6 +35,7 @@ type Conversation = {
   online?: boolean;
   peerId: string;
   peerRole: Role;
+  serviceContext?: ServiceContext;
 };
 
 type ChatMessage = {
@@ -45,6 +46,7 @@ type ChatMessage = {
   senderName: string;
   senderRole: Role;
   attachments: ChatAttachment[];
+  serviceContext?: ServiceContext;
 };
 
 type ChatsPageProps = {
@@ -56,6 +58,14 @@ type ChatAttachment = {
   size: number;
   type: string;
   url: string;
+};
+
+type ServiceContext = {
+  gigId?: string;
+  title?: string;
+  category?: string;
+  price?: number | string;
+  providerName?: string;
 };
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
@@ -72,6 +82,7 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
 export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   const { userProfile } = useAuth();
   const searchParams = useSearchParams();
+  const chatIdParam = searchParams.get("chatId");
   const peerIdParam = searchParams.get("peerId");
   const subjectParam = searchParams.get("subject");
 
@@ -85,10 +96,11 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   const [composerError, setComposerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const currentChatId = chatIdParam || activeId;
 
   // Opening chat from a profile creates the conversation only if it does not exist.
   useEffect(() => {
-    if (!userProfile || !peerIdParam) return;
+    if (chatIdParam || !userProfile || !peerIdParam) return;
 
     async function initializeConversation() {
       const peerId = String(peerIdParam);
@@ -119,7 +131,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           const peerSnap = await getDoc(doc(db, "users", peerId));
           let peerName = "Student Partner";
           let peerUniv = "University";
-          const peerSkill = subjectParam || "Skill Swap";
+          const peerSkill = subjectParam || "Service Chat";
           let peerRole: Role = "buyer";
 
           if (peerSnap.exists()) {
@@ -150,6 +162,10 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
               [currentUid]: "Skills Help",
               [peerId]: peerSkill,
             },
+            serviceContext: {
+              title: peerSkill,
+              category: "",
+            },
             lastMessage: "Chat started",
             updatedAt: serverTimestamp(),
           });
@@ -162,7 +178,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
     }
 
     initializeConversation();
-  }, [userProfile, peerIdParam, subjectParam]);
+  }, [chatIdParam, userProfile, peerIdParam, subjectParam]);
 
   // Listen to every conversation that includes the current user.
   useEffect(() => {
@@ -179,8 +195,11 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           const data = chatDoc.data();
           const peerId = data.participants?.find((p: string) => p !== userProfile.uid) || "";
           const name = data.participantNames?.[peerId] || "Student Partner";
-          const skill = data.participantSkills?.[peerId] || "Skill Exchange";
+          const skill = data.participantSkills?.[peerId] || "Service Chat";
           const university = data.participantUniversities?.[peerId] || "Sri Lankan University";
+          const serviceContext = isServiceContext(data.serviceContext)
+            ? data.serviceContext
+            : { title: skill, category: "" };
 
           let peerRole = resolveChatRole(data.participantRoles?.[peerId]);
           if (peerId && !data.participantRoles?.[peerId]) {
@@ -212,6 +231,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
             time: timeStr,
             peerId,
             peerRole,
+            serviceContext,
             updatedAtMs,
           };
         })
@@ -230,27 +250,28 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           time: conversation.time,
           peerId: conversation.peerId,
           peerRole: conversation.peerRole,
+          serviceContext: conversation.serviceContext,
         }))
       );
       setLoading(false);
 
-      if (list.length > 0 && !activeId) {
+      if (list.length > 0 && !activeId && !chatIdParam) {
         setActiveId(list[0].id);
       }
     });
 
     return () => unsubscribe();
-  }, [userProfile, activeId]);
+  }, [userProfile, activeId, chatIdParam]);
 
   const activeConversation =
-    conversations.find((conversation) => conversation.id === activeId) || null;
+    conversations.find((conversation) => conversation.id === currentChatId) || null;
 
   // Switching conversations also switches this message listener.
   useEffect(() => {
-    if (!activeId) return;
+    if (!currentChatId) return;
 
     const messagesQuery = query(
-      collection(db, `chats/${activeId}/messages`),
+      collection(db, `chats/${currentChatId}/messages`),
       orderBy("createdAt", "asc")
     );
 
@@ -277,6 +298,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           senderRole: resolveChatRole(
             data.senderRole ?? (data.senderId === userProfile?.uid ? userProfile?.role : activeConversation?.peerRole)
           ),
+          serviceContext: isServiceContext(data.serviceContext) ? data.serviceContext : undefined,
           attachments: Array.isArray(data.attachments)
             ? data.attachments.filter(isValidAttachment)
             : [],
@@ -286,13 +308,13 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
     });
 
     return () => unsubscribe();
-  }, [activeId, userProfile, activeConversation?.name, activeConversation?.peerRole]);
+  }, [currentChatId, userProfile, activeConversation?.name, activeConversation?.peerRole]);
 
   // Save the message first, then update the chat preview shown in both inboxes.
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = draftMessage.trim();
-    if ((!text && selectedFiles.length === 0) || !activeId || !userProfile || isSending) return;
+    if ((!text && selectedFiles.length === 0) || !currentChatId || !userProfile || isSending) return;
 
     try {
       setIsSending(true);
@@ -303,7 +325,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
           const storageRef = ref(
             storage,
-            `chat-attachments/${activeId}/${Date.now()}-${safeFileName}`
+            `chat-attachments/${currentChatId}/${Date.now()}-${safeFileName}`
           );
           await uploadBytes(storageRef, file, { contentType: file.type });
           const url = await getDownloadURL(storageRef);
@@ -316,7 +338,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
         })
       );
 
-      await addDoc(collection(db, `chats/${activeId}/messages`), {
+      await addDoc(collection(db, `chats/${currentChatId}/messages`), {
         senderId: userProfile.uid,
         senderName: userProfile.name || "You",
         senderRole: resolveChatRole(userProfile.role),
@@ -325,13 +347,13 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
         createdAt: serverTimestamp(),
       });
 
-      await updateDoc(doc(db, "chats", activeId), {
+      await updateDoc(doc(db, "chats", currentChatId), {
         lastMessage:
           text || (attachments.length === 1 ? `Sent ${attachments[0].name}` : `Sent ${attachments.length} files`),
         updatedAt: serverTimestamp(),
       });
 
-      const peerConversation = conversations.find((c) => c.id === activeId);
+      const peerConversation = conversations.find((c) => c.id === currentChatId);
       if (peerConversation && peerConversation.peerId !== userProfile.uid) {
         await createNotification({
           userId: peerConversation.peerId,
@@ -408,7 +430,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="grid min-h-[720px] lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid min-h-[720px] lg:grid-cols-[320px_minmax(0,1fr)_260px]">
         {/* Conversation search and inbox */}
         <aside className="border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
           <div className="border-b border-slate-100 p-5">
@@ -442,7 +464,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
                 <ConversationButton
                   key={conversation.id}
                   conversation={conversation}
-                  active={conversation.id === activeConversation?.id}
+                  active={conversation.id === currentChatId}
                   onClick={() => setActiveId(conversation.id)}
                 />
               ))
@@ -502,8 +524,32 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
             </p>
           </div>
         )}
+
+        {activeConversation ? <ServiceContextPanel conversation={activeConversation} /> : null}
       </div>
     </section>
+  );
+}
+
+function ServiceContextPanel({ conversation }: { conversation: Conversation }) {
+  const service = conversation.serviceContext;
+
+  return (
+    <aside className="border-t border-slate-200 bg-white p-5 lg:border-l lg:border-t-0">
+      <h2 className="text-sm font-bold text-slate-900">Service</h2>
+      <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Gig Title</p>
+        <p className="mt-1 break-words text-sm font-semibold leading-5 text-slate-800">
+          {service?.title || conversation.skill || "Service chat"}
+        </p>
+        <div className="mt-4 border-t border-slate-200 pt-3">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Category</p>
+          <p className="mt-1 text-sm font-semibold text-[#0f4cbf]">
+            {service?.category || "General"}
+          </p>
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -716,7 +762,21 @@ function MessageBubble({
             {formatRoleLabel(message.senderRole)}
           </span>
         </div>
-        <p className="text-sm leading-6 sm:text-[15px]">{message.text}</p>
+        <p className="whitespace-pre-line text-sm leading-6 sm:text-[15px]">{message.text}</p>
+        {message.serviceContext ? (
+          <div
+            className={`mt-3 rounded-xl border px-3 py-2 text-xs ${
+              isMine
+                ? "border-white/20 bg-white/10 text-white"
+                : "border-blue-100 bg-blue-50 text-slate-700"
+            }`}
+          >
+            <p className="font-bold">{message.serviceContext.title || "Gig"}</p>
+            <p className={isMine ? "text-blue-100" : "text-slate-500"}>
+              {message.serviceContext.category || "General"}
+            </p>
+          </div>
+        ) : null}
         {message.attachments.length > 0 ? (
           <div className={`${message.text ? "mt-3" : ""} space-y-2`}>
             {message.attachments.map((attachment) => (
@@ -997,6 +1057,16 @@ function isValidAttachment(value: unknown): value is ChatAttachment {
     typeof attachment.size === "number" &&
     typeof attachment.type === "string" &&
     typeof attachment.url === "string"
+  );
+}
+
+function isServiceContext(value: unknown): value is ServiceContext {
+  if (!value || typeof value !== "object") return false;
+  const context = value as Record<string, unknown>;
+  return (
+    (context.title === undefined || typeof context.title === "string") &&
+    (context.category === undefined || typeof context.category === "string") &&
+    (context.gigId === undefined || typeof context.gigId === "string")
   );
 }
 

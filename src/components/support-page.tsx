@@ -4,7 +4,7 @@ const categories = [
   {
     title: "Account & Profile",
     description:
-      "Guidance on creating a student account, verifying university email, updating profile details, adding skills, and managing account settings.",
+      "Guidance on creating an account, verifying normal email, uploading student proof, updating profile details, adding services, and managing account settings.",
     tone: "bg-[#e7edff] text-[#2452da]",
     cardTone: "bg-white",
     icon: "user",
@@ -12,7 +12,7 @@ const categories = [
   {
     title: "Safety & Security",
     description:
-      "Learn how university email verification, private chat, ratings, reviews, and report options help maintain a trusted student-only environment.",
+      "Learn how student proof review, private chat, ratings, reviews, and report options help maintain a trusted service environment.",
     tone: "bg-[#ffe8e3] text-[#f06447]",
     cardTone: "bg-[#f4f5ff]",
     icon: "shield",
@@ -37,14 +37,14 @@ const categories = [
 
 const faqs = [
   {
-    question: "How do I verify my university email?",
+    question: "How do I verify my account?",
     answer:
-      "Students must register using their official university email address. A verification code will be sent to that email, and the student can access the platform only after entering the correct code.",
+      "Non-students verify ownership of their normal email through Firebase. Students upload proof such as a student ID or confirmation letter, then wait for admin approval before using provider features.",
   },
   {
     question: "Is Skill Swap Hub only for university students?",
     answer:
-      "Yes. Skill Swap Hub is designed for Sri Lankan university students. University email verification is used to help keep the platform student-only and trusted.",
+      "Buyers can be students or non-students. Only verified university students can become providers, and admin approval is required before they can sell services.",
   },
   {
     question: "How can I find a student for a service?",
@@ -93,7 +93,7 @@ export default function SupportPage() {
             Skill Swap Hub Help & Support
           </h1>
           <p className="max-w-2xl text-sm text-slate-600">
-            Find simple guides for account setup, university email verification,
+            Find simple guides for account setup, email verification, student proof review,
             skill swapping, private chat, ratings, reviews, and safe
             student-to-student communication.
           </p>
@@ -189,10 +189,6 @@ export default function SupportPage() {
                 <div className="flex items-center gap-3">
                   <ClockIcon className="h-[18px] w-[18px] shrink-0" />
                   <span>Mon-Fri: 9AM - 6PM</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <LocationIcon className="h-[18px] w-[18px] shrink-0" />
-                  <span>Colombo, Sri Lanka</span>
                 </div>
               </div>
             </div>
@@ -342,21 +338,6 @@ function ClockIcon({ className }: { className?: string }) {
     >
       <circle cx="12" cy="12" r="8" />
       <path d="M12 8v4.5l3 1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function LocationIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path d="M12 20s6-4.35 6-10a6 6 0 1 0-12 0c0 5.65 6 10 6 10z" />
-      <circle cx="12" cy="10" r="2.1" />
     </svg>
   );
 }

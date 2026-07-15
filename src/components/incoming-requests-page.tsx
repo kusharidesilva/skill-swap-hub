@@ -21,6 +21,7 @@ import { UNIVERSITIES } from "@/lib/universities";
 import { createNotification } from "@/lib/notifications";
 import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
+import { useLookupOptions } from "@/lib/lookups";
 
 type IncomingRequestsTab = "new" | "accepted" | "completed" | "declined";
 
@@ -295,40 +296,17 @@ function NewRequestsView({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const categoryOptions = [
-    "All Categories",
-    "Programming",
-    "UX Design",
-    "Graphic Design",
-    "Mathematics",
-    "Photography",
-    "Video Editing",
-    "Data Analysis",
-    "Web Development",
-    "Content Writing",
-    "Music",
-  ];
+  const serviceCategories = useLookupOptions("serviceCategories");
+  const categoryOptions = ["All Categories", ...serviceCategories];
   const universityOptions = ["Any University", ...UNIVERSITIES];
-  const [category, setCategory] = useState(
-    searchParams.get("category") || "All Categories",
-  );
-  const [university, setUniversity] = useState(
-    searchParams.get("university") || "Any University",
-  );
-
-  useEffect(() => {
-    const nextCategory = searchParams.get("category") || "All Categories";
-    const nextUniversity = searchParams.get("university") || "Any University";
-
-    setCategory(
-      categoryOptions.includes(nextCategory) ? nextCategory : "All Categories",
-    );
-    setUniversity(
-      universityOptions.includes(nextUniversity)
-        ? nextUniversity
-        : "Any University",
-    );
-  }, [searchParams]);
+  const nextCategory = searchParams.get("category") || "All Categories";
+  const nextUniversity = searchParams.get("university") || "Any University";
+  const category = categoryOptions.includes(nextCategory)
+    ? nextCategory
+    : "All Categories";
+  const university = universityOptions.includes(nextUniversity)
+    ? nextUniversity
+    : "Any University";
 
   // Apply the selected tab and search text before rendering the cards.
   const filteredRequests = useMemo(() => {
@@ -422,7 +400,6 @@ function NewRequestsView({
               options={categoryOptions}
               fieldClassName="min-h-10 text-sm font-medium"
               onChange={(nextCategory) => {
-                setCategory(nextCategory);
                 updateFilters(nextCategory, university);
               }}
             />
@@ -432,7 +409,6 @@ function NewRequestsView({
               options={universityOptions}
               fieldClassName="min-h-10 text-sm font-medium"
               onChange={(nextUniversity) => {
-                setUniversity(nextUniversity);
                 updateFilters(category, nextUniversity);
               }}
             />

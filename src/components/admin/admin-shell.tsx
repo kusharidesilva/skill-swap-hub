@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { isAuthorizedAdminEmail, signOut } from "@/lib/auth";
 
 type NavItem = {
   label: string;
@@ -12,24 +14,52 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: <DashboardIcon /> },
-  { label: "Verifications", href: "/admin/verifications", icon: <ShieldIcon /> },
+  { label: "Verification", href: "/admin/verifications", icon: <ShieldIcon /> },
   { label: "User Management", href: "/admin/user-management", icon: <UsersIcon /> },
-  { label: "Issue Resolution", href: "/admin/issue-resolution", icon: <TriangleIcon /> },
+  { label: "Report Handling", href: "/admin/issue-resolution", icon: <TriangleIcon /> },
 ];
 
 const pageTitles: Record<string, string> = {
   "/admin": "Dashboard",
   "/admin/user-management": "User Management",
-  "/admin/verifications": "Verifications",
-  "/admin/issue-resolution": "Issue Resolution",
+  "/admin/verifications": "Verification",
+  "/admin/issue-resolution": "Report Handling",
   "/admin/settings": "Settings",
+  "/admin/sign-out": "Sign Out",
 };
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { userProfile, loading } = useAuth();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const title = pageTitles[pathname] ?? "Dashboard";
+  const isAdmin =
+    userProfile?.role === "admin" && isAuthorizedAdminEmail(userProfile.email);
+  const isStandaloneAdminAuthPage =
+    pathname === "/admin/login" || pathname === "/admin/sign-out";
+
+  useEffect(() => {
+    if (isStandaloneAdminAuthPage) return;
+    if (loading) return;
+
+    if (!userProfile) {
+      router.replace("/admin/login");
+      return;
+    }
+
+    if (userProfile.role !== "admin") {
+      router.replace(`/dashboard/${userProfile.role === "both" ? "both" : userProfile.role}`);
+      return;
+    }
+
+    if (!isAuthorizedAdminEmail(userProfile.email)) {
+      void signOut().finally(() => {
+        router.replace("/admin/login");
+      });
+    }
+  }, [isStandaloneAdminAuthPage, loading, router, userProfile]);
 
   useEffect(() => {
     // Close the account menu when the admin clicks anywhere outside it.
@@ -42,6 +72,21 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (isStandaloneAdminAuthPage) {
+    return <>{children}</>;
+  }
+
+  if (loading || !isAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f8f7ff]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2f66e7] border-t-transparent" />
+          <p className="text-sm font-medium text-slate-500">Loading admin panel...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid h-screen overflow-hidden lg:grid-cols-[255px_minmax(0,1fr)]">
@@ -94,7 +139,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             </Link>
 
             <Link
-              href="/sign-out"
+              href="/admin/sign-out"
               className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-[15px] font-medium text-slate-600 transition hover:bg-white/80"
             >
               <span className="flex h-8 w-8 items-center justify-center text-slate-500">
@@ -134,7 +179,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                   Account
                 </Link>
                 <Link
-                  href="/sign-out"
+                  href="/admin/sign-out"
                   onClick={() => setMenuOpen(false)}
                   className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                 >

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db, storage } from "@/lib/firebase";
+import { ISSUE_TYPES } from "@/lib/platform";
 import SelectField from "@/components/ui/select-field";
 import {
   addDoc,
@@ -70,6 +71,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
   const [historyRows, setHistoryRows] = useState<ReportHistoryItem[]>([]);
   const [lockedTargetName, setLockedTargetName] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [issueTypeOptions, setIssueTypeOptions] = useState<string[]>([...ISSUE_TYPES]);
 
   useEffect(() => {
     let active = true;
@@ -211,6 +213,37 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
       return;
     }
 
+    const unsubscribe = onSnapshot(
+      collection(db, "issueTypes"),
+      (snapshot) => {
+        const nextOptions = snapshot.docs
+          .map((entry) => {
+            const data = entry.data();
+            return {
+              name: typeof data.name === "string" ? data.name.trim() : "",
+              active: data.active !== false,
+            };
+          })
+          .filter((item) => item.active && item.name)
+          .map((item) => item.name)
+          .sort((left, right) => left.localeCompare(right));
+
+        setIssueTypeOptions(nextOptions.length ? nextOptions : [...ISSUE_TYPES]);
+      },
+      (error) => {
+        console.error("Error fetching issue types:", error);
+        setIssueTypeOptions([...ISSUE_TYPES]);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [userProfile]);
+
+  useEffect(() => {
+    if (!userProfile) {
+      return;
+    }
+
     // Live history lets the reporter see new moderation status changes.
     const reportsQuery = query(collection(db, "reports"), where("reporterId", "==", userProfile.uid));
 
@@ -232,8 +265,10 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
                 ? data.targetUserName
                 : "Community Member",
             category:
-              typeof data.category === "string" && data.category.trim()
-                ? data.category
+              typeof data.issueType === "string" && data.issueType.trim()
+                ? data.issueType
+                : typeof data.category === "string" && data.category.trim()
+                  ? data.category
                 : "General Review",
             status:
               typeof data.status === "string" && data.status.trim() ? data.status : "Pending",
@@ -405,6 +440,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
         targetUserId,
         targetUserName: targetName || "Community Member",
         category,
+        issueType: category,
         description: description.trim(),
         evidenceFiles: uploadedEvidence,
         status: "Pending",
@@ -547,24 +583,17 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
 
             <div>
               <p className="mb-3 text-[14px] font-semibold text-[#42516b]">
-                Reason for Report
+                Issue Type
               </p>
               <SelectField
-                label="Reason for Report"
+                label="Issue Type"
                 value={category}
                 onChange={(nextValue) => {
                   setCategory(nextValue);
                   setFeedback(null);
                 }}
-                placeholder="Choose a category"
-                options={[
-                  "No-show",
-                  "Quality",
-                  "Abusive Behavior",
-                  "Fraud Concern",
-                  "Harassment",
-                  "Other",
-                ]}
+                placeholder="Choose an issue type"
+                options={issueTypeOptions}
                 error={isCategoryInvalid ? "Please choose a report category." : undefined}
                 className={inputClassName}
                 labelClassName="hidden"
@@ -832,8 +861,6 @@ function formatBytes(bytes: number) {
 
 const inputClassName =
   "h-10 w-full rounded-[10px] border border-[#d7dfec] bg-white px-4 text-[14px] text-[#36465f] outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-[#dbe7ff]";
-const invalidInputClassName =
-  "border-red-300 bg-red-50 text-red-700 focus:border-red-400 focus:ring-red-100";
 
 function ShieldIcon({ className }: { className?: string }) {
   return (

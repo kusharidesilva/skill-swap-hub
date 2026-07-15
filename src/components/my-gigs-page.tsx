@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { formatRatingLabel } from "@/lib/ratings";
 import { useAuth } from "@/context/AuthContext";
@@ -202,6 +202,7 @@ export default function MyGigsPageContent({
       const existingSkills = (userProfile.providerProfile?.skills || []) as string[];
       const existingImages = (userProfile.providerProfile?.gigImages || []) as string[];
       const existingGigs = [...(userProfile.providerProfile?.gigs || [])];
+      const removedGigId = existingGigs[rawIndex]?.id;
       // All three arrays use the same index, so they must be removed together.
       const updatedSkills = existingSkills.filter((_, idx) => idx !== rawIndex);
       const updatedImages = existingImages.filter((_, idx) => idx !== rawIndex);
@@ -212,6 +213,14 @@ export default function MyGigsPageContent({
         "providerProfile.gigImages": updatedImages,
         "providerProfile.gigs": updatedGigs,
       });
+
+      if (removedGigId) {
+        await updateDoc(doc(db, "gigs", removedGigId), {
+          status: "removed",
+          gigStatus: "removed",
+          updatedAt: serverTimestamp(),
+        });
+      }
 
       await refreshProfile();
       setDeleteTarget(null);
@@ -361,7 +370,7 @@ export default function MyGigsPageContent({
                       {gig.availability}
                     </span>
                     <span className="shrink-0 rounded-full bg-[#dff7f5] px-2.5 py-1 text-[11px] font-semibold text-[#0d7f78]">
-                      Skill Exchange
+                      Service Gig
                     </span>
                   </div>
 
