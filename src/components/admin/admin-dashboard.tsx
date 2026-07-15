@@ -5,23 +5,27 @@ import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { SERVICE_CATEGORIES } from "@/lib/platform";
 
+type TimestampLike = { toDate?: () => Date } | Date | string | number | null | undefined;
+
 type UserRecord = {
   role?: string;
   accountStatus?: string;
   providerVerificationStatus?: string;
+  createdAt?: TimestampLike;
 };
 
 type VerificationRecord = {
   studentName?: string;
   email?: string;
   status?: string;
-  submittedAt?: { toDate?: () => Date } | Date | string | number | null;
+  submittedAt?: TimestampLike;
 };
 
 type GigRecord = {
   title?: string;
   category?: string;
   status?: string;
+  createdAt?: TimestampLike;
 };
 
 type ReportRecord = {
@@ -31,7 +35,7 @@ type ReportRecord = {
   type?: string;
   issueType?: string;
   status?: string;
-  createdAt?: { toDate?: () => Date } | Date | string | number | null;
+  createdAt?: TimestampLike;
 };
 
 type OrderRecord = {
@@ -65,6 +69,26 @@ type CategoryRow = {
   icon: ReactNode;
 };
 
+type ActivityRange = "years" | "months" | "weeks";
+
+type ActivityBucket = {
+  key: string;
+  label: string;
+  shortLabel?: string;
+  start: Date;
+  end: Date;
+};
+
+type ActivitySeriesKey = "users" | "providers" | "buyers" | "gigs";
+
+type ActivitySeries = {
+  key: ActivitySeriesKey;
+  label: string;
+  accent: string;
+  counts: number[];
+  total: number;
+};
+
 export default function AdminDashboard() {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [verifications, setVerifications] = useState<Array<VerificationRecord & { id: string }>>([]);
@@ -74,6 +98,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [activityRange, setActivityRange] = useState<ActivityRange>("months");
 
   useEffect(() => {
     const requiredSources = new Set(["users", "providerVerifications"]);
@@ -128,7 +153,7 @@ export default function AdminDashboard() {
         (error) => handleSnapshotError("providerVerifications", error),
       ),
       onSnapshot(
-        query(collection(db, "gigs"), where("status", "==", "active")),
+        collection(db, "gigs"),
         (snapshot) => {
           setGigs(snapshot.docs.map((docSnap) => docSnap.data() as GigRecord));
           markLoaded("gigs");
@@ -191,12 +216,61 @@ export default function AdminDashboard() {
   ];
 
   const secondaryStats: StatCard[] = [
-    { label: "Active Buyers", value: String(activeBuyers.length), accent: "#2563eb", icon: <UsersIcon /> },
+    { label: "Active Buyers", value: String(activeBuyers.length), accent: "#2563eb", icon: <BuyerGroupIcon /> },
     { label: "Active Providers", value: String(activeProviders.length), accent: "#0f766e", icon: <ShieldIcon /> },
-    { label: "Completed Orders", value: String(completedOrders.length), accent: "#7c3aed", icon: <OfferIcon /> },
-    { label: "Active Gigs", value: String(activeGigs.length), accent: "#2563eb", icon: <OfferIcon /> },
+    { label: "Completed Orders", value: String(completedOrders.length), accent: "#7c3aed", icon: <CompletedOrdersIcon /> },
+    { label: "Active Gigs", value: String(activeGigs.length), accent: "#2563eb", icon: <ActiveGigsIcon /> },
   ];
   const allStats = [...topStats, ...secondaryStats];
+  const activityBuckets = useMemo(
+    () => buildActivityBuckets(activityRange, new Date()),
+    [activityRange],
+  );
+
+  const activitySeries = useMemo<ActivitySeries[]>(() => {
+    const providerUsers = users.filter(
+      (user) => user.role === "provider" || user.role === "both",
+    );
+    const buyerUsers = users.filter(
+      (user) => user.role === "buyer" || user.role === "both",
+    );
+
+    const nextSeries: ActivitySeries[] = [
+      {
+        key: "users",
+        label: "Joined Users",
+        accent: "#2563eb",
+        counts: countRecordsByBuckets(users, activityBuckets),
+        total: 0,
+      },
+      {
+        key: "providers",
+        label: "Joined Providers",
+        accent: "#0f766e",
+        counts: countRecordsByBuckets(providerUsers, activityBuckets),
+        total: 0,
+      },
+      {
+        key: "buyers",
+        label: "Joined Buyers",
+        accent: "#7c3aed",
+        counts: countRecordsByBuckets(buyerUsers, activityBuckets),
+        total: 0,
+      },
+      {
+        key: "gigs",
+        label: "Created Gigs",
+        accent: "#d97706",
+        counts: countRecordsByBuckets(gigs, activityBuckets),
+        total: 0,
+      },
+    ];
+
+    return nextSeries.map((series) => ({
+      ...series,
+      total: series.counts.reduce((sum, value) => sum + value, 0),
+    }));
+  }, [activityBuckets, gigs, users]);
 
   const topCategories = useMemo<CategoryRow[]>(() => {
     const counts = new Map<string, number>();
@@ -266,10 +340,14 @@ export default function AdminDashboard() {
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-3">
             <h3 className="text-xl font-semibold text-slate-900">Platform Activity</h3>
-            <span className="text-sm font-semibold text-[#1d4ed8]">Live</span>
+            <RangeSelector value={activityRange} onChange={setActivityRange} />
           </div>
           <div className="mt-5 rounded-xl border border-slate-200 bg-[#f3f4ff] p-6">
-            <ActivityPanel users={users.length} gigs={activeGigs.length} reports={pendingReports.length} />
+            <ActivityPanel
+              range={activityRange}
+              buckets={activityBuckets}
+              series={activitySeries}
+            />
           </div>
         </article>
 
@@ -341,10 +419,9 @@ export default function AdminDashboard() {
 
 function formatDate(value: VerificationRecord["submittedAt"] | ReportRecord["createdAt"]) {
   if (!value) return "Recently";
-  const date =
-    typeof value === "object" && "toDate" in value && typeof value.toDate === "function"
-      ? value.toDate()
-      : new Date(value as Date | string | number);
+  const date = toDateValue(value);
+
+  if (!date) return "Recently";
 
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
@@ -378,28 +455,142 @@ function StatCardBlock({ stat, loading }: { stat: StatCard; loading: boolean }) 
   );
 }
 
-function ActivityPanel({ users, gigs, reports }: { users: number; gigs: number; reports: number }) {
+function ActivityPanel({
+  range,
+  buckets,
+  series,
+}: {
+  range: ActivityRange;
+  buckets: ActivityBucket[];
+  series: ActivitySeries[];
+}) {
+  const maxValue = Math.max(
+    1,
+    ...series.flatMap((item) => item.counts),
+  );
+  const yAxisSteps = buildYAxisSteps(maxValue);
+
   return (
-    <div className="grid min-h-[290px] place-items-center rounded-xl border border-slate-200 bg-[#f3f4ff]">
-      <div className="grid w-full max-w-md gap-4 text-sm">
-        <ActivityRow label="Users" value={users} accent="#1d4ed8" />
-        <ActivityRow label="Active service gigs" value={gigs} accent="#0f766e" />
-        <ActivityRow label="Pending reports" value={reports} accent="#b91c1c" />
+    <div className="rounded-xl border border-slate-200 bg-[#f3f4ff] p-5">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">
+              {range === "years"
+                ? "Yearly growth"
+                : range === "months"
+                  ? "Monthly growth"
+                  : "Weekly growth"}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Users, providers, buyers, and gigs created in the selected period.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold text-slate-500">
+            {series.map((item) => (
+              <div key={item.key} className="flex items-center gap-2">
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: item.accent }}
+                />
+                <span>{item.label}</span>
+                <span className="text-slate-700">{item.total}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 grid min-h-[320px] grid-cols-[40px_minmax(0,1fr)] gap-4">
+          <div className="flex flex-col justify-between pb-8 text-[11px] font-semibold text-slate-400">
+            {yAxisSteps.map((value, index) => (
+              <span key={`${value}-${index}`}>{value}</span>
+            ))}
+          </div>
+
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-0 flex flex-col justify-between pb-8">
+              {yAxisSteps.map((value, index) => (
+                <div key={`${value}-${index}`} className="border-t border-dashed border-slate-200" />
+              ))}
+            </div>
+
+            <div
+              className="relative grid h-full gap-3"
+              style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))` }}
+            >
+              {buckets.map((bucket, bucketIndex) => (
+                <div key={bucket.key} className="flex min-w-0 flex-col justify-end">
+                  <div className="flex h-[270px] items-end justify-center gap-1.5 rounded-xl px-1 pb-2">
+                    {series.map((item) => {
+                      const value = item.counts[bucketIndex] || 0;
+                      const height = `${Math.max((value / maxValue) * 100, value > 0 ? 8 : 0)}%`;
+
+                      return (
+                        <div
+                          key={`${item.key}-${bucket.key}`}
+                          className="flex flex-1 items-end"
+                        >
+                          <div
+                            className="w-full rounded-t-md transition-opacity hover:opacity-90"
+                            style={{
+                              height,
+                              backgroundColor: item.accent,
+                            }}
+                            title={`${item.label}: ${value}`}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="pt-3 text-center">
+                    <p className="text-xs font-semibold text-slate-600">{bucket.label}</p>
+                    {bucket.shortLabel ? (
+                      <p className="mt-0.5 text-[11px] text-slate-400">{bucket.shortLabel}</p>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function ActivityRow({ label, value, accent }: { label: string; value: number; accent: string }) {
+function RangeSelector({
+  value,
+  onChange,
+}: {
+  value: ActivityRange;
+  onChange: (value: ActivityRange) => void;
+}) {
+  const options: Array<{ value: ActivityRange; label: string }> = [
+    { value: "years", label: "Years" },
+    { value: "months", label: "Months" },
+    { value: "weeks", label: "Weeks" },
+  ];
+
   return (
-    <div className="rounded-xl bg-white px-4 py-3 shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="font-medium text-slate-600">{label}</span>
-        <span className="text-lg font-semibold text-slate-900">{value}</span>
-      </div>
-      <div className="mt-2 h-2 rounded-full bg-slate-200">
-        <div className="h-2 rounded-full" style={{ width: `${Math.min(value * 10, 100)}%`, backgroundColor: accent }} />
-      </div>
+    <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
+      {options.map((option) => {
+        const active = option.value === value;
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+              active
+                ? "bg-[#1d4ed8] text-white shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -424,6 +615,111 @@ function CategoryItem({ category }: { category: CategoryRow }) {
   );
 }
 
+function buildActivityBuckets(range: ActivityRange, now: Date) {
+  if (range === "weeks") {
+    const buckets: ActivityBucket[] = [];
+    const today = startOfDay(now);
+
+    for (let index = 6; index >= 0; index -= 1) {
+      const start = addDays(today, -index);
+      const end = addDays(start, 1);
+      buckets.push({
+        key: start.toISOString(),
+        label: start.toLocaleDateString("en-US", { weekday: "short" }),
+        shortLabel: start.toLocaleDateString("en-US", { day: "numeric", month: "short" }),
+        start,
+        end,
+      });
+    }
+
+    return buckets;
+  }
+
+  if (range === "months") {
+    const buckets: ActivityBucket[] = [];
+
+    for (let index = 5; index >= 0; index -= 1) {
+      const start = new Date(now.getFullYear(), now.getMonth() - index, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - index + 1, 1);
+      buckets.push({
+        key: `${start.getFullYear()}-${start.getMonth()}`,
+        label: start.toLocaleDateString("en-US", { month: "short" }),
+        shortLabel: String(start.getFullYear()),
+        start,
+        end,
+      });
+    }
+
+    return buckets;
+  }
+
+  return Array.from({ length: 5 }, (_, arrayIndex) => {
+    const year = now.getFullYear() - (4 - arrayIndex);
+    const start = new Date(year, 0, 1);
+    const end = new Date(year + 1, 0, 1);
+
+    return {
+      key: String(year),
+      label: String(year),
+      start,
+      end,
+    };
+  });
+}
+
+function countRecordsByBuckets(
+  records: Array<{ createdAt?: TimestampLike }>,
+  buckets: ActivityBucket[],
+) {
+  return buckets.map((bucket) =>
+    records.reduce((count, record) => {
+      const recordDate = toDateValue(record.createdAt);
+
+      if (!recordDate) return count;
+      if (recordDate >= bucket.start && recordDate < bucket.end) {
+        return count + 1;
+      }
+
+      return count;
+    }, 0),
+  );
+}
+
+function toDateValue(value: TimestampLike) {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  if (typeof value === "object") {
+    if ("toDate" in value && typeof value.toDate === "function") {
+      const nextDate = value.toDate();
+      return Number.isNaN(nextDate.getTime()) ? null : nextDate;
+    }
+
+    return null;
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function startOfDay(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+}
+
+function addDays(value: Date, days: number) {
+  const date = new Date(value);
+  date.setDate(date.getDate() + days);
+  return date;
+}
+
+function buildYAxisSteps(maxValue: number) {
+  return [maxValue, Math.ceil(maxValue * 0.66), Math.ceil(maxValue * 0.33), 0];
+}
+
 function UsersIcon() {
   return <Icon path="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" />;
 }
@@ -446,6 +742,18 @@ function ShieldIcon() {
 
 function OfferIcon() {
   return <Icon path="M5.5 7.5h9.8a2 2 0 0 1 1.4.6l1.8 1.8a2 2 0 0 1 0 2.8l-5.7 5.7a2 2 0 0 1-2.8 0l-4.5-4.5a2 2 0 0 1 0-2.8l2.8-2.8a2 2 0 0 1 1.2-.6Z M14.5 7.5v4h4" />;
+}
+
+function BuyerGroupIcon() {
+  return <Icon path="M16 21v-2.2a3.8 3.8 0 0 0-3.8-3.8H7.8A3.8 3.8 0 0 0 4 18.8V21 M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7 M17.5 11.5 19 13l3-3.2" />;
+}
+
+function CompletedOrdersIcon() {
+  return <Icon path="M8 7h10l1.4 2.4v7.6A2 2 0 0 1 17.4 19H8a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z M10 7V5.8A1.8 1.8 0 0 1 11.8 4h2.4A1.8 1.8 0 0 1 16 5.8V7 M9.5 12.2l2 2 3.7-3.9" />;
+}
+
+function ActiveGigsIcon() {
+  return <Icon path="M7 6.5h3l1.2-1.8h1.6L14 6.5h3A2.2 2.2 0 0 1 19.2 8.7v7.6A2.2 2.2 0 0 1 17 18.5H7A2.2 2.2 0 0 1 4.8 16.3V8.7A2.2 2.2 0 0 1 7 6.5Z M9 11.7h6 M9 14.7h3.8" />;
 }
 
 function CategoryIcon() {

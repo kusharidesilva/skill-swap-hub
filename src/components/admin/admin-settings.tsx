@@ -1,418 +1,437 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
-  collection,
-  doc,
-  onSnapshot,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-} from "firebase/firestore";
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+} from "firebase/auth";
+import { doc, updateDoc } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import {
-  AVAILABILITY_TIME_SLOTS,
-  ISSUE_TYPES,
-  SERVICE_CATEGORIES,
-  YEAR_OF_STUDY_OPTIONS,
-} from "@/lib/platform";
-import { UNIVERSITIES } from "@/lib/universities";
 
-type LookupGroupKey =
-  | "serviceCategories"
-  | "universities"
-  | "issueTypes"
-  | "yearOfStudyOptions"
-  | "availabilityTimeSlots";
+const strongPasswordMessage =
+  "Use at least 6 characters with uppercase, lowercase, a number, and a symbol.";
+const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const PROFILE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
-type LookupItem = {
-  id: string;
-  name?: string;
-  active?: boolean;
-  createdAt?: unknown;
-};
+function isStrongPassword(value: string) {
+  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/.test(value);
+}
 
-type LookupGroup = {
-  key: LookupGroupKey;
-  title: string;
-  singular: string;
-  defaults: readonly string[];
-};
+function compressImageToBase64(
+  file: File,
+  maxDimension = 300,
+  quality = 0.7,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const reader = new FileReader();
 
-const lookupGroups: LookupGroup[] = [
-  {
-    key: "serviceCategories",
-    title: "Service Categories",
-    singular: "category",
-    defaults: SERVICE_CATEGORIES,
-  },
-  {
-    key: "universities",
-    title: "Universities",
-    singular: "university",
-    defaults: UNIVERSITIES,
-  },
-  {
-    key: "issueTypes",
-    title: "Issue Types",
-    singular: "issue type",
-    defaults: ISSUE_TYPES,
-  },
-  {
-    key: "yearOfStudyOptions",
-    title: "Year of Study Options",
-    singular: "year option",
-    defaults: YEAR_OF_STUDY_OPTIONS,
-  },
-  {
-    key: "availabilityTimeSlots",
-    title: "Availability Time Slots",
-    singular: "time slot",
-    defaults: AVAILABILITY_TIME_SLOTS,
-  },
-];
+    reader.onload = (event) => {
+      image.src = event.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error("Failed to read the selected image."));
 
-const emptyLookupState: Record<LookupGroupKey, LookupItem[]> = {
-  serviceCategories: [],
-  universities: [],
-  issueTypes: [],
-  yearOfStudyOptions: [],
-  availabilityTimeSlots: [],
-};
+    image.onload = () => {
+      let { width, height } = image;
 
-const emptyInputs: Record<LookupGroupKey, string> = {
-  serviceCategories: "",
-  universities: "",
-  issueTypes: "",
-  yearOfStudyOptions: "",
-  availabilityTimeSlots: "",
-};
+      if (width > height && width > maxDimension) {
+        height = Math.round((height * maxDimension) / width);
+        width = maxDimension;
+      } else if (height > maxDimension) {
+        width = Math.round((width * maxDimension) / height);
+        height = maxDimension;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        reject(new Error("Canvas is not supported in this browser."));
+        return;
+      }
+
+      context.drawImage(image, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+
+      if (dataUrl.length > 700_000) {
+        reject(new Error("Image is still too large. Try a smaller image."));
+        return;
+      }
+
+      resolve(dataUrl);
+    };
+
+    image.onerror = () => reject(new Error("Failed to load the selected image."));
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function AdminSettings() {
-  const { userProfile } = useAuth();
-  const [items, setItems] = useState(emptyLookupState);
-  const [inputs, setInputs] = useState(emptyInputs);
-  const [loadingGroups, setLoadingGroups] = useState<Record<LookupGroupKey, boolean>>({
-    serviceCategories: true,
-    universities: true,
-    issueTypes: true,
-    yearOfStudyOptions: true,
-    availabilityTimeSlots: true,
-  });
-  const [busyKey, setBusyKey] = useState("");
-  const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const { firebaseUser, userProfile, refreshProfile } = useAuth();
+  const [displayName, setDisplayName] = useState("");
+  const [profileImageUrl, setProfileImageUrl] = useState("");
+  const [nameBusy, setNameBusy] = useState(false);
+  const [nameNotice, setNameNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileNotice, setProfileNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordNotice, setPasswordNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    const unsubscribers = lookupGroups.map((group) =>
-      onSnapshot(
-        collection(db, group.key),
-        (snapshot) => {
-          const nextItems = snapshot.docs
-            .map((docSnap) => ({
-              id: docSnap.id,
-              ...(docSnap.data() as Omit<LookupItem, "id">),
-            }))
-            .sort((left, right) => itemName(left).localeCompare(itemName(right)));
+    setDisplayName(userProfile?.name || "");
+    setProfileImageUrl(userProfile?.profileImageUrl || "");
+  }, [userProfile?.name, userProfile?.profileImageUrl]);
 
-          setItems((current) => ({ ...current, [group.key]: nextItems }));
-          setLoadingGroups((current) => ({ ...current, [group.key]: false }));
-        },
-        (error) => {
-          console.error(`Error loading ${group.key}:`, error);
-          setNotice({ type: "error", text: `Could not load ${group.title}.` });
-          setLoadingGroups((current) => ({ ...current, [group.key]: false }));
-        },
-      ),
-    );
+  const saveDisplayName = async () => {
+    if (!userProfile) return;
 
-    return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
-  }, []);
-
-  const totals = useMemo(
-    () => ({
-      categories: items.serviceCategories.filter((item) => item.active !== false).length,
-      universities: items.universities.filter((item) => item.active !== false).length,
-      issueTypes: items.issueTypes.filter((item) => item.active !== false).length,
-      yearOptions: items.yearOfStudyOptions.filter((item) => item.active !== false).length,
-      timeSlots: items.availabilityTimeSlots.filter((item) => item.active !== false).length,
-    }),
-    [items],
-  );
-
-  const addLookupItem = async (group: LookupGroup) => {
-    const name = inputs[group.key].trim();
-    if (!name) {
-      setNotice({ type: "error", text: `Enter a ${group.singular} name first.` });
+    const trimmedName = displayName.trim();
+    if (!trimmedName) {
+      setNameNotice({ type: "error", text: "Enter the admin display name first." });
       return;
     }
 
-    const docId = slugify(name);
-    setBusyKey(`${group.key}-add`);
-    setNotice(null);
+    setNameBusy(true);
+    setNameNotice(null);
 
     try {
-      await setDoc(
-        doc(db, group.key, docId),
-        {
-          name,
-          active: true,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true },
-      );
-
-      setInputs((current) => ({ ...current, [group.key]: "" }));
-      setNotice({ type: "success", text: `${name} saved.` });
+      await updateDoc(doc(db, "users", userProfile.uid), {
+        name: trimmedName,
+      });
+      await refreshProfile();
+      setNameNotice({ type: "success", text: "Admin name updated." });
     } catch (error) {
-      console.error(`Error saving ${group.key}:`, error);
-      setNotice({ type: "error", text: `Could not save this ${group.singular}.` });
+      console.error("Error updating admin name:", error);
+      setNameNotice({ type: "error", text: "Could not update the admin name." });
     } finally {
-      setBusyKey("");
+      setNameBusy(false);
     }
   };
 
-  const seedDefaults = async (group: LookupGroup) => {
-    setBusyKey(`${group.key}-seed`);
-    setNotice(null);
+  const handleUpdatePassword = async () => {
+    setPasswordNotice(null);
+
+    if (!firebaseUser?.email) {
+      setPasswordNotice({ type: "error", text: "No signed-in admin email was found." });
+      return;
+    }
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordNotice({ type: "error", text: "Please fill in all password fields." });
+      return;
+    }
+
+    if (!isStrongPassword(newPassword)) {
+      setPasswordNotice({ type: "error", text: strongPasswordMessage });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordNotice({ type: "error", text: "New password and confirmation do not match." });
+      return;
+    }
+
+    setPasswordBusy(true);
 
     try {
-      await Promise.all(
-        group.defaults.map((name) =>
-          setDoc(
-            doc(db, group.key, slugify(name)),
-            {
-              name,
-              active: true,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            },
-            { merge: true },
-          ),
-        ),
-      );
-
-      setNotice({ type: "success", text: `${group.title} defaults saved.` });
-    } catch (error) {
-      console.error(`Error seeding ${group.key}:`, error);
-      setNotice({ type: "error", text: `Could not seed ${group.title}.` });
+      const credential = EmailAuthProvider.credential(firebaseUser.email, currentPassword);
+      await reauthenticateWithCredential(firebaseUser, credential);
+      await updatePassword(firebaseUser, newPassword);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordNotice({ type: "success", text: "Password updated successfully." });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to update password.";
+      setPasswordNotice({ type: "error", text: message });
     } finally {
-      setBusyKey("");
+      setPasswordBusy(false);
     }
   };
 
-  const toggleLookupItem = async (group: LookupGroup, item: LookupItem) => {
-    const nextActive = item.active === false;
-    setBusyKey(`${group.key}-${item.id}`);
-    setNotice(null);
+  const handleProfileImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !userProfile) {
+      return;
+    }
+
+    if (!PROFILE_IMAGE_TYPES.has(file.type)) {
+      setProfileNotice({ type: "error", text: "Please upload a PNG, JPG, or WEBP image." });
+      return;
+    }
+
+    if (file.size > MAX_PROFILE_IMAGE_SIZE_BYTES) {
+      setProfileNotice({ type: "error", text: "Profile image must be 5MB or smaller." });
+      return;
+    }
+
+    setProfileBusy(true);
+    setProfileNotice(null);
 
     try {
-      await updateDoc(doc(db, group.key, item.id), {
-        active: nextActive,
-        updatedAt: serverTimestamp(),
+      const nextProfileImageUrl = await compressImageToBase64(file);
+
+      await updateDoc(doc(db, "users", userProfile.uid), {
+        profileImageUrl: nextProfileImageUrl,
       });
 
-      setNotice({
-        type: "success",
-        text: `${itemName(item)} ${nextActive ? "activated" : "deactivated"}.`,
-      });
-    } catch (error) {
-      console.error(`Error updating ${group.key}:`, error);
-      setNotice({ type: "error", text: `Could not update this ${group.singular}.` });
+      setProfileImageUrl(nextProfileImageUrl);
+      await refreshProfile();
+      setProfileNotice({ type: "success", text: "Admin profile image updated." });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Could not update the admin profile image.";
+      setProfileNotice({ type: "error", text: message });
     } finally {
-      setBusyKey("");
+      setProfileBusy(false);
     }
   };
 
   return (
     <div className="px-6 py-10">
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-[30px] font-semibold tracking-tight text-slate-900">Admin Settings</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Manage the Firestore lookup data used by services, registration, and reports.
-            </p>
-          </div>
-
-          {notice ? (
-            <div
-              className={`rounded-xl border px-4 py-3 text-sm font-medium ${
-                notice.type === "success"
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-red-200 bg-red-50 text-red-700"
-              }`}
-            >
-              {notice.text}
-            </div>
-          ) : null}
-
-          {lookupGroups.map((group) => (
-            <LookupCard
-              key={group.key}
-              group={group}
-              items={items[group.key]}
-              inputValue={inputs[group.key]}
-              loading={loadingGroups[group.key]}
-              busyKey={busyKey}
-              onInputChange={(value) =>
-                setInputs((current) => ({ ...current, [group.key]: value }))
-              }
-              onAdd={() => addLookupItem(group)}
-              onSeed={() => seedDefaults(group)}
-              onToggle={(item) => toggleLookupItem(group, item)}
-            />
-          ))}
+      <div className="mx-auto max-w-[1180px] space-y-6">
+        <div>
+          <h1 className="text-[30px] font-semibold tracking-tight text-slate-900">Admin Settings</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Manage the admin account profile and security settings.
+          </p>
         </div>
 
-        <aside className="space-y-6">
-          <Card title="Admin Account">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 text-white shadow-md">
-                <UserIcon />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-800">
-                  {userProfile?.name || "System Administrator"}
-                </p>
-                <p className="truncate text-sm text-slate-500">{userProfile?.email || "Admin"}</p>
-              </div>
-            </div>
-            <div className="mt-5 border-t border-slate-200 pt-4">
-              <StatusLine label="Role" value="Admin" />
-              <StatusLine label="Account Status" value={userProfile?.accountStatus || "active"} />
-            </div>
-          </Card>
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-800">Admin Account Settings</h2>
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              {nameNotice ? (
+                <Notice tone={nameNotice.type}>{nameNotice.text}</Notice>
+              ) : null}
 
-          <Card title="Lookup Summary">
-            <div className="space-y-4">
-              <SummaryRow label="Active categories" value={totals.categories} />
-              <SummaryRow label="Active universities" value={totals.universities} />
-              <SummaryRow label="Active issue types" value={totals.issueTypes} />
-              <SummaryRow label="Active year options" value={totals.yearOptions} />
-              <SummaryRow label="Active time slots" value={totals.timeSlots} />
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Admin Name">
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+                  />
+                </Field>
+                <Field label="Admin Email">
+                  <input
+                    type="text"
+                    value={userProfile?.email || ""}
+                    readOnly
+                    className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 outline-none"
+                  />
+                </Field>
+                <Field label="Role">
+                  <input
+                    type="text"
+                    value="Admin"
+                    readOnly
+                    className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 outline-none"
+                  />
+                </Field>
+                <Field label="Account Status">
+                  <input
+                    type="text"
+                    value={(userProfile?.accountStatus || "active").replace(/_/g, " ")}
+                    readOnly
+                    className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold capitalize text-slate-700 outline-none"
+                  />
+                </Field>
+              </div>
+
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={saveDisplayName}
+                  disabled={nameBusy}
+                  className="inline-flex h-11 items-center justify-center rounded-lg bg-[#2f66e7] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2356cb] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {nameBusy ? "Saving..." : "Save Name"}
+                </button>
+              </div>
             </div>
-          </Card>
-        </aside>
-      </section>
+          </article>
+
+          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-800">Admin Profile</h2>
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              {profileNotice ? (
+                <Notice tone={profileNotice.type}>{profileNotice.text}</Notice>
+              ) : null}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".png,.jpg,.jpeg,.webp"
+                onChange={handleProfileImageChange}
+                className="hidden"
+              />
+
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={profileBusy}
+                  className="group relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-800 text-white shadow-md ring-1 ring-slate-200 transition hover:ring-[#2f66e7] disabled:cursor-not-allowed disabled:opacity-70"
+                  aria-label="Change admin profile image"
+                  title="Change admin profile image"
+                >
+                  {profileImageUrl ? (
+                    <img
+                      src={profileImageUrl}
+                      alt={userProfile?.name || "Admin profile"}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <UserIcon />
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center bg-slate-950/0 text-white opacity-0 transition group-hover:bg-slate-950/45 group-hover:opacity-100">
+                    {profileBusy ? <SpinnerIcon /> : <EditIcon />}
+                  </span>
+                </button>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-800">
+                    {userProfile?.name || "System Administrator"}
+                  </p>
+                  <p className="truncate text-sm text-slate-500">{userProfile?.email || "Admin"}</p>
+                </div>
+              </div>
+              <div className="mt-5 border-t border-slate-200 pt-4">
+                <StatusLine label="Role" value="Admin" />
+                <StatusLine label="Account Status" value={userProfile?.accountStatus || "active"} />
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-800">Password Change</h2>
+          <div className="mt-4 border-t border-slate-200 pt-4">
+            {passwordNotice ? (
+              <Notice tone={passwordNotice.type}>{passwordNotice.text}</Notice>
+            ) : null}
+
+            <div className="grid gap-4 xl:grid-cols-3">
+              <PasswordField
+                label="Current Password"
+                value={currentPassword}
+                onChange={setCurrentPassword}
+                visible={showCurrent}
+                onToggle={() => setShowCurrent((value) => !value)}
+                autoComplete="current-password"
+              />
+              <PasswordField
+                label="New Password"
+                value={newPassword}
+                onChange={setNewPassword}
+                visible={showNew}
+                onToggle={() => setShowNew((value) => !value)}
+                autoComplete="new-password"
+              />
+              <PasswordField
+                label="Confirm New Password"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                visible={showConfirm}
+                onToggle={() => setShowConfirm((value) => !value)}
+                autoComplete="new-password"
+              />
+            </div>
+
+            <p className="mt-3 text-xs text-slate-500">{strongPasswordMessage}</p>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={handleUpdatePassword}
+                disabled={passwordBusy}
+                className="inline-flex h-11 items-center justify-center rounded-lg bg-[#2f66e7] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2356cb] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {passwordBusy ? "Updating..." : "Update Password"}
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
     </div>
   );
 }
 
-function LookupCard({
-  group,
-  items,
-  inputValue,
-  loading,
-  busyKey,
-  onInputChange,
-  onAdd,
-  onSeed,
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-sm font-medium text-slate-600">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function PasswordField({
+  label,
+  value,
+  onChange,
+  visible,
   onToggle,
+  autoComplete,
 }: {
-  group: LookupGroup;
-  items: LookupItem[];
-  inputValue: string;
-  loading: boolean;
-  busyKey: string;
-  onInputChange: (value: string) => void;
-  onAdd: () => void;
-  onSeed: () => void;
-  onToggle: (item: LookupItem) => void;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  visible: boolean;
+  onToggle: () => void;
+  autoComplete: string;
 }) {
-  const activeCount = items.filter((item) => item.active !== false).length;
-  const inactiveCount = items.length - activeCount;
-
   return (
-    <Card title={group.title}>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-        <label className="flex-1">
-          <span className="mb-2 block text-sm font-medium text-slate-600">Name</span>
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(event) => onInputChange(event.target.value)}
-            className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
-            placeholder={`Add ${group.singular}`}
-          />
-        </label>
+    <label className="grid gap-2">
+      <span className="text-sm font-medium text-slate-600">{label}</span>
+      <div className="flex h-11 items-center rounded-lg border border-slate-200 px-3 focus-within:border-[#2f66e7] focus-within:ring-4 focus-within:ring-blue-100">
+        <input
+          type={visible ? "text" : "password"}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          autoComplete={autoComplete}
+          className="w-full bg-transparent text-sm text-slate-700 outline-none"
+        />
         <button
           type="button"
-          onClick={onAdd}
-          disabled={busyKey !== ""}
-          className="inline-flex h-11 items-center justify-center rounded-lg bg-[#2f66e7] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2356cb] disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={onToggle}
+          className="ml-2 text-slate-400 transition hover:text-slate-600"
+          aria-label={visible ? "Hide password" : "Show password"}
         >
-          {busyKey === `${group.key}-add` ? "Saving..." : "Add"}
-        </button>
-        <button
-          type="button"
-          onClick={onSeed}
-          disabled={busyKey !== ""}
-          className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {busyKey === `${group.key}-seed` ? "Saving..." : "Seed Defaults"}
+          {visible ? <EyeOffIcon /> : <EyeIcon />}
         </button>
       </div>
-
-      <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-500">
-        <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">{activeCount} Active</span>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{inactiveCount} Inactive</span>
-      </div>
-
-      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
-        {loading ? (
-          <EmptyState>Loading...</EmptyState>
-        ) : items.length === 0 ? (
-          <EmptyState>No records yet.</EmptyState>
-        ) : (
-          <div className="max-h-[300px] divide-y divide-slate-100 overflow-y-auto">
-            {items.map((item) => {
-              const active = item.active !== false;
-
-              return (
-                <div key={item.id} className="flex items-center justify-between gap-4 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-700">{itemName(item)}</p>
-                    <p className="text-xs text-slate-400">{item.id}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onToggle(item)}
-                    disabled={busyKey !== ""}
-                    className={`inline-flex h-9 shrink-0 items-center rounded-lg px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                      active
-                        ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                        : "bg-emerald-600 text-white hover:bg-emerald-700"
-                    }`}
-                  >
-                    {busyKey === `${group.key}-${item.id}`
-                      ? "Saving..."
-                      : active
-                        ? "Deactivate"
-                        : "Activate"}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </Card>
+    </label>
   );
 }
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
+function Notice({ tone, children }: { tone: "success" | "error"; children: string }) {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
-      <div className="mt-4 border-t border-slate-200 pt-4">{children}</div>
-    </article>
+    <div
+      className={`mb-4 rounded-xl border px-4 py-3 text-sm font-medium ${
+        tone === "success"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "border-red-200 bg-red-50 text-red-700"
+      }`}
+    >
+      {children}
+    </div>
   );
-}
-
-function EmptyState({ children }: { children: ReactNode }) {
-  return <p className="px-4 py-8 text-center text-sm font-medium text-slate-400">{children}</p>;
 }
 
 function StatusLine({ label, value }: { label: string; value: string }) {
@@ -424,34 +443,46 @@ function StatusLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-      <span className="text-sm font-medium text-slate-600">{label}</span>
-      <span className="text-lg font-semibold text-slate-900">{value}</span>
-    </div>
-  );
-}
-
-function itemName(item: LookupItem) {
-  return item.name?.trim() || item.id;
-}
-
-function slugify(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
-}
-
 function UserIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="m16.5 3.5 4 4L8 20l-5 1 1-5Z" />
+    </svg>
+  );
+}
+
+function SpinnerIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 animate-spin" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12a9 9 0 1 1-6.22-8.56" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
     </svg>
   );
 }

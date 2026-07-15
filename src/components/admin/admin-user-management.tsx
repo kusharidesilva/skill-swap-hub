@@ -5,6 +5,7 @@ import { collection, doc, onSnapshot, serverTimestamp, updateDoc } from "firebas
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { createNotification } from "@/lib/notifications";
+import SelectField from "@/components/ui/select-field";
 
 type TimestampLike =
   | { toDate?: () => Date; toMillis?: () => number }
@@ -244,68 +245,67 @@ export default function AdminUserManagement() {
             </div>
           </Field>
 
-          <Field label="Role">
-            <select
+          <SelectField
+            label="Role"
+            value={roleFilter}
+            onChange={setRoleFilter}
+            options={roleFilters}
+            title="Filter by role"
+            wrapperClassName="min-w-0"
+            labelClassName="mb-0 text-sm font-medium text-slate-600"
+            className="h-12 rounded-xl border-slate-200 px-4 text-sm font-medium text-slate-700 shadow-sm"
+          />
+
+          <SelectField
+            label="Student Type"
+            value={typeFilter}
+            onChange={setTypeFilter}
+            options={typeFilters}
+            title="Filter by student type"
+            wrapperClassName="min-w-0"
+            labelClassName="mb-0 text-sm font-medium text-slate-600"
+            className="h-12 rounded-xl border-slate-200 px-4 text-sm font-medium text-slate-700 shadow-sm"
+          />
+
+          <SelectField
+            label="Account Status"
+            value={accountFilter}
+            onChange={setAccountFilter}
+            options={accountFilters}
+            title="Filter by account status"
+            wrapperClassName="min-w-0"
+            labelClassName="mb-0 text-sm font-medium text-slate-600"
+            className="h-12 rounded-xl border-slate-200 px-4 text-sm font-medium text-slate-700 shadow-sm"
+          />
+
+          <SelectField
+            label="Verification"
+            value={verificationFilter}
+            onChange={setVerificationFilter}
+            options={verificationFilters}
+            title="Filter by verification status"
+            wrapperClassName="min-w-0"
+            labelClassName="mb-0 text-sm font-medium text-slate-600"
+            className="h-12 rounded-xl border-slate-200 px-4 text-sm font-medium text-slate-700 shadow-sm"
+          />
+
+          <Field label="Clear">
+            <button
               value={roleFilter}
-              onChange={(event) => setRoleFilter(event.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setRoleFilter(roleFilters[0]);
+                setTypeFilter(typeFilters[0]);
+                setAccountFilter(accountFilters[0]);
+                setVerificationFilter(verificationFilters[0]);
+              }}
+              className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+              aria-label="Clear filters"
             >
-              {roleFilters.map((filter) => (
-                <option key={filter}>{filter}</option>
-              ))}
-            </select>
+              <FilterOffIcon />
+            </button>
           </Field>
-
-          <Field label="Student Type">
-            <select
-              value={typeFilter}
-              onChange={(event) => setTypeFilter(event.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
-            >
-              {typeFilters.map((filter) => (
-                <option key={filter}>{filter}</option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Account Status">
-            <select
-              value={accountFilter}
-              onChange={(event) => setAccountFilter(event.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
-            >
-              {accountFilters.map((filter) => (
-                <option key={filter}>{filter}</option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Verification">
-            <select
-              value={verificationFilter}
-              onChange={(event) => setVerificationFilter(event.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
-            >
-              {verificationFilters.map((filter) => (
-                <option key={filter}>{filter}</option>
-              ))}
-            </select>
-          </Field>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSearchTerm("");
-              setRoleFilter(roleFilters[0]);
-              setTypeFilter(typeFilters[0]);
-              setAccountFilter(accountFilters[0]);
-              setVerificationFilter(verificationFilters[0]);
-            }}
-            className="mt-6 inline-flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-700 transition hover:bg-slate-200"
-            aria-label="Clear filters"
-          >
-            <FilterOffIcon />
-          </button>
         </div>
       </section>
 

@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { label: "Verification", href: "/admin/verifications", icon: <ShieldIcon /> },
   { label: "User Management", href: "/admin/user-management", icon: <UsersIcon /> },
   { label: "Report Handling", href: "/admin/issue-resolution", icon: <TriangleIcon /> },
+  { label: "Lookup Settings", href: "/admin/lookup-settings", icon: <CollectionIcon /> },
 ];
 
 const pageTitles: Record<string, string> = {
@@ -24,6 +25,7 @@ const pageTitles: Record<string, string> = {
   "/admin/user-management": "User Management",
   "/admin/verifications": "Verification",
   "/admin/issue-resolution": "Report Handling",
+  "/admin/lookup-settings": "Lookup Settings",
   "/admin/settings": "Settings",
   "/admin/sign-out": "Sign Out",
 };
@@ -34,6 +36,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const { userProfile, loading } = useAuth();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const title = pageTitles[pathname] ?? "Dashboard";
   const isAdmin =
     userProfile?.role === "admin" && isAuthorizedAdminEmail(userProfile.email);
@@ -73,6 +76,11 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    setSidebarOpen(false);
+    setMenuOpen(false);
+  }, [pathname]);
+
   if (isStandaloneAdminAuthPage) {
     return <>{children}</>;
   }
@@ -90,8 +98,21 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="grid h-screen overflow-hidden lg:grid-cols-[255px_minmax(0,1fr)]">
+      {sidebarOpen ? (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-slate-950/35 lg:hidden"
+        />
+      ) : null}
+
       {/* Admin navigation */}
-      <aside className="flex h-screen flex-col border-r border-slate-300 bg-[#eef0ff] px-4 py-7">
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex h-screen w-[255px] flex-col border-r border-slate-300 bg-[#eef0ff] px-4 py-7 transition-transform duration-200 lg:static lg:z-auto lg:w-auto lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
         <div className="px-2">
           <h1 className="text-[29px] font-semibold tracking-[-0.04em] text-slate-900">
             Skill Swap Hub
@@ -154,16 +175,34 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       {/* Current admin page and account menu */}
       <main className="min-w-0 bg-[#f8f7ff]">
         <header className="flex h-[74px] items-center justify-between border-b border-slate-300 bg-white px-12 shadow-[0_2px_10px_rgba(15,23,42,0.05)]">
-          <h2 className="text-[25px] font-medium text-slate-900">{title}</h2>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open navigation"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 lg:hidden"
+            >
+              <MenuIcon />
+            </button>
+            <h2 className="text-[25px] font-medium text-slate-900">{title}</h2>
+          </div>
           <div ref={menuRef} className="relative">
             <button
               type="button"
               onClick={() => setMenuOpen((value) => !value)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              className="flex h-12 w-12 items-center justify-center rounded-full text-slate-900 transition hover:text-slate-700"
+              className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-slate-200 text-slate-900 transition hover:border-slate-300 hover:text-slate-700"
             >
-              <UserCircleIcon />
+              {userProfile.profileImageUrl ? (
+                <img
+                  src={userProfile.profileImageUrl}
+                  alt={userProfile.name || "Admin profile"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <UserCircleIcon />
+              )}
             </button>
 
             {menuOpen ? (
@@ -217,16 +256,30 @@ function TriangleIcon() {
   return <TriangleOutlineIcon />;
 }
 
+function CollectionIcon() {
+  return <LayersIcon />;
+}
+
 function SettingsIcon() {
-  return <GearIcon />;
+  return <SettingsSliderIcon />;
 }
 
 function LogoutIcon() {
-  return <LogoutArrowIcon />;
+  return <LogoutDoorIcon />;
 }
 
 function UserCircleIcon() {
   return <UserCircleOutlineIcon />;
+}
+
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 7h16" />
+      <path d="M4 12h16" />
+      <path d="M4 17h16" />
+    </svg>
+  );
 }
 
 function AccountIcon() {
@@ -279,11 +332,34 @@ function TriangleOutlineIcon() {
   );
 }
 
+function LayersIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m12 3 9 4.5-9 4.5L3 7.5 12 3Z" />
+      <path d="m21 12-9 4.5L3 12" />
+      <path d="m21 16.5-9 4.5-9-4.5" />
+    </svg>
+  );
+}
+
 function GearIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" />
       <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 0 1 0 2.8l-1.1 1.1a2 2 0 0 1-2.8 0l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V22a2 2 0 0 1-2 2h-1.6a2 2 0 0 1-2-2v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 0 1-2.8 0L2 19.8a2 2 0 0 1 0-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H1a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 0 1 0-2.8L3.3 1.2a2 2 0 0 1 2.8 0l.1.1a1.7 1.7 0 0 0 1.9.3h.2A1.7 1.7 0 0 0 9.3.1V0a2 2 0 0 1 2-2h1.6a2 2 0 0 1 2 2v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 0 1 2.8 0l1.1 1.1a2 2 0 0 1 0 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.2a1.7 1.7 0 0 0 1.5 1H24a2 2 0 0 1 2 2v1.6a2 2 0 0 1-2 2h-.1a1.7 1.7 0 0 0-1.5 1z" />
+    </svg>
+  );
+}
+
+function SettingsSliderIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 6h16" />
+      <path d="M4 12h16" />
+      <path d="M4 18h16" />
+      <circle cx="9" cy="6" r="2" />
+      <circle cx="15" cy="12" r="2" />
+      <circle cx="11" cy="18" r="2" />
     </svg>
   );
 }
@@ -294,6 +370,16 @@ function LogoutArrowIcon() {
       <path d="M10 17l5-5-5-5" />
       <path d="M15 12H3" />
       <path d="M21 3v18" />
+    </svg>
+  );
+}
+
+function LogoutDoorIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13 5h6v14h-6" />
+      <path d="M10 8l-4 4 4 4" />
+      <path d="M18 12H6" />
     </svg>
   );
 }

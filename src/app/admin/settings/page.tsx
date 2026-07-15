@@ -3,7 +3,7 @@ import AdminSettings from "@/components/admin/admin-settings";
 
 export const metadata: Metadata = {
   title: "Settings | Admin | Skill Swap Hub",
-  description: "Admin profile and system settings.",
+  description: "Admin account profile and password settings.",
 };
 
 export default function AdminSettingsPage() {

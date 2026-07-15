@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { collection, doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { createNotification } from "@/lib/notifications";
+import SelectField from "@/components/ui/select-field";
 
 type TimestampLike =
   | { toDate?: () => Date; toMillis?: () => number }
@@ -261,17 +262,33 @@ export default function AdminIssueResolution() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <SearchBox value={searchTerm} onChange={setSearchTerm} />
-          <select
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
-            className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,260px)_220px_auto] xl:items-end">
+          <div className="min-w-0">
+            <SearchBox value={searchTerm} onChange={setSearchTerm} />
+          </div>
+          <div className="min-w-0">
+            <SelectField
+              label="Report Status"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={statusFilters}
+              title="Filter reports by status"
+              wrapperClassName="min-w-0"
+              labelClassName="mb-0 text-sm font-medium text-slate-600"
+              className="h-12 rounded-xl border-slate-200 px-4 text-sm font-medium text-slate-700 shadow-sm"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchTerm("");
+              setStatusFilter(statusFilters[0]);
+            }}
+            className="inline-flex h-12 w-12 items-center justify-center self-end rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+            aria-label="Clear report filters"
           >
-            {statusFilters.map((status) => (
-              <option key={status}>{status}</option>
-            ))}
-          </select>
+            <FilterResetIcon />
+          </button>
         </div>
       </section>
 
@@ -429,8 +446,10 @@ function StatCard({
 
   return (
     <article className={`rounded-2xl border p-5 shadow-sm ${accent}`}>
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
-      <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
+      <div className="flex min-h-[118px] flex-col justify-between">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+        <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
+      </div>
     </article>
   );
 }
@@ -478,16 +497,19 @@ function SearchBox({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="flex h-10 w-[230px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-slate-500 shadow-sm">
-      <SearchIcon />
-      <input
-        type="search"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="Search reports"
-        className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
-      />
-    </div>
+    <label className="grid gap-2">
+      <span className="text-sm font-medium text-slate-600">Search Reports</span>
+      <div className="flex h-12 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-slate-500 shadow-sm">
+        <SearchIcon />
+        <input
+          type="search"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="Search reports"
+          className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+        />
+      </div>
+    </label>
   );
 }
 
@@ -591,6 +613,17 @@ function SearchIcon() {
     <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
+function FilterResetIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 7h16" />
+      <path d="M7 12h10" />
+      <path d="M10 17h4" />
+      <path d="m5 5 14 14" />
     </svg>
   );
 }
