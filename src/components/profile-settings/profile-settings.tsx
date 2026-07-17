@@ -120,6 +120,8 @@ function ProfileSettingsForm({
   refreshProfile: () => Promise<void>;
 }) {
   const role = userProfile.role || propRole;
+  const isNonStudentBuyer =
+    role === "buyer" && userProfile.accountType === "non-student";
   const showOffered = role === "provider" || role === "both";
   const showNeeded = role === "buyer" || role === "both";
   const showAvailability = role === "provider" || role === "both";
@@ -135,8 +137,10 @@ function ProfileSettingsForm({
   const description =
     role === "both"
       ? "Manage your profile details, skills offered/requested, availability, and dashboard security options."
-      : role === "buyer"
-        ? "Manage your profile details, skills requested, and dashboard security options."
+      : isNonStudentBuyer
+        ? "Manage your buyer account details, requested services, and dashboard security options."
+        : role === "buyer"
+          ? "Manage your profile details, skills requested, and dashboard security options."
         : "Manage your profile details, skills offered, availability, and dashboard security options.";
 
   // Basic profile fields are initialized from the shared auth profile.
@@ -184,6 +188,14 @@ function ProfileSettingsForm({
   const [saveStatus, setSaveStatus] = useState<"success" | "error" | "">("");
   const [errorMessage, setErrorMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const profileBadgeLabel = userProfile.verifiedStudentProvider
+    ? "Verified Student"
+    : isNonStudentBuyer
+      ? "Buyer Account"
+      : "Student Buyer";
+  const profileSubline = isNonStudentBuyer
+    ? userProfile.email || "Non-student buyer"
+    : [degree, university].filter(Boolean).join(" - ");
 
   // Build one update payload so Firestore receives an atomic profile change.
   const handleSaveProfile = async () => {
@@ -355,11 +367,11 @@ function ProfileSettingsForm({
                 <h2 className="text-base font-bold text-slate-900">{name}</h2>
                 <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-[#62ead8] px-2 py-0.5 text-[10px] font-bold text-teal-800">
                   <BadgeCheckIcon className="h-3.5 w-3.5" />
-                  Verified Student
+                  {profileBadgeLabel}
                 </span>
               </div>
               <p className="mt-1 text-xs font-semibold text-slate-500">
-                {degree} - {university}
+                {profileSubline || "Profile details not added yet"}
               </p>
             </div>
           </div>
@@ -570,6 +582,7 @@ function ProfileSettingsForm({
             </section>
           )}
 
+          {/* Keep the buyer "Skills I Need" editor hidden for now.
           {showNeeded && (
             <section className="min-w-0 rounded-xl border border-slate-200 border-l-4 border-l-[#0758d8] bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-4">
@@ -623,13 +636,16 @@ function ProfileSettingsForm({
               </div>
             </section>
           )}
+          */}
 
+          {/* Keep the notification settings card hidden for now.
           <NotificationSettings
             emailNotifications={emailNotifications}
             pushNotifications={pushNotifications}
             onEmailNotificationsChange={setEmailNotifications}
             onPushNotificationsChange={setPushNotifications}
           />
+          */}
           <PrivacySettings
             profileVisibility={profileVisibility}
             onProfileVisibilityChange={setProfileVisibility}

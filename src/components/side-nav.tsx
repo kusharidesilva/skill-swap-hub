@@ -189,8 +189,8 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
   const effectiveFindItems     = findItems;
 
   return (
-    <aside className="sticky top-24 h-fit w-64 rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-sm">
-      <nav className="flex flex-col text-sm font-semibold">
+    <aside className="flex h-full w-full flex-col overflow-hidden border-r border-slate-300 bg-[#eef0ff] px-4 py-5">
+      <nav className="flex min-h-0 flex-1 flex-col text-[14px] font-medium">
         <div className="flex flex-col gap-1">
           {effectiveDefaultItems.map((link) => (
             <SideNavLink key={link.label} link={link} pathname={pathname} />
@@ -198,11 +198,11 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
         </div>
 
         {effectiveProvideItems.length > 0 && (
-          <div className="mt-4">
-            <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <div className="mt-3">
+            <p className="px-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">
               Provide Skills
             </p>
-            <div className="mt-2 flex flex-col gap-1">
+            <div className="mt-1.5 flex flex-col gap-1">
               {effectiveProvideItems.map((link) => (
                 <SideNavLink key={link.label} link={link} pathname={pathname} />
               ))}
@@ -211,11 +211,11 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
         )}
 
         {effectiveFindItems.length > 0 && (
-          <div className="mt-4">
-            <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <div className="mt-3">
+            <p className="px-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">
               Find Skills
             </p>
-            <div className="mt-2 flex flex-col gap-1">
+            <div className="mt-1.5 flex flex-col gap-1">
               {effectiveFindItems.map((link) => (
                 <SideNavLink key={link.label} link={link} pathname={pathname} />
               ))}
@@ -223,18 +223,18 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
           </div>
         )}
 
-        <div className="mt-4">
-          <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+        <div className="mt-3">
+          <p className="px-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">
             Community
           </p>
-          <div className="mt-2 flex flex-col gap-1">
+          <div className="mt-1.5 flex flex-col gap-1">
             {communityItems.map((link) => (
               <SideNavLink key={link.label} link={link} pathname={pathname} />
             ))}
           </div>
         </div>
 
-        <div className="mt-4 border-t border-slate-200 pt-4">
+        <div className="mt-auto border-t border-slate-300 pt-3">
           <div className="flex flex-col gap-1">
             {footerItems.map((link) => (
               <SideNavLink key={link.label} link={link} pathname={pathname} />
@@ -271,26 +271,26 @@ function SideNavLink({ link, pathname }: { link: NavItem; pathname: string }) {
       key={link.label}
       href={link.href}
       aria-current={isActive ? "page" : undefined}
-      className={`group flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
+      className={`group flex min-h-10 items-center gap-3 rounded-[10px] px-3 py-2 transition-colors ${
         isActive
           ? "bg-[#2f66e7] text-white shadow-sm"
           : isSignOut
-            ? "text-amber-700 hover:bg-amber-50"
-            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            ? "text-amber-700 hover:bg-white/80"
+            : "text-slate-600 hover:bg-white/80 hover:text-slate-900"
       }`}
     >
       <span
-        className={`flex h-8 w-8 items-center justify-center rounded-full ${
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
           isActive
             ? "bg-white/15"
             : isSignOut
               ? "bg-amber-50 text-amber-700"
-              : "bg-slate-100 text-slate-500 group-hover:text-slate-700"
+              : "bg-white/70 text-slate-500 group-hover:text-slate-700"
         }`}
       >
-        <Icon className="h-4 w-4" />
+        <Icon className="h-3.5 w-3.5" />
       </span>
-      <span>{link.label}</span>
+      <span className="min-w-0 flex-1 truncate">{link.label}</span>
     </Link>
   );
 }

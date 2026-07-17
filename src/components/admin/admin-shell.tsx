@@ -232,7 +232,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div className="h-[calc(100vh-74px)] overflow-y-auto">
+        <div className="admin-content-scroll h-[calc(100vh-74px)] overflow-y-auto">
           {children}
         </div>
       </main>

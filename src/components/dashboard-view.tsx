@@ -121,6 +121,12 @@ export default function DashboardView({ role }: DashboardViewProps) {
   }
 
   const userRole = userProfile.role === "admin" ? role : userProfile.role || role;
+  const isNonStudentBuyer =
+    userRole === "buyer" && userProfile.accountType === "non-student";
+  const buyerIntro = isNonStudentBuyer
+    ? "Track your active service requests, saved providers, and completed orders from one place."
+    : "Track your active swap requests, saved providers, and ratings from one place.";
+  const showBuyerUpgradeCallout = false;
 
   return (
     <ProfileShell role={userRole}>
@@ -138,7 +144,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
               ? "Use both buyer and provider tools together without switching accounts."
               : userRole === "provider"
                 ? "Manage your incoming requests, active swap sessions, and student feedback."
-                : "Track your active swap requests, saved providers, and ratings from one place."}
+                : buyerIntro}
           </p>
 
           {/* Live activity totals */}
@@ -163,10 +169,12 @@ export default function DashboardView({ role }: DashboardViewProps) {
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
-                    University Name
+                    {isNonStudentBuyer ? "Account Type" : "University Name"}
                   </p>
                   <p className="mt-2.5 text-base font-bold text-blue-700 truncate">
-                    {userProfile.university || "Stanford University"}
+                    {isNonStudentBuyer
+                      ? "Non-student Buyer"
+                      : userProfile.university || "University not added"}
                   </p>
                 </div>
               </>
@@ -348,8 +356,8 @@ export default function DashboardView({ role }: DashboardViewProps) {
           </section>
         )}
 
-        {/* Provider upgrade callout */}
-        {userRole === "buyer" && (
+        {/* Provider upgrade callout is intentionally hidden for buyer dashboards right now. */}
+        {showBuyerUpgradeCallout && userRole === "buyer" && (
           <div className="overflow-hidden rounded-2xl border border-blue-100 bg-[#f8faff] p-6 shadow-sm relative">
             <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-48 h-48 bg-blue-100/30 rounded-full blur-2xl pointer-events-none" />
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">

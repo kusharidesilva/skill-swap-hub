@@ -107,6 +107,8 @@ export default function Profile({ role: propRole }: { role: Role }) {
 
   // The route may request a view, but the saved profile is the source of truth.
   const displayRole = userProfile.role || propRole;
+  const isNonStudentBuyer =
+    displayRole === "buyer" && userProfile.accountType === "non-student";
 
   // Normalize optional profile fields before passing them into the UI.
   const name = userProfile.name || "";
@@ -114,10 +116,26 @@ export default function Profile({ role: propRole }: { role: Role }) {
   const degree = userProfile.degree || "";
   const yearOfStudy = userProfile.yearOfStudy || "";
   const bio = userProfile.providerProfile?.bio || (
-    displayRole === "buyer"
-      ? `Hey there! I'm a student at ${university} studying ${degree}. I joined Skill Swap Hub to collaborate with other students, exchange knowledge, and learn new skills.`
-      : `Hey there! I'm a ${degree} student passionate about sharing knowledge. I believe the best way to learn is to teach someone else.`
+    isNonStudentBuyer
+      ? "Hey there! I joined Skill Swap Hub as a buyer to discover useful services, connect with talented people, and get help when I need it."
+      : displayRole === "buyer"
+        ? `Hey there! I'm a student at ${university} studying ${degree}. I joined Skill Swap Hub to collaborate with other students, exchange knowledge, and learn new skills.`
+        : `Hey there! I'm a ${degree} student passionate about sharing knowledge. I believe the best way to learn is to teach someone else.`
   );
+  const profileTag = userProfile.verifiedStudentProvider
+    ? "Verified Student Provider"
+    : isNonStudentBuyer
+      ? "Non-student Buyer"
+      : "Buyer";
+  const identityTitle = isNonStudentBuyer ? "Email Verified Account" : "Identity Verified";
+  const identityMessage = isNonStudentBuyer
+    ? "This buyer account uses normal Firebase email verification for access and service requests."
+    : "Student provider proof is reviewed by admin. Buyers use normal Firebase email verification.";
+  const academicLine = isNonStudentBuyer
+    ? userProfile.email || "Buyer account"
+    : [degree && yearOfStudy ? `${degree} (${yearOfStudy})` : degree || yearOfStudy, university]
+        .filter(Boolean)
+        .join(" - ");
 
   // Provider skills come from the nested provider profile.
   const offeredSkills = userProfile.providerProfile?.skills || [];
@@ -160,11 +178,11 @@ export default function Profile({ role: propRole }: { role: Role }) {
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-xl font-semibold text-slate-900">{name}</h1>
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  {userProfile.verifiedStudentProvider ? "Verified Student Provider" : "Buyer"}
+                  {profileTag}
                 </span>
               </div>
               <p className="mt-1 text-sm text-slate-500">
-                {degree} ({yearOfStudy}) - {university}
+                {academicLine || "Profile details not added yet"}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-600">
                 <div className="flex items-center gap-2">
@@ -193,9 +211,9 @@ export default function Profile({ role: propRole }: { role: Role }) {
             ✓
           </span>
           <div>
-            <h2 className="text-sm font-semibold text-emerald-800">Identity Verified</h2>
+            <h2 className="text-sm font-semibold text-emerald-800">{identityTitle}</h2>
             <p className="text-xs text-emerald-700">
-              Student provider proof is reviewed by admin. Buyers use normal Firebase email verification.
+              {identityMessage}
             </p>
           </div>
         </div>
@@ -241,6 +259,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
             </div>
           )}
 
+          {/* Keep the buyer "Skills I Need" card hidden for now.
           {showNeeded && (
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -265,6 +284,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
               </div>
             </div>
           )}
+          */}
         </div>
       </section>
 

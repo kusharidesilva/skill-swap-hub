@@ -13,7 +13,7 @@ type ProfileShellProps = {
 
 export default function ProfileShell({ role, children }: ProfileShellProps) {
   return (
-    <div className="min-h-screen bg-[#f5f7ff] text-slate-900">
+    <div className="flex h-screen flex-col overflow-hidden bg-[#f5f7ff] text-slate-900">
       <Navbar role={role} />
 
       {/* Mobile and tablet navigation */}
@@ -22,14 +22,20 @@ export default function ProfileShell({ role, children }: ProfileShellProps) {
       </div>
       <div className="h-[61px] shrink-0 xl:hidden" aria-hidden="true" />
 
-      <div className="mx-auto flex w-full max-w-6xl flex-col xl:flex-row gap-8 px-6 pt-6 xl:pt-10 pb-8">
-        {/* Desktop sidebar */}
-        <div className="hidden xl:block w-64 shrink-0">
-          <SideNav role={role} />
+      <div className="user-content-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="grid min-h-full xl:grid-cols-[255px_minmax(0,1fr)]">
+          {/* Desktop sidebar */}
+          <div className="hidden xl:sticky xl:top-0 xl:block xl:h-[calc(100vh-85px)]">
+            <SideNav role={role} />
+          </div>
+          <main className="min-w-0 px-5 py-6 sm:px-6 lg:px-8 xl:px-10">
+            <div className="mx-auto flex w-full max-w-[1220px] flex-col gap-8">
+              {children}
+            </div>
+          </main>
         </div>
-        <main className="min-w-0 flex-1">{children}</main>
+        <SiteFooter role={role} />
       </div>
-      <SiteFooter role={role} />
     </div>
   );
 }

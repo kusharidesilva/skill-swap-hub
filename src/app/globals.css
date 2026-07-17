@@ -47,3 +47,49 @@ body {
 .scrollbar-none::-webkit-scrollbar { 
   display: none; 
 } 
+
+/* Thin system-colour scrollbar for the user dashboard content area. */
+.user-content-scroll {
+  scrollbar-color: #2f66e7 transparent;
+  scrollbar-width: thin;
+}
+
+.user-content-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.user-content-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.user-content-scroll::-webkit-scrollbar-thumb {
+  background: #2f66e7;
+  border-radius: 999px;
+}
+
+.user-content-scroll::-webkit-scrollbar-thumb:hover {
+  background: #1d4ed8;
+}
+
+/* Thin system-colour scrollbar for the admin content area. */
+.admin-content-scroll {
+  scrollbar-color: #2f66e7 transparent;
+  scrollbar-width: thin;
+}
+
+.admin-content-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.admin-content-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-content-scroll::-webkit-scrollbar-thumb {
+  background: #2f66e7;
+  border-radius: 999px;
+}
+
+.admin-content-scroll::-webkit-scrollbar-thumb:hover {
+  background: #1d4ed8;
+}
