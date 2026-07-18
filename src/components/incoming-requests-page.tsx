@@ -35,6 +35,7 @@ interface RequestData {
   buyerId: string;
   buyerName: string;
   buyerProfileImageUrl?: string;
+  buyerAccountType?: string;
   buyerUniversity: string;
   buyerDegree: string;
   buyerYearOfStudy: string;
@@ -58,6 +59,14 @@ interface RequestData {
     comment: string;
   };
 }
+
+type BuyerRequestMeta = {
+  profileImageUrl: string;
+  accountType: string;
+  university: string;
+  degree: string;
+  yearOfStudy: string;
+};
 
 export default function IncomingRequestsPageContent({
   activeTab = "new",
@@ -132,25 +141,73 @@ export default function IncomingRequestsPageContent({
 
       const buyerImageEntries = await Promise.all(
         docs.map(async (request) => {
-          if (!request.buyerId) return [request.buyerId, ""] as const;
+          if (!request.buyerId) {
+            return [
+              request.buyerId,
+              {
+                profileImageUrl: "",
+                accountType: "",
+                university: "",
+                degree: "",
+                yearOfStudy: "",
+              },
+            ] as const;
+          }
           try {
             const buyerSnapshot = await getDoc(doc(db, "users", request.buyerId));
             const buyerData = buyerSnapshot.exists()
-              ? (buyerSnapshot.data() as { profileImageUrl?: string })
+              ? (buyerSnapshot.data() as Partial<BuyerRequestMeta>)
               : null;
-            return [request.buyerId, buyerData?.profileImageUrl || ""] as const;
+            return [
+              request.buyerId,
+              {
+                profileImageUrl: buyerData?.profileImageUrl || "",
+                accountType: buyerData?.accountType || "",
+                university: buyerData?.university || "",
+                degree: buyerData?.degree || "",
+                yearOfStudy: buyerData?.yearOfStudy || "",
+              },
+            ] as const;
           } catch (err) {
             console.error("Error fetching buyer profile image:", err);
-            return [request.buyerId, ""] as const;
+            return [
+              request.buyerId,
+              {
+                profileImageUrl: "",
+                accountType: "",
+                university: "",
+                degree: "",
+                yearOfStudy: "",
+              },
+            ] as const;
           }
         }),
       );
 
-      const buyerImageMap = new Map(buyerImageEntries);
-      const hydratedDocs = docs.map((request) => ({
-        ...request,
-        buyerProfileImageUrl: buyerImageMap.get(request.buyerId) || "",
-      }));
+      const buyerImageMap = new Map<string, BuyerRequestMeta>(buyerImageEntries);
+      const hydratedDocs = docs.map((request) => {
+        const buyerMeta = buyerImageMap.get(request.buyerId);
+        const resolvedBuyerAccountType =
+          request.buyerAccountType || buyerMeta?.accountType || "";
+
+        return {
+          ...request,
+          buyerProfileImageUrl: buyerMeta?.profileImageUrl || "",
+          buyerAccountType: resolvedBuyerAccountType,
+          buyerUniversity:
+            resolvedBuyerAccountType === "non-student"
+              ? ""
+              : request.buyerUniversity || buyerMeta?.university || "",
+          buyerDegree:
+            resolvedBuyerAccountType === "non-student"
+              ? ""
+              : request.buyerDegree || buyerMeta?.degree || "",
+          buyerYearOfStudy:
+            resolvedBuyerAccountType === "non-student"
+              ? ""
+              : request.buyerYearOfStudy || buyerMeta?.yearOfStudy || "",
+        };
+      });
       hydratedDocs.sort((a, b) => b.id.localeCompare(a.id));
       setRequests(hydratedDocs);
       setFetching(false);
@@ -450,10 +507,16 @@ function NewRequestsView({
                         {request.buyerName}
                       </p>
                       <p className="truncate text-xs leading-5 text-slate-500">
-                        {request.buyerDegree}
+                        {request.buyerAccountType === "non-student"
+                          ? "Non-student Buyer"
+                          : request.buyerDegree}
                       </p>
                       <p className="truncate whitespace-nowrap text-xs leading-5 text-slate-500">
-                        {request.buyerUniversity} ({request.buyerYearOfStudy})
+                        {request.buyerAccountType === "non-student"
+                          ? request.buyerName
+                            ? request.buyerName.split(" ")[0] + "'s buyer account"
+                            : "Buyer account"
+                          : `${request.buyerUniversity}${request.buyerYearOfStudy ? ` (${request.buyerYearOfStudy})` : ""}`}
                       </p>
                     </div>
                   </div>
@@ -657,7 +720,9 @@ function AcceptedView({
                     {item.buyerName}
                   </p>
                   <p className="text-[10px] text-slate-400">
-                    {item.buyerUniversity}
+                    {item.buyerAccountType === "non-student"
+                      ? "Non-student Buyer"
+                      : item.buyerUniversity}
                   </p>
                 </div>
                 <span
@@ -865,7 +930,9 @@ function CompletedView({ requests }: { requests: RequestData[] }) {
                   {item.buyerName}
                 </p>
                 <p className="text-[10px] text-slate-400">
-                  {item.buyerUniversity}
+                  {item.buyerAccountType === "non-student"
+                    ? "Non-student Buyer"
+                    : item.buyerUniversity}
                 </p>
               </div>
               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800">

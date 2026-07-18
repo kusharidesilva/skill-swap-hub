@@ -239,7 +239,7 @@ export default function AdminUserManagement() {
                 type="search"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Name, email, university..."
+                placeholder="Name, email, role..."
                 className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
               />
             </div>
@@ -314,12 +314,12 @@ export default function AdminUserManagement() {
           <div className="min-w-[1080px]">
             <div className="grid grid-cols-[1.55fr_1.2fr_0.7fr_0.85fr_0.95fr_0.8fr_1fr] border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
               <span>Name &amp; Email</span>
-              <span>University &amp; Programme</span>
-              <span>Role</span>
-              <span>Student Type</span>
-              <span>Status</span>
-              <span>Rating</span>
-              <span>Actions</span>
+              <span>Academic Details</span>
+              <span className="justify-self-center">Role</span>
+              <span className="justify-self-center">Student Type</span>
+              <span className="justify-self-center">Status</span>
+              <span className="justify-self-center">Rating</span>
+              <span className="justify-self-center">Actions</span>
             </div>
 
             {loading ? (
@@ -346,15 +346,21 @@ export default function AdminUserManagement() {
                     </div>
 
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-slate-700">{user.university || "Not added"}</p>
+                      <p className="truncate font-medium text-slate-700">
+                        {user.accountType === "student" ? user.university || "Not added" : "Not applicable"}
+                      </p>
                       <p className="truncate text-sm text-slate-500">
-                        {[user.degree, user.yearOfStudy].filter(Boolean).join(" - ") || "Not added"}
+                        {user.accountType === "student"
+                          ? [user.degree, user.yearOfStudy].filter(Boolean).join(" - ") || "Not added"
+                          : "Not applicable"}
                       </p>
                     </div>
 
-                    <StatusChip tone={roleTone(user.role)}>{roleLabel(user.role)}</StatusChip>
-                    <span className="font-medium text-slate-600">{accountTypeLabel(user.accountType)}</span>
-                    <div className="space-y-1.5">
+                    <div className="justify-self-center">
+                      <StatusChip tone={roleTone(user.role)}>{roleLabel(user.role)}</StatusChip>
+                    </div>
+                    <span className="justify-self-center font-medium text-slate-600">{accountTypeLabel(user.accountType)}</span>
+                    <div className="justify-self-center space-y-1.5 text-center">
                       <StatusChip tone={accountTone(user.accountStatus)}>
                         {accountStatusLabel(user.accountStatus)}
                       </StatusChip>
@@ -363,21 +369,21 @@ export default function AdminUserManagement() {
                       </p>
                     </div>
 
-                    <p className="flex items-center gap-1 font-medium text-slate-700">
+                    <p className="justify-self-center flex items-center gap-1 font-medium text-slate-700">
                       <StarIcon />
                       {ratingLabel(user)}
                     </p>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex min-w-[96px] max-w-[96px] justify-self-center flex-col items-stretch gap-2">
                       <a
                         href={profileHref(user)}
-                        className="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                       >
                         Profile
                       </a>
                       <a
                         href={`/admin/issue-resolution?user=${targetUserId}`}
-                        className="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                       >
                         Reports
                       </a>
@@ -385,7 +391,7 @@ export default function AdminUserManagement() {
                         type="button"
                         disabled={busyUserId !== "" || (isSelf && !isSuspended)}
                         onClick={() => handleAccountStatus(user, isSuspended ? "active" : "suspended")}
-                        className={`inline-flex h-9 items-center rounded-lg px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                        className={`inline-flex h-8 items-center justify-center rounded-lg px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
                           isSuspended
                             ? "bg-emerald-600 text-white hover:bg-emerald-700"
                             : "bg-[#ef295a] text-white hover:bg-[#db1f4d]"
@@ -436,13 +442,13 @@ function StatCard({
 }) {
   const styles =
     tone === "blue"
-      ? "border-blue-200 bg-blue-50 text-blue-700"
+      ? "border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-300 hover:bg-blue-100/70"
       : tone === "amber"
-        ? "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-rose-200 bg-rose-50 text-rose-700";
+        ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100/70"
+        : "border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100/70";
 
   return (
-    <article className={`rounded-2xl border p-5 shadow-sm ${styles}`}>
+    <article className={`rounded-2xl border p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01] hover:shadow-md ${styles}`}>
       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
       <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
     </article>

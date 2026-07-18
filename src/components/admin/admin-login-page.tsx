@@ -130,7 +130,7 @@ export default function AdminLoginPage() {
         <div className="mt-5 flex justify-center">
           <span className="inline-flex items-center gap-2 rounded-md border border-[#e1e3ed] bg-[#f7f6ff] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.02em] text-[#697080]">
             <ShieldSmallIcon className="h-4 w-4 text-[#ef445a]" />
-            Google authorized administrators only
+            Authorized admin accounts only
           </span>
         </div>
       </section>

@@ -1,0 +1,44 @@
+[debug] [2026-07-17T15:44:49.128Z] ----------------------------------------------------------------------
+[debug] [2026-07-17T15:44:49.132Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kushari\AppData\Local\npm-cache\_npx\7750544ccf494d8b\node_modules\firebase-tools\lib\bin\firebase.js firestore:delete yearOfStudyOptions --project skill-swap-hub-eca37 --recursive --force
+[debug] [2026-07-17T15:44:49.132Z] CLI Version:   15.24.0
+[debug] [2026-07-17T15:44:49.133Z] Platform:      win32
+[debug] [2026-07-17T15:44:49.133Z] Node Version:  v24.11.1
+[debug] [2026-07-17T15:44:49.133Z] Detected Agent: codex_cli
+[debug] [2026-07-17T15:44:49.134Z] Time:          Fri Jul 17 2026 21:14:49 GMT+0530 (India Standard Time)
+[debug] [2026-07-17T15:44:49.134Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-17T15:44:49.152Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-07-17T15:44:51.492Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-17T15:44:51.493Z] > authorizing via signed-in user (thuwanrajap076@gmail.com)
+[debug] [2026-07-17T15:44:51.494Z] [iam] checking project skill-swap-hub-eca37 for permissions ["datastore.entities.delete","datastore.entities.list","firebase.projects.get"]
+[debug] [2026-07-17T15:44:51.496Z] Checked if tokens are valid: false, expires at: 1784139079349
+[debug] [2026-07-17T15:44:51.497Z] Checked if tokens are valid: false, expires at: 1784139079349
+[debug] [2026-07-17T15:44:51.497Z] > refreshing access token with scopes: []
+[debug] [2026-07-17T15:44:51.500Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-07-17T15:44:51.500Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-07-17T15:44:51.748Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-07-17T15:44:51.749Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-07-17T15:44:51.770Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/skill-swap-hub-eca37:testIamPermissions [none]
+[debug] [2026-07-17T15:44:51.771Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/skill-swap-hub-eca37:testIamPermissions  x-goog-user-project=skill-swap-hub-eca37
+[debug] [2026-07-17T15:44:51.771Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/skill-swap-hub-eca37:testIamPermissions {"permissions":["datastore.entities.delete","datastore.entities.list","firebase.projects.get"]}
+[debug] [2026-07-17T15:44:52.152Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-07-17T15:44:52.153Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-07-17T15:44:53.084Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/skill-swap-hub-eca37:testIamPermissions 200
+[debug] [2026-07-17T15:44:53.085Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/skill-swap-hub-eca37:testIamPermissions {"permissions":["datastore.entities.delete","datastore.entities.list","firebase.projects.get"]}
+[debug] [2026-07-17T15:44:53.094Z] Checked if tokens are valid: true, expires at: 1784306690749
+[debug] [2026-07-17T15:44:53.095Z] Checked if tokens are valid: true, expires at: 1784306690749
+[debug] [2026-07-17T15:44:53.095Z] >>> [apiv2][query] POST https://firestore.googleapis.com/v1/projects/skill-swap-hub-eca37/databases/(default)/documents:runQuery [none]
+[debug] [2026-07-17T15:44:53.095Z] >>> [apiv2][body] POST https://firestore.googleapis.com/v1/projects/skill-swap-hub-eca37/databases/(default)/documents:runQuery {"structuredQuery":{"where":{"compositeFilter":{"op":"AND","filters":[{"fieldFilter":{"field":{"fieldPath":"__name__"},"op":"GREATER_THAN_OR_EQUAL","value":{"referenceValue":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions/__id-9223372036854775808__"}}},{"fieldFilter":{"field":{"fieldPath":"__name__"},"op":"LESS_THAN","value":{"referenceValue":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions\u0000/__id-9223372036854775808__"}}}]}},"limit":7500,"from":[{"allDescendants":true}],"select":{"fields":[{"fieldPath":"__name__"}]},"orderBy":[{"field":{"fieldPath":"__name__"}}]}}
+[debug] [2026-07-17T15:44:54.648Z] <<< [apiv2][status] POST https://firestore.googleapis.com/v1/projects/skill-swap-hub-eca37/databases/(default)/documents:runQuery 200
+[debug] [2026-07-17T15:44:54.648Z] <<< [apiv2][body] POST https://firestore.googleapis.com/v1/projects/skill-swap-hub-eca37/databases/(default)/documents:runQuery [{"document":{"name":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions/1st-year","createTime":"2026-07-15T15:14:49.795782Z","updateTime":"2026-07-15T18:00:12.393239Z"},"readTime":"2026-07-17T15:44:52.627186Z"},{"document":{"name":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions/2nd-year","createTime":"2026-07-15T15:14:50.885510Z","updateTime":"2026-07-15T18:00:12.483934Z"},"readTime":"2026-07-17T15:44:52.627186Z"},{"document":{"name":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions/3rd-year","createTime":"2026-07-15T15:14:51.242434Z","updateTime":"2026-07-15T18:00:12.562547Z"},"readTime":"2026-07-17T15:44:52.627186Z"},{"document":{"name":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions/4th-year","createTime":"2026-07-15T15:14:52.343577Z","updateTime":"2026-07-15T18:00:12.596200Z"},"readTime":"2026-07-17T15:44:52.627186Z"}]
+[debug] [2026-07-17T15:44:54.650Z] Checked if tokens are valid: true, expires at: 1784306690749
+[debug] [2026-07-17T15:44:54.650Z] Checked if tokens are valid: true, expires at: 1784306690749
+[debug] [2026-07-17T15:44:54.651Z] Checked if tokens are valid: true, expires at: 1784306690749
+[debug] [2026-07-17T15:44:54.652Z] Checked if tokens are valid: true, expires at: 1784306690749
+[debug] [2026-07-17T15:44:54.653Z] >>> [apiv2][query] POST https://firestore.googleapis.com/v1/projects/skill-swap-hub-eca37/databases/(default)/documents:runQuery [none]
+[debug] [2026-07-17T15:44:54.653Z] >>> [apiv2][body] POST https://firestore.googleapis.com/v1/projects/skill-swap-hub-eca37/databases/(default)/documents:runQuery {"structuredQuery":{"where":{"compositeFilter":{"op":"AND","filters":[{"fieldFilter":{"field":{"fieldPath":"__name__"},"op":"GREATER_THAN_OR_EQUAL","value":{"referenceValue":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions/__id-9223372036854775808__"}}},{"fieldFilter":{"field":{"fieldPath":"__name__"},"op":"LESS_THAN","value":{"referenceValue":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions\u0000/__id-9223372036854775808__"}}}]}},"limit":7500,"from":[{"allDescendants":true}],"select":{"fields":[{"fieldPath":"__name__"}]},"orderBy":[{"field":{"fieldPath":"__name__"}}],"startAt":{"values":[{"referenceValue":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions/4th-year"}],"before":false}}}
+[debug] [2026-07-17T15:44:54.655Z] >>> [apiv2][query] POST https://firestore.googleapis.com/v1/projects/skill-swap-hub-eca37/databases/(default)/documents:commit [none]
+[debug] [2026-07-17T15:44:54.656Z] >>> [apiv2][body] POST https://firestore.googleapis.com/v1/projects/skill-swap-hub-eca37/databases/(default)/documents:commit {"writes":[{"delete":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions/1st-year"},{"delete":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions/2nd-year"},{"delete":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions/3rd-year"},{"delete":"projects/skill-swap-hub-eca37/databases/(default)/documents/yearOfStudyOptions/4th-year"}]}
+[debug] [2026-07-17T15:44:55.017Z] <<< [apiv2][status] POST https://firestore.googleapis.com/v1/projects/skill-swap-hub-eca37/databases/(default)/documents:runQuery 200
+[debug] [2026-07-17T15:44:55.017Z] <<< [apiv2][body] POST https://firestore.googleapis.com/v1/projects/skill-swap-hub-eca37/databases/(default)/documents:runQuery [{"readTime":"2026-07-17T15:44:52.982816Z"}]
+[debug] [2026-07-17T15:44:56.196Z] <<< [apiv2][status] POST https://firestore.googleapis.com/v1/projects/skill-swap-hub-eca37/databases/(default)/documents:commit 200

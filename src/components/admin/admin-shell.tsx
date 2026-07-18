@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { isAuthorizedAdminEmail, signOut } from "@/lib/auth";
 
 type NavItem = {
   label: string;
@@ -17,7 +16,7 @@ const navItems: NavItem[] = [
   { label: "Verification", href: "/admin/verifications", icon: <ShieldIcon /> },
   { label: "User Management", href: "/admin/user-management", icon: <UsersIcon /> },
   { label: "Report Handling", href: "/admin/issue-resolution", icon: <TriangleIcon /> },
-  { label: "Lookup Settings", href: "/admin/lookup-settings", icon: <CollectionIcon /> },
+  { label: "Add & Manage", href: "/admin/add-and-manage", icon: <CollectionIcon /> },
 ];
 
 const pageTitles: Record<string, string> = {
@@ -25,7 +24,7 @@ const pageTitles: Record<string, string> = {
   "/admin/user-management": "User Management",
   "/admin/verifications": "Verification",
   "/admin/issue-resolution": "Report Handling",
-  "/admin/lookup-settings": "Lookup Settings",
+  "/admin/add-and-manage": "Add & Manage Options",
   "/admin/settings": "Settings",
   "/admin/sign-out": "Sign Out",
 };
@@ -38,8 +37,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const title = pageTitles[pathname] ?? "Dashboard";
-  const isAdmin =
-    userProfile?.role === "admin" && isAuthorizedAdminEmail(userProfile.email);
+  const isAdmin = userProfile?.role === "admin";
   const isStandaloneAdminAuthPage =
     pathname === "/admin/login" || pathname === "/admin/sign-out";
 
@@ -56,12 +54,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       router.replace(`/dashboard/${userProfile.role === "both" ? "both" : userProfile.role}`);
       return;
     }
-
-    if (!isAuthorizedAdminEmail(userProfile.email)) {
-      void signOut().finally(() => {
-        router.replace("/admin/login");
-      });
-    }
   }, [isStandaloneAdminAuthPage, loading, router, userProfile]);
 
   useEffect(() => {
@@ -75,11 +67,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    setSidebarOpen(false);
-    setMenuOpen(false);
-  }, [pathname]);
 
   if (isStandaloneAdminAuthPage) {
     return <>{children}</>;
@@ -130,6 +117,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.label}
                 href={item.href}
+                onClick={() => {
+                  setSidebarOpen(false);
+                  setMenuOpen(false);
+                }}
                 aria-current={active ? "page" : undefined}
                 className={`flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-[15px] font-medium transition ${
                   active ? "bg-[#2f66e7] text-white" : "text-slate-600 hover:bg-white/80"
@@ -149,6 +140,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           <div className="space-y-2 pt-6">
             <Link
               href="/admin/settings"
+              onClick={() => {
+                setSidebarOpen(false);
+                setMenuOpen(false);
+              }}
               className={`flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-[15px] font-medium transition ${
                 pathname === "/admin/settings" ? "bg-[#2f66e7] text-white" : "text-slate-600 hover:bg-white/80"
               }`}
@@ -161,6 +156,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
             <Link
               href="/admin/sign-out"
+              onClick={() => {
+                setSidebarOpen(false);
+                setMenuOpen(false);
+              }}
               className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-[15px] font-medium text-slate-600 transition hover:bg-white/80"
             >
               <span className="flex h-8 w-8 items-center justify-center text-slate-500">

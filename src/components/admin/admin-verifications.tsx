@@ -364,24 +364,28 @@ function StatCard({ stat }: { stat: StatItem }) {
       ? {
           accent: "bg-[#66ead9] text-[#006d63]",
           wash: "bg-[#d9faf3]",
+          hover: "hover:border-teal-300 hover:bg-teal-50/40",
         }
       : stat.tone === "blue"
         ? {
             accent: "bg-[#dfe5ff] text-[#21367d]",
             wash: "bg-[#e5ecff]",
+            hover: "hover:border-blue-300 hover:bg-blue-50/40",
           }
         : stat.tone === "peach"
           ? {
               accent: "bg-[#ffdccc] text-[#9a4a1f]",
               wash: "bg-[#faeadf]",
+              hover: "hover:border-orange-300 hover:bg-orange-50/40",
             }
           : {
               accent: "bg-[#ffd8d8] text-[#b91c1c]",
               wash: "bg-[#fbe9e9]",
+              hover: "hover:border-rose-300 hover:bg-rose-50/40",
             };
 
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-slate-300 bg-white p-5 shadow-[0_6px_18px_rgba(15,23,42,0.05)]">
+    <article className={`relative overflow-hidden rounded-2xl border border-slate-300 bg-white p-5 shadow-[0_6px_18px_rgba(15,23,42,0.05)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01] hover:shadow-md ${toneClasses.hover}`}>
       <div className={`absolute -right-8 -top-8 h-24 w-24 rounded-full ${toneClasses.wash}`} />
       <div className="relative flex min-h-[120px] flex-col">
         <div className="flex items-start justify-between gap-4">

@@ -25,7 +25,7 @@ import { useLookupOptions } from "@/lib/lookups";
 
 const requestServiceSchema = z.object({
   category: z.string().trim().min(1, "Service category is required."),
-  requiredDate: z.string().trim().optional().or(z.literal("")),
+  requiredDate: z.string().trim().min(1, "Required date is required."),
   budgetPrice: z.string().trim().optional().or(z.literal("")),
   requestNote: z
     .string()
@@ -137,6 +137,10 @@ function RequestForm({
     type: "success" | "error";
     msg: string;
   } | null>(null);
+  const [invalidModalOpen, setInvalidModalOpen] = useState(false);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [pendingSubmission, setPendingSubmission] =
+    useState<RequestServiceFormValues | null>(null);
   const {
     register,
     handleSubmit,
@@ -147,7 +151,7 @@ function RequestForm({
   } = useForm<RequestServiceFormValues>({
     resolver: zodResolver(requestServiceSchema),
     defaultValues: {
-      category: serviceCategories[0] || "Photography",
+      category: "",
       requiredDate: "",
       budgetPrice: "",
       requestNote: "",
@@ -166,8 +170,8 @@ function RequestForm({
   useEffect(() => {
     if (!serviceCategories.length) return;
     const currentCategory = selectedCategory || "";
-    if (!serviceCategories.includes(currentCategory)) {
-      setValue("category", serviceCategories[0], {
+    if (currentCategory && !serviceCategories.includes(currentCategory)) {
+      setValue("category", "", {
         shouldDirty: false,
         shouldValidate: true,
       });
@@ -179,21 +183,33 @@ function RequestForm({
       type: "error",
       msg: "Please complete all required fields correctly before submitting.",
     });
+    setInvalidModalOpen(true);
   };
 
-  const onSubmit = async (data: RequestServiceFormValues) => {
+  const onSubmit = (data: RequestServiceFormValues) => {
+    setFeedback(null);
+    setPendingSubmission(data);
+    setConfirmModalOpen(true);
+  };
+
+  const submitConfirmedRequest = async () => {
+    if (!pendingSubmission) return;
+
+    setConfirmModalOpen(false);
+    setFeedback(null);
     setFeedback(null);
     setIsSubmitting(true);
 
     try {
-      const trimmedCategory = data.category.trim();
-      const trimmedNote = data.requestNote.trim();
-      const trimmedBudget = data.budgetPrice?.trim() || "";
-      const trimmedRequiredDate = data.requiredDate?.trim() || "";
+      const trimmedCategory = pendingSubmission.category.trim();
+      const trimmedNote = pendingSubmission.requestNote.trim();
+      const trimmedBudget = pendingSubmission.budgetPrice?.trim() || "";
+      const trimmedRequiredDate = pendingSubmission.requiredDate?.trim() || "";
       const title = `${trimmedCategory} request`;
       await addDoc(collection(db, "requests"), {
         buyerId: buyerProfile.uid,
         buyerName: buyerProfile.name,
+        buyerAccountType: buyerProfile.accountType || "",
         buyerUniversity: buyerProfile.university || "",
         buyerDegree: buyerProfile.degree || "",
         buyerYearOfStudy: buyerProfile.yearOfStudy || "",
@@ -240,8 +256,9 @@ function RequestForm({
         type: "success",
         msg: "Your skill swap request has been submitted successfully!",
       });
+      setPendingSubmission(null);
       reset({
-        category: serviceCategories[0] || "Photography",
+        category: "",
         requiredDate: "",
         budgetPrice: "",
         requestNote: "",
@@ -277,7 +294,7 @@ function RequestForm({
         )}
 
         <SelectField
-          label="Service Category"
+          label="Service Category *"
           value={selectedCategory}
           onChange={(nextValue) =>
             setValue("category", nextValue, {
@@ -286,6 +303,7 @@ function RequestForm({
             })
           }
           options={serviceCategories}
+          placeholder="Select a service category"
           className="text-sm"
           error={errors.category?.message}
         />
@@ -293,7 +311,7 @@ function RequestForm({
         <div className="grid gap-4 md:grid-cols-2">
           <label className="grid min-w-0 gap-1.5">
             <span className="text-xs font-semibold text-slate-600">
-              Required Date (Optional)
+              Required Date <span className="text-red-500">*</span>
             </span>
             <input
               type="date"
@@ -301,6 +319,11 @@ function RequestForm({
               aria-invalid={Boolean(errors.requiredDate)}
               className={getFieldClassName(Boolean(errors.requiredDate))}
             />
+            {errors.requiredDate && (
+              <p className="text-xs font-medium text-red-600">
+                {errors.requiredDate.message}
+              </p>
+            )}
           </label>
 
           <label className="grid min-w-0 gap-1.5">
@@ -355,7 +378,119 @@ function RequestForm({
           </button>
         </div>
       </form>
+
+      {invalidModalOpen ? (
+        <FormActionModal
+          tone="error"
+          title="Please fill the required fields"
+          description="Service category and required date must be filled before you submit this request."
+          primaryLabel="Okay"
+          onPrimaryClick={() => setInvalidModalOpen(false)}
+          onClose={() => setInvalidModalOpen(false)}
+        />
+      ) : null}
+
+      {confirmModalOpen ? (
+        <FormActionModal
+          tone="confirm"
+          title="Are you sure?"
+          description="Your request details look ready. Submit this service request now?"
+          primaryLabel={isSubmitting ? "Submitting..." : "Submit"}
+          secondaryLabel="Cancel"
+          primaryDisabled={isSubmitting}
+          onPrimaryClick={() => void submitConfirmedRequest()}
+          onSecondaryClick={() => setConfirmModalOpen(false)}
+          onClose={() => setConfirmModalOpen(false)}
+        />
+      ) : null}
     </section>
+  );
+}
+
+function FormActionModal({
+  tone,
+  title,
+  description,
+  primaryLabel,
+  secondaryLabel,
+  primaryDisabled = false,
+  onPrimaryClick,
+  onSecondaryClick,
+  onClose,
+}: {
+  tone: "error" | "confirm";
+  title: string;
+  description: string;
+  primaryLabel: string;
+  secondaryLabel?: string;
+  primaryDisabled?: boolean;
+  onPrimaryClick: () => void;
+  onSecondaryClick?: () => void;
+  onClose: () => void;
+}) {
+  const primaryClassName =
+    tone === "error"
+      ? "bg-red-600 text-white hover:bg-red-700"
+      : "bg-[#2f66e7] text-white hover:bg-[#2557cf]";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-[3px]">
+      <div className="w-full max-w-[560px] rounded-2xl border border-slate-200 bg-white p-7 shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
+        <div className="flex items-start justify-between gap-5">
+          <div className="max-w-[380px]">
+            <h3 className="text-[18px] font-bold leading-tight text-slate-900">{title}</h3>
+            <p className="mt-3 text-[15px] leading-7 text-slate-600">
+              {description}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+            aria-label="Close popup"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+
+        <div className="mt-8 flex items-center justify-end gap-3">
+          {secondaryLabel ? (
+            <button
+              type="button"
+              onClick={onSecondaryClick}
+              className="inline-flex h-11 min-w-[112px] items-center justify-center rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              {secondaryLabel}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onPrimaryClick}
+            disabled={primaryDisabled}
+            className={`inline-flex h-11 min-w-[112px] items-center justify-center rounded-lg px-5 text-sm font-semibold transition disabled:opacity-60 ${primaryClassName}`}
+          >
+            {primaryLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
   );
 }
 

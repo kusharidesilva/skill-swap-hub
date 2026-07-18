@@ -1,10 +1,13 @@
 import {
   createUserWithEmailAndPassword,
   deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   sendEmailVerification,
   signOut as firebaseSignOut,
+  updateEmail,
   type User,
 } from "firebase/auth";
 import {
@@ -158,7 +161,9 @@ async function ensureAuthorizedAdminProfile(
   existingProfile?: UserProfile | null,
 ) {
   const normalizedEmail = user.email?.trim().toLowerCase();
-  if (!isAuthorizedAdminEmail(normalizedEmail)) {
+  const isExistingAdmin = existingProfile?.role === "admin";
+
+  if (!isExistingAdmin && !isAuthorizedAdminEmail(normalizedEmail)) {
     throw new Error("This account is not authorized for admin access.");
   }
 
@@ -450,10 +455,6 @@ export async function loginAdmin(
   user: User;
   profile: UserProfile;
 }> {
-  if (!isAuthorizedAdminEmail(email)) {
-    throw new Error("This account is not authorized for admin access.");
-  }
-
   let user: User;
 
   try {
@@ -492,15 +493,11 @@ export async function loginAdmin(
   const nextProfile =
     !profile ||
     profile.role !== "admin" ||
-    !isAuthorizedAdminEmail(profile.email) ||
     user.email?.trim().toLowerCase() !== profile.email?.trim().toLowerCase()
       ? await ensureAuthorizedAdminProfile(user, profile)
       : profile;
 
-  if (
-    !isAuthorizedAdminEmail(nextProfile.email) ||
-    !isAuthorizedAdminEmail(user.email)
-  ) {
+  if (nextProfile.role !== "admin") {
     await firebaseSignOut(auth);
     throw new Error("This account is not authorized for admin access.");
   }
@@ -522,13 +519,6 @@ export async function getPostLoginRedirect(
   }
 
   if (profile.role === "admin") {
-    if (
-      !isAuthorizedAdminEmail(profile.email) ||
-      !isAuthorizedAdminEmail(auth.currentUser?.email)
-    ) {
-      await firebaseSignOut(auth);
-      throw new Error("This account is not authorized for admin access.");
-    }
     return "/admin";
   }
 
@@ -641,6 +631,31 @@ export async function resetPassword(email: string): Promise<void> {
 export async function resendVerificationEmail(): Promise<void> {
   const user = auth.currentUser;
   if (!user) throw new Error("No user is currently signed in.");
+  await sendEmailVerification(user);
+}
+
+export async function changeSignedInEmail(
+  currentPassword: string,
+  newEmail: string,
+): Promise<void> {
+  const user = auth.currentUser;
+
+  if (!user?.email) {
+    throw new Error("No user is currently signed in.");
+  }
+
+  const trimmedEmail = newEmail.trim().toLowerCase();
+  if (!trimmedEmail) {
+    throw new Error("Enter the new email address first.");
+  }
+
+  if (trimmedEmail === user.email.trim().toLowerCase()) {
+    throw new Error("Enter a different email address.");
+  }
+
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updateEmail(user, trimmedEmail);
   await sendEmailVerification(user);
 }
 

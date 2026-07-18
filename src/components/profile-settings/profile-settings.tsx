@@ -3,15 +3,13 @@
 import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword,
 } from "firebase/auth";
-import type { UserProfile } from "@/lib/auth";
-import UniversityCombobox from "@/components/ui/university-combobox";
-import SelectField from "@/components/ui/select-field";
+import { changeSignedInEmail, type UserProfile } from "@/lib/auth";
 import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
 import { useLookupOptions } from "@/lib/lookups";
 
@@ -122,11 +120,12 @@ function ProfileSettingsForm({
   const role = userProfile.role || propRole;
   const isNonStudentBuyer =
     role === "buyer" && userProfile.accountType === "non-student";
+  const isStudentAccount = userProfile.accountType === "student";
+  const canChangeEmail = isNonStudentBuyer || role === "admin";
   const showOffered = role === "provider" || role === "both";
   const showNeeded = role === "buyer" || role === "both";
   const showAvailability = role === "provider" || role === "both";
   const serviceCategories = useLookupOptions("serviceCategories");
-  const yearOptions = useLookupOptions("yearOfStudyOptions");
   const timeSlotOptions = useLookupOptions("availabilityTimeSlots");
   const availabilityOptions = AVAILABILITY_DAYS.flatMap((day) =>
     (timeSlotOptions.length ? timeSlotOptions : [...AVAILABILITY_TIME_SLOTS]).map(
@@ -145,11 +144,13 @@ function ProfileSettingsForm({
 
   // Basic profile fields are initialized from the shared auth profile.
   const [name, setName] = useState(userProfile.name || "");
+  const [email, setEmail] = useState(userProfile.email || "");
   const [university, setUniversity] = useState(userProfile.university || "");
   const [degree, setDegree] = useState(userProfile.degree || "");
   const [yearOfStudy, setYearOfStudy] = useState(
     userProfile.yearOfStudy || "1st Year",
   );
+  const [emailPassword, setEmailPassword] = useState("");
   const [bio, setBio] = useState(userProfile.providerProfile?.bio || "");
   const [profileImageUrl, setProfileImageUrl] = useState(
     userProfile.profileImageUrl || "",
@@ -187,6 +188,9 @@ function ProfileSettingsForm({
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"success" | "error" | "">("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailNotice, setEmailNotice] = useState<"success" | "error" | "">("");
+  const [emailNoticeMessage, setEmailNoticeMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const profileBadgeLabel = userProfile.verifiedStudentProvider
     ? "Verified Student"
@@ -216,9 +220,6 @@ function ProfileSettingsForm({
       const updates: Record<string, unknown> = {
         name,
         profileImageUrl: nextProfileImageUrl,
-        university,
-        degree,
-        yearOfStudy,
         neededSkills,
         settings: {
           emailNotifications,
@@ -226,6 +227,12 @@ function ProfileSettingsForm({
           profileVisibility,
         },
       };
+
+      if (isStudentAccount) {
+        updates.university = university;
+        updates.degree = degree;
+        updates.yearOfStudy = yearOfStudy;
+      }
 
       // Buyer-only accounts do not have provider fields to update.
       if (showOffered) {
@@ -276,6 +283,60 @@ function ProfileSettingsForm({
     setErrorMessage("");
     setSelectedProfileImageFile(file);
     setProfileImageUrl(URL.createObjectURL(file));
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!canChangeEmail) return;
+
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      setEmailNotice("error");
+      setEmailNoticeMessage("Enter your new email address first.");
+      return;
+    }
+
+    if (!emailPassword) {
+      setEmailNotice("error");
+      setEmailNoticeMessage("Enter your current password to change the email.");
+      return;
+    }
+
+    setEmailBusy(true);
+    setEmailNotice("");
+    setEmailNoticeMessage("");
+
+    try {
+      await changeSignedInEmail(emailPassword, trimmedEmail);
+
+      const updates: Record<string, unknown> = {
+        email: trimmedEmail,
+        emailVerified: false,
+        updatedAt: serverTimestamp(),
+      };
+
+      if (isNonStudentBuyer) {
+        updates.accountStatus = "pending_email_verification";
+        updates.canBuyServices = false;
+      }
+
+      await updateDoc(doc(db, "users", userProfile.uid), updates);
+      await refreshProfile();
+      setEmail(trimmedEmail);
+      setEmailPassword("");
+      setEmailNotice("success");
+      setEmailNoticeMessage(
+        isNonStudentBuyer
+          ? "Email updated. Please verify the new address to continue using your buyer account."
+          : "Admin email updated. Please verify the new address from your inbox.",
+      );
+    } catch (err: unknown) {
+      setEmailNotice("error");
+      setEmailNoticeMessage(
+        err instanceof Error ? err.message : "Failed to update email.",
+      );
+    } finally {
+      setEmailBusy(false);
+    }
   };
 
   // Small helpers keep tag and availability updates out of the JSX.
@@ -411,7 +472,7 @@ function ProfileSettingsForm({
                 </label>
 
                 <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
-                  Current Email (Verified)
+                  Current Email
                   <input
                     type="email"
                     value={userProfile.email}
@@ -420,31 +481,39 @@ function ProfileSettingsForm({
                   />
                 </label>
 
-                <UniversityCombobox
-                  label="University"
-                  value={university}
-                  onSelect={setUniversity}
-                  placeholder="Type or select university..."
-                />
+                {isStudentAccount ? (
+                  <>
+                    <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+                      University
+                      <input
+                        type="text"
+                        value={university}
+                        disabled
+                        className="h-9 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-500 outline-none cursor-not-allowed"
+                      />
+                    </label>
 
-                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
-                  Degree Program
-                  <input
-                    type="text"
-                    value={degree}
-                    onChange={(e) => setDegree(e.target.value)}
-                    className="h-9 min-w-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
-                  />
-                </label>
+                    <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+                      Degree Program
+                      <input
+                        type="text"
+                        value={degree}
+                        disabled
+                        className="h-9 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-500 outline-none cursor-not-allowed"
+                      />
+                    </label>
 
-                <SelectField
-                  label="Year of Study"
-                  value={yearOfStudy}
-                  onChange={setYearOfStudy}
-                  options={yearOptions}
-                  labelClassName="text-xs font-semibold text-slate-600"
-                  className="h-9 px-3 text-xs font-medium text-slate-800"
-                />
+                    <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+                      Year of Study
+                      <input
+                        type="text"
+                        value={yearOfStudy}
+                        disabled
+                        className="h-9 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-500 outline-none cursor-not-allowed"
+                      />
+                    </label>
+                  </>
+                ) : null}
               </div>
 
               {showOffered && (
@@ -502,7 +571,17 @@ function ProfileSettingsForm({
             </section>
           )}
 
-          <LoginSecurity />
+          <LoginSecurity
+            canChangeEmail={canChangeEmail}
+            email={email}
+            emailPassword={emailPassword}
+            emailBusy={emailBusy}
+            emailNotice={emailNotice}
+            emailNoticeMessage={emailNoticeMessage}
+            onEmailChange={setEmail}
+            onEmailPasswordChange={setEmailPassword}
+            onUpdateEmail={handleUpdateEmail}
+          />
         </div>
 
         {/* Skills, notifications, privacy, and account removal */}
@@ -657,7 +736,27 @@ function ProfileSettingsForm({
   );
 }
 
-function LoginSecurity() {
+function LoginSecurity({
+  canChangeEmail,
+  email,
+  emailPassword,
+  emailBusy,
+  emailNotice,
+  emailNoticeMessage,
+  onEmailChange,
+  onEmailPasswordChange,
+  onUpdateEmail,
+}: {
+  canChangeEmail: boolean;
+  email: string;
+  emailPassword: string;
+  emailBusy: boolean;
+  emailNotice: "success" | "error" | "";
+  emailNoticeMessage: string;
+  onEmailChange: (value: string) => void;
+  onEmailPasswordChange: (value: string) => void;
+  onUpdateEmail: () => Promise<void>;
+}) {
   const { firebaseUser } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -742,89 +841,163 @@ function LoginSecurity() {
         title="Login & Security"
       />
 
-      <form className="mt-4 grid gap-4">
-        <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
-          Current Password
-          <div className="flex items-center justify-between rounded-md border border-slate-300 px-3 h-9 bg-white focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100 transition">
-            <input
-              type={showCurrent ? "text" : "password"}
-              value={currentPassword}
-              onChange={(event) => setCurrentPassword(event.target.value)}
-              autoComplete="current-password"
-              className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => setShowCurrent(!showCurrent)}
-              className="text-slate-400 hover:text-slate-600 focus:outline-none"
-            >
-              {showCurrent ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-            </button>
+      <div className="mt-4 grid gap-5">
+        {canChangeEmail ? (
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+            <div className="flex flex-col gap-1">
+              <h3 className="text-sm font-bold text-slate-800">Change Email</h3>
+              <p className="text-[11px] font-medium leading-relaxed text-slate-500">
+                Update your account email and verify the new address from your inbox.
+              </p>
+            </div>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+                New Email Address
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => onEmailChange(event.target.value)}
+                  className="h-9 min-w-0 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+                />
+              </label>
+
+              <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+                Current Password
+                <input
+                  type="password"
+                  value={emailPassword}
+                  onChange={(event) => onEmailPasswordChange(event.target.value)}
+                  className="h-9 min-w-0 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+                />
+              </label>
+            </div>
+
+            {emailNotice ? (
+              <p
+                className={`mt-4 rounded-md px-3 py-2 text-xs font-semibold ${
+                  emailNotice === "success"
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-red-50 text-red-700"
+                }`}
+              >
+                {emailNoticeMessage}
+              </p>
+            ) : null}
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => void onUpdateEmail()}
+                disabled={emailBusy}
+                className="inline-flex h-9 min-w-[148px] items-center justify-center rounded-md bg-[#0758d8] px-4 text-xs font-bold text-white transition hover:bg-[#0648b4] disabled:opacity-60"
+              >
+                {emailBusy ? "Updating Email..." : "Update Email"}
+              </button>
+            </div>
           </div>
-        </label>
-        <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-          <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
-            New Password
-            <div className="flex items-center justify-between rounded-md border border-slate-300 px-3 h-9 bg-white focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100 transition">
-              <input
-                type={showNew ? "text" : "password"}
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                autoComplete="new-password"
-                className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none"
-              />
+        ) : null}
+
+        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-sm font-bold text-slate-800">Change Password</h3>
+            <p className="text-[11px] font-medium leading-relaxed text-slate-500">
+              Keep your account secure with a strong new password.
+            </p>
+          </div>
+
+          <form className="mt-4 grid gap-4">
+            <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
+              Current Password
+              <div className="flex h-9 items-center justify-between rounded-md border border-slate-300 bg-white px-3 transition focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100">
+                <input
+                  type={showCurrent ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  autoComplete="current-password"
+                  className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrent(!showCurrent)}
+                  className="text-slate-400 hover:text-slate-600 focus:outline-none"
+                >
+                  {showCurrent ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                </button>
+              </div>
+            </label>
+
+            <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
+                New Password
+                <div className="flex h-9 items-center justify-between rounded-md border border-slate-300 bg-white px-3 transition focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100">
+                  <input
+                    type={showNew ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    autoComplete="new-password"
+                    className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNew(!showNew)}
+                    className="text-slate-400 hover:text-slate-600 focus:outline-none"
+                  >
+                    {showNew ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                  </button>
+                </div>
+              </label>
+
+              <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
+                Confirm New
+                <div className="flex h-9 items-center justify-between rounded-md border border-slate-300 bg-white px-3 transition focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100">
+                  <input
+                    type={showConfirm ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    autoComplete="new-password"
+                    className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="text-slate-400 hover:text-slate-600 focus:outline-none"
+                  >
+                    {showConfirm ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                  </button>
+                </div>
+              </label>
+            </div>
+
+            <p className="text-[11px] font-medium leading-[1.45] text-slate-500">
+              {strongPasswordMessage}
+            </p>
+
+            {passwordMessage && (
+              <p
+                className={`rounded-md px-3 py-2 text-xs font-semibold ${
+                  passwordStatus === "success"
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-red-50 text-red-700"
+                }`}
+              >
+                {passwordMessage}
+              </p>
+            )}
+
+            <div className="flex justify-end">
               <button
                 type="button"
-                onClick={() => setShowNew(!showNew)}
-                className="text-slate-400 hover:text-slate-600 focus:outline-none"
+                onClick={handleUpdatePassword}
+                disabled={isUpdatingPassword}
+                className="inline-flex h-9 min-w-[148px] items-center justify-center rounded-md bg-[#0758d8] px-4 text-xs font-bold text-white transition hover:bg-[#0648b4] disabled:opacity-60"
               >
-                {showNew ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                {isUpdatingPassword ? "Updating..." : "Update Password"}
               </button>
             </div>
-          </label>
-          <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
-            Confirm New
-            <div className="flex items-center justify-between rounded-md border border-slate-300 px-3 h-9 bg-white focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100 transition">
-              <input
-                type={showConfirm ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                autoComplete="new-password"
-                className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirm(!showConfirm)}
-                className="text-slate-400 hover:text-slate-600 focus:outline-none"
-              >
-                {showConfirm ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-              </button>
-            </div>
-          </label>
+          </form>
         </div>
-        <p className="text-[11px] font-medium leading-[1.45] text-slate-500">
-          {strongPasswordMessage}
-        </p>
-        {passwordMessage && (
-          <p
-            className={`rounded-md px-3 py-2 text-xs font-semibold ${
-              passwordStatus === "success"
-                ? "bg-emerald-50 text-emerald-700"
-                : "bg-red-50 text-red-700"
-            }`}
-          >
-            {passwordMessage}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={handleUpdatePassword}
-          disabled={isUpdatingPassword}
-          className="h-9 rounded-md bg-[#0758d8] px-4 text-xs font-bold text-white transition hover:bg-[#0648b4] disabled:opacity-60"
-        >
-          {isUpdatingPassword ? "Updating..." : "Update Password"}
-        </button>
-      </form>
+      </div>
     </section>
   );
 }

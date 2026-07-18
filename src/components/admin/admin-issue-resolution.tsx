@@ -439,16 +439,16 @@ function StatCard({
 }) {
   const accent =
     tone === "orange"
-      ? "border-orange-200 bg-orange-50 text-orange-700"
+      ? "border-orange-200 bg-orange-50 text-orange-700 hover:border-orange-300 hover:bg-orange-100/70"
       : tone === "blue"
-        ? "border-blue-200 bg-blue-50 text-blue-700"
-        : "border-teal-200 bg-teal-50 text-teal-700";
+        ? "border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-300 hover:bg-blue-100/70"
+        : "border-teal-200 bg-teal-50 text-teal-700 hover:border-teal-300 hover:bg-teal-100/70";
 
   return (
-    <article className={`rounded-2xl border p-5 shadow-sm ${accent}`}>
-      <div className="flex min-h-[118px] flex-col justify-between">
+    <article className={`rounded-2xl border p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01] hover:shadow-md ${accent}`}>
+      <div className="flex min-h-[78px] flex-col justify-between">
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
-        <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
+        <p className="mt-2 text-3xl font-semibold leading-none tracking-tight text-slate-900">{value}</p>
       </div>
     </article>
   );

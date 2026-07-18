@@ -4,6 +4,11 @@
   /* Shared light theme colours used by the whole application. */
   --background: #ffffff;
   --foreground: #171717;
+  --motion-fast: 160ms;
+  --motion-base: 260ms;
+  --motion-slow: 440ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @theme inline {
@@ -38,6 +43,241 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), sans-serif;
 } 
+
+.user-motion-scope {
+  font-size: 16px;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+}
+
+.user-motion-scope :where(button, input, select, textarea) {
+  font: inherit;
+}
+
+.user-motion-scope :where(button, [role="button"], a[class*="rounded-"]) {
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-base) var(--motion-ease),
+    border-color var(--motion-base) ease,
+    background-color var(--motion-base) ease,
+    color var(--motion-base) ease,
+    opacity var(--motion-base) ease;
+}
+
+.user-motion-scope :where(button, [role="button"], a) svg {
+  flex: none;
+  transition: transform var(--motion-base) var(--motion-ease);
+}
+
+.user-motion-scope :where(button, [role="button"], a, input, select, textarea):focus-visible {
+  outline: 3px solid rgb(47 102 231 / 28%);
+  outline-offset: 2px;
+}
+
+.user-motion-scope :where(input, select, textarea) {
+  transition:
+    border-color var(--motion-base) ease,
+    box-shadow var(--motion-base) ease,
+    background-color var(--motion-base) ease;
+}
+
+.user-motion-scope :where(h1, h2, h3) {
+  text-wrap: balance;
+}
+
+.user-motion-scope p {
+  text-wrap: pretty;
+}
+
+.user-motion-scope :where(img, svg) {
+  vertical-align: middle;
+}
+
+/* Page content enters gently without changing component structure or state. */
+.user-motion-scope > :where(div, main, section),
+.user-motion-scope .app-route-stage > * {
+  animation: app-content-enter var(--motion-slow) var(--motion-ease) both;
+}
+
+.user-motion-scope .app-route-stage > :nth-child(2) {
+  animation-delay: 45ms;
+}
+
+.user-motion-scope .app-route-stage > :nth-child(3) {
+  animation-delay: 85ms;
+}
+
+.user-motion-scope .app-route-stage > :nth-child(4) {
+  animation-delay: 120ms;
+}
+
+.user-motion-scope .app-route-stage > :nth-child(n + 5) {
+  animation-delay: 150ms;
+}
+
+.user-motion-scope .app-route-stage > :where(section, article, header) {
+  animation: app-section-enter 500ms var(--motion-ease) both;
+}
+
+.user-motion-scope .app-route-stage {
+  width: 100%;
+  gap: clamp(1.25rem, 2vw, 2rem);
+}
+
+/* User cards stay steady on hover, matching the original non-lifting layout. */
+.user-motion-scope .app-route-stage
+  :where(article, section)[class*="rounded-"][class*="shadow"]:not(:has(form, table, canvas, input, select, textarea)) {
+  transition:
+    box-shadow var(--motion-base) var(--motion-ease),
+    border-color var(--motion-base) ease,
+    background-color var(--motion-base) ease;
+}
+
+.user-motion-scope .dashboard-stat-card {
+  transition:
+    box-shadow var(--motion-base) var(--motion-ease),
+    border-color var(--motion-base) ease,
+    background-color var(--motion-base) ease;
+}
+
+/* Menus, dialogs, and notices appear from the point users expect. */
+.user-motion-scope [class*="fixed"][class*="inset-0"] {
+  animation: app-backdrop-enter 200ms ease-out both;
+}
+
+.user-motion-scope [class*="fixed"][class*="inset-0"] > [class*="rounded-"][class*="bg-white"] {
+  animation: app-dialog-enter 320ms var(--motion-ease) both;
+}
+
+.user-motion-scope [class*="absolute"][class*="shadow"] {
+  transform-origin: top right;
+  animation: app-menu-enter 220ms var(--motion-ease) both;
+}
+
+.user-motion-scope [class*="fixed"][class*="top-"][class*="shadow"]:not([class*="inset-0"]) {
+  animation: app-notice-enter 360ms var(--motion-ease) both;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .user-motion-scope button:not(:disabled):hover,
+  .user-motion-scope [role="button"]:not([aria-disabled="true"]):hover,
+  .user-motion-scope a[class*="rounded-"]:hover {
+    filter: saturate(1.04);
+  }
+
+  .user-motion-scope button:not(:disabled):hover svg,
+  .user-motion-scope [role="button"]:not([aria-disabled="true"]):hover svg,
+  .user-motion-scope a:hover svg {
+    transform: translateY(-1px) scale(1.04);
+  }
+
+  .user-motion-scope button:not(:disabled):active,
+  .user-motion-scope [role="button"]:not([aria-disabled="true"]):active,
+  .user-motion-scope a[class*="rounded-"]:active {
+    transform: scale(0.975);
+  }
+}
+
+.user-motion-scope :where(article, section, div)[class*="rounded-"][class*="shadow"],
+.user-motion-scope :where(article, section, div)[class*="rounded-"][class*="shadow"]:hover,
+.user-motion-scope :where(article, section, div)[class*="rounded-"][class*="shadow"]:focus-within {
+  transform: none !important;
+}
+
+.user-motion-scope :where(article, section, div)[class*="rounded-"][class*="shadow"] img,
+.user-motion-scope :where(article, section, div)[class*="rounded-"][class*="shadow"]:hover :where(img, svg, span, div) {
+  transform: none !important;
+}
+
+@keyframes app-content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes app-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes app-backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes app-dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes app-menu-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes app-notice-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(14px, -8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .user-motion-scope > :where(div, main, section),
+  .user-motion-scope .app-route-stage > *,
+  .user-motion-scope .app-route-stage > :where(section, article, header),
+  .user-motion-scope [class*="fixed"][class*="inset-0"],
+  .user-motion-scope [class*="fixed"][class*="inset-0"] > [class*="rounded-"][class*="bg-white"],
+  .user-motion-scope [class*="absolute"][class*="shadow"],
+  .user-motion-scope [class*="fixed"][class*="top-"][class*="shadow"]:not([class*="inset-0"]) {
+    animation: none;
+  }
+
+  .user-motion-scope button,
+  .user-motion-scope [role="button"],
+  .user-motion-scope a[class*="rounded-"],
+  .user-motion-scope :where(input, select, textarea),
+  .user-motion-scope .app-route-stage
+    :where(article, section)[class*="rounded-"][class*="shadow"] {
+    transition-duration: 0.01ms;
+  }
+
+  .user-motion-scope :where(button, [role="button"], a) svg {
+    transition-duration: 0.01ms;
+  }
+}
  
 /* Hide scrollbar on the mobile nav while keeping it scrollable */ 
 .scrollbar-none { 

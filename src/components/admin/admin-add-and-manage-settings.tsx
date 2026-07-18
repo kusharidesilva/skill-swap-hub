@@ -5,77 +5,69 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-type LookupGroupKey =
+type AddAndManageGroupKey =
   | "serviceCategories"
   | "universities"
   | "issueTypes"
-  | "yearOfStudyOptions"
   | "availabilityTimeSlots";
 
-type LookupItem = {
+type AddAndManageItem = {
   active?: boolean;
 };
 
-type LookupGroup = {
-  key: LookupGroupKey;
+type AddAndManageGroup = {
+  key: AddAndManageGroupKey;
   title: string;
   description: string;
   href: string;
 };
 
-const lookupGroups: LookupGroup[] = [
+const addAndManageGroups: AddAndManageGroup[] = [
   {
     key: "serviceCategories",
     title: "Service Categories",
     description: "Manage the services shown across gigs and requests.",
-    href: "/admin/lookup-settings/service-categories",
+    href: "/admin/add-and-manage/service-categories",
   },
   {
     key: "universities",
     title: "Universities",
     description: "Control the university list used during registration.",
-    href: "/admin/lookup-settings/universities",
+    href: "/admin/add-and-manage/universities",
   },
   {
     key: "issueTypes",
     title: "Issue Types",
     description: "Set the report categories available to users and admins.",
-    href: "/admin/lookup-settings/issue-types",
-  },
-  {
-    key: "yearOfStudyOptions",
-    title: "Year of Study Options",
-    description: "Choose the year values used in registration and profiles.",
-    href: "/admin/lookup-settings/year-of-study-options",
+    href: "/admin/add-and-manage/issue-types",
   },
   {
     key: "availabilityTimeSlots",
     title: "Availability Time Slots",
     description: "Keep provider availability slots consistent across the app.",
-    href: "/admin/lookup-settings/availability-time-slots",
+    href: "/admin/add-and-manage/availability-time-slots",
   },
 ];
 
-const emptyLookupState: Record<LookupGroupKey, LookupItem[]> = {
+const emptyAddAndManageState: Record<AddAndManageGroupKey, AddAndManageItem[]> = {
   serviceCategories: [],
   universities: [],
   issueTypes: [],
-  yearOfStudyOptions: [],
   availabilityTimeSlots: [],
 };
 
-export default function AdminLookupSettings() {
-  const [items, setItems] = useState(emptyLookupState);
+export default function AdminAddAndManageSettings() {
+  const [items, setItems] = useState(emptyAddAndManageState);
 
   useEffect(() => {
-    const unsubscribers = lookupGroups.map((group) =>
+    const unsubscribers = addAndManageGroups.map((group) =>
       onSnapshot(
         collection(db, group.key),
         (snapshot) => {
           setItems((current) => ({
             ...current,
             [group.key]: snapshot.docs.map(
-              (docSnap) => docSnap.data() as LookupItem,
+              (docSnap) => docSnap.data() as AddAndManageItem,
             ),
           }));
         },
@@ -93,7 +85,6 @@ export default function AdminLookupSettings() {
       serviceCategories: items.serviceCategories.filter((item) => item.active !== false).length,
       universities: items.universities.filter((item) => item.active !== false).length,
       issueTypes: items.issueTypes.filter((item) => item.active !== false).length,
-      yearOfStudyOptions: items.yearOfStudyOptions.filter((item) => item.active !== false).length,
       availabilityTimeSlots: items.availabilityTimeSlots.filter((item) => item.active !== false).length,
     }),
     [items],
@@ -103,14 +94,14 @@ export default function AdminLookupSettings() {
     <div className="px-6 py-10">
       <div className="mx-auto max-w-[1480px] space-y-6">
         <div>
-          <h1 className="text-[30px] font-semibold tracking-tight text-slate-900">Lookup Settings</h1>
+          <h1 className="text-[30px] font-semibold tracking-tight text-slate-900">Add &amp; Manage Options</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            Choose a lookup area to manage categories, universities, issue types, year options, and time slots.
+            Choose an option group to add new entries and manage categories, universities, issue types, and time slots.
           </p>
         </div>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          {lookupGroups.map((group) => (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {addAndManageGroups.map((group) => (
             <Link
               key={group.key}
               href={group.href}

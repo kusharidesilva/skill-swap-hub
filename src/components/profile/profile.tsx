@@ -21,30 +21,32 @@ export default function Profile({ role: propRole }: { role: Role }) {
   const { userProfile, loading } = useAuth();
   const [swapsCount, setSwapsCount] = useState(0);
   const [averageRating, setAverageRating] = useState<number | null>(null);
-  const [reviewsList, setReviewsList] = useState<{rating: number; comment: string; reviewer: string}[]>([]);
+  const [reviewsList, setReviewsList] = useState<
+    { rating: number; comment: string; reviewer: string }[]
+  >([]);
 
   useEffect(() => {
     if (!userProfile) return;
 
-    // Both request directions are needed to build one complete activity summary.
     const q1 = query(
       collection(db, "requests"),
       where("providerId", "==", userProfile.uid),
-      where("status", "==", "completed")
+      where("status", "==", "completed"),
     );
     const q2 = query(
       collection(db, "requests"),
       where("buyerId", "==", userProfile.uid),
-      where("status", "==", "completed")
+      where("status", "==", "completed"),
     );
 
     let active = true;
+
     async function loadReviews() {
       try {
         const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
         if (!active) return;
 
-        const list: {rating: number; comment: string; reviewer: string}[] = [];
+        const list: { rating: number; comment: string; reviewer: string }[] = [];
         let totalRating = 0;
         let count = 0;
 
@@ -57,7 +59,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
               reviewer: data.buyerName || "Buyer",
             });
             totalRating += data.review.rating;
-            count++;
+            count += 1;
           }
         });
 
@@ -70,12 +72,14 @@ export default function Profile({ role: propRole }: { role: Role }) {
               reviewer: data.providerName || "Provider",
             });
             totalRating += data.providerReview.rating;
-            count++;
+            count += 1;
           }
         });
 
         setSwapsCount(count);
-        setAverageRating(count > 0 ? Number((totalRating / count).toFixed(1)) : null);
+        setAverageRating(
+          count > 0 ? Number((totalRating / count).toFixed(1)) : null,
+        );
         setReviewsList(list);
       } catch (err) {
         console.error("Error loading profile reviews:", err);
@@ -83,7 +87,9 @@ export default function Profile({ role: propRole }: { role: Role }) {
     }
 
     loadReviews();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [userProfile]);
 
   if (loading) {
@@ -100,52 +106,57 @@ export default function Profile({ role: propRole }: { role: Role }) {
   if (!userProfile) {
     return (
       <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">No profile data found. Please sign in.</p>
+        <p className="text-sm text-slate-500">
+          No profile data found. Please sign in.
+        </p>
       </div>
     );
   }
 
-  // The route may request a view, but the saved profile is the source of truth.
   const displayRole = userProfile.role || propRole;
   const isNonStudentBuyer =
     displayRole === "buyer" && userProfile.accountType === "non-student";
 
-  // Normalize optional profile fields before passing them into the UI.
   const name = userProfile.name || "";
   const university = userProfile.university || "";
   const degree = userProfile.degree || "";
   const yearOfStudy = userProfile.yearOfStudy || "";
-  const bio = userProfile.providerProfile?.bio || (
-    isNonStudentBuyer
+  const bio =
+    userProfile.providerProfile?.bio ||
+    (isNonStudentBuyer
       ? "Hey there! I joined Skill Swap Hub as a buyer to discover useful services, connect with talented people, and get help when I need it."
       : displayRole === "buyer"
         ? `Hey there! I'm a student at ${university} studying ${degree}. I joined Skill Swap Hub to collaborate with other students, exchange knowledge, and learn new skills.`
-        : `Hey there! I'm a ${degree} student passionate about sharing knowledge. I believe the best way to learn is to teach someone else.`
-  );
+        : `Hey there! I'm a ${degree} student passionate about sharing knowledge. I believe the best way to learn is to teach someone else.`);
+
   const profileTag = userProfile.verifiedStudentProvider
     ? "Verified Student Provider"
     : isNonStudentBuyer
-      ? "Non-student Buyer"
+      ? "Verified Non-student Buyer"
       : "Buyer";
-  const identityTitle = isNonStudentBuyer ? "Email Verified Account" : "Identity Verified";
+
+  const identityTitle = isNonStudentBuyer
+    ? "Buyer Verification"
+    : "Identity Verified";
   const identityMessage = isNonStudentBuyer
-    ? "This buyer account uses normal Firebase email verification for access and service requests."
+    ? "Verified and ready for service requests."
     : "Student provider proof is reviewed by admin. Buyers use normal Firebase email verification.";
+
   const academicLine = isNonStudentBuyer
     ? userProfile.email || "Buyer account"
-    : [degree && yearOfStudy ? `${degree} (${yearOfStudy})` : degree || yearOfStudy, university]
+    : [
+        degree && yearOfStudy ? `${degree} (${yearOfStudy})` : degree || yearOfStudy,
+        university,
+      ]
         .filter(Boolean)
         .join(" - ");
 
-  // Provider skills come from the nested provider profile.
   const offeredSkills = userProfile.providerProfile?.skills || [];
   const neededSkills = userProfile.neededSkills || [];
-
-  // Each role sees only the profile sections that apply to their activity.
   const showOffered = displayRole === "provider" || displayRole === "both";
   const showNeeded = displayRole === "buyer" || displayRole === "both";
+  const showProfileSidebar = showOffered;
 
-  // Convert saved time values into the labels displayed on the profile.
   const availabilitySlots = userProfile.providerProfile?.availability || [];
   const activeDays = new Set<string>();
   availableDays.forEach((day) => {
@@ -156,11 +167,9 @@ export default function Profile({ role: propRole }: { role: Role }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Profile Header */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-5">
-            {/* Letter Avatar for Verified Student */}
+          <div className="flex items-start gap-5 sm:items-center">
             <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 shadow-inner">
               {userProfile.profileImageUrl ? (
                 <img
@@ -174,53 +183,64 @@ export default function Profile({ role: propRole }: { role: Role }) {
                 </span>
               )}
             </div>
-            <div>
+
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-xl font-semibold text-slate-900">{name}</h1>
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                   {profileTag}
                 </span>
               </div>
+
               <p className="mt-1 text-sm text-slate-500">
                 {academicLine || "Profile details not added yet"}
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-600">
+
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
                 <div className="flex items-center gap-2">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                    ★
+                    <StarIcon />
                   </span>
                   <span className="font-semibold text-emerald-700">
-                    {averageRating !== null ? averageRating.toFixed(1) : "—"}
+                    {averageRating !== null ? averageRating.toFixed(1) : "--"}
                   </span>
                   <span className="text-slate-500">
-                    {averageRating !== null ? `(${swapsCount} review${swapsCount !== 1 ? "s" : ""})` : "(No reviews yet)"}
+                    {averageRating !== null
+                      ? `(${swapsCount} review${swapsCount !== 1 ? "s" : ""})`
+                      : "(No reviews yet)"}
                   </span>
                 </div>
                 <span className="text-slate-400">|</span>
-                <span className="font-semibold text-slate-700">{swapsCount} swaps</span>
+                <span className="font-semibold text-slate-700">
+                  {swapsCount} swaps
+                </span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Identity Verified Banner */}
       <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-        <div className="flex items-start gap-3">
-          <span className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-            ✓
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <VerifiedShieldIcon />
           </span>
-          <div>
-            <h2 className="text-sm font-semibold text-emerald-800">{identityTitle}</h2>
-            <p className="text-xs text-emerald-700">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-emerald-800">
+              {identityTitle}
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-emerald-700">
               {identityMessage}
             </p>
           </div>
         </div>
       </section>
 
-      {/* About + Skills */}
-      <section className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+      <section
+        className={`grid gap-6 ${
+          showProfileSidebar ? "xl:grid-cols-[2fr_1fr]" : "xl:grid-cols-1"
+        }`}
+      >
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-600">
@@ -228,17 +248,17 @@ export default function Profile({ role: propRole }: { role: Role }) {
             </span>
             About {name.split(" ")[0]}
           </div>
-          <p className="mt-3 text-sm leading-6 text-slate-600 whitespace-pre-line">
+          <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">
             {bio}
           </p>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className={`flex flex-col gap-4 ${showProfileSidebar ? "" : "hidden"}`}>
           {showOffered && (
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                  ✓
+                  <CheckIcon />
                 </span>
                 Skills I Can Offer
               </div>
@@ -253,7 +273,9 @@ export default function Profile({ role: propRole }: { role: Role }) {
                     </span>
                   ))
                 ) : (
-                  <p className="text-xs text-slate-400">No offered skills listed yet.</p>
+                  <p className="text-xs text-slate-400">
+                    No offered skills listed yet.
+                  </p>
                 )}
               </div>
             </div>
@@ -264,7 +286,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                  ✓
+                  <CheckIcon />
                 </span>
                 Skills I Need
               </div>
@@ -288,12 +310,11 @@ export default function Profile({ role: propRole }: { role: Role }) {
         </div>
       </section>
 
-      {/* Recent Reviews */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-              ✦
+              <SparkIcon />
             </span>
             Recent Reviews
           </div>
@@ -302,36 +323,47 @@ export default function Profile({ role: propRole }: { role: Role }) {
         <div className="mt-4 grid gap-4">
           {reviewsList.length > 0 ? (
             reviewsList.map((rev, index) => (
-              <div key={index} className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1">
+              <div
+                key={index}
+                className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-4"
+              >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-slate-700">{rev.reviewer}</span>
-                  <span className="text-amber-500 text-xs font-bold">
+                  <span className="text-xs font-bold text-slate-700">
+                    {rev.reviewer}
+                  </span>
+                  <span className="text-xs font-bold text-amber-500">
                     {"★".repeat(rev.rating)}
                     {"☆".repeat(5 - rev.rating)}
                   </span>
                 </div>
-                <p className="text-xs italic text-slate-600">&ldquo;{rev.comment}&rdquo;</p>
+                <p className="text-xs italic text-slate-600">
+                  &ldquo;{rev.comment}&rdquo;
+                </p>
               </div>
             ))
           ) : (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center py-8">
-              <p className="text-sm text-slate-500">No reviews yet. Complete your first swap to receive reviews!</p>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-8 text-center">
+              <p className="text-sm text-slate-500">
+                No reviews yet. Complete your first swap to receive reviews!
+              </p>
             </div>
           )}
         </div>
       </section>
 
-      {/* Availability */}
       {showOffered && (
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-              ●
+              <DotIcon />
             </span>
             Available for Swaps
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            Preferred slots: {availabilitySlots.length ? availabilitySlots.join(", ") : "Not added yet"}
+            Preferred slots:{" "}
+            {availabilitySlots.length
+              ? availabilitySlots.join(", ")
+              : "Not added yet"}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {availableDays.map((day) => (
@@ -351,4 +383,69 @@ export default function Profile({ role: propRole }: { role: Role }) {
       )}
     </div>
   );
+}
+
+function StarIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="m12 3.8 2.5 5.08 5.6.82-4.05 3.95.96 5.58L12 16.6l-5.01 2.63.96-5.58L3.9 9.7l5.6-.82L12 3.8Z" />
+    </svg>
+  );
+}
+
+function VerifiedShieldIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4.5 w-4.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m9 12 2 2 4-4" />
+      <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4Z" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m5 12 4 4L19 6" />
+    </svg>
+  );
+}
+
+function SparkIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="m12 2 1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9L12 2Z" />
+    </svg>
+  );
+}
+
+function DotIcon() {
+  return <span className="block h-2.5 w-2.5 rounded-full bg-current" aria-hidden="true" />;
 }

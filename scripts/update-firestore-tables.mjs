@@ -486,7 +486,6 @@ async function verifyLookupCounts(accessToken) {
     "serviceCategories",
     "universities",
     "issueTypes",
-    "yearOfStudyOptions",
     "availabilityTimeSlots",
   ];
 
@@ -501,7 +500,6 @@ async function main() {
   const accessToken = await getFirestoreAccessToken();
   const serviceCategories = extractConstArray("src/lib/platform.ts", "SERVICE_CATEGORIES");
   const issueTypes = extractConstArray("src/lib/platform.ts", "ISSUE_TYPES");
-  const yearOptions = extractConstArray("src/lib/platform.ts", "YEAR_OF_STUDY_OPTIONS");
   const timeSlots = extractConstArray("src/lib/platform.ts", "AVAILABILITY_TIME_SLOTS");
   const universities = extractUniversities("src/lib/universities.ts");
 
@@ -517,7 +515,6 @@ async function main() {
         (item) => ({ domains: item.domains }),
       ),
       issueTypes: await seedLookup(accessToken, "issueTypes", issueTypes),
-      yearOfStudyOptions: await seedLookup(accessToken, "yearOfStudyOptions", yearOptions),
       availabilityTimeSlots: await seedLookup(
         accessToken,
         "availabilityTimeSlots",

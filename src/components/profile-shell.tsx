@@ -29,7 +29,7 @@ export default function ProfileShell({ role, children }: ProfileShellProps) {
             <SideNav role={role} />
           </div>
           <main className="min-w-0 px-5 py-6 sm:px-6 lg:px-8 xl:px-10">
-            <div className="mx-auto flex w-full max-w-[1220px] flex-col gap-8">
+            <div className="app-route-stage mx-auto flex w-full max-w-[1220px] flex-col gap-8">
               {children}
             </div>
           </main>

@@ -15,32 +15,30 @@ import {
   AVAILABILITY_TIME_SLOTS,
   ISSUE_TYPES,
   SERVICE_CATEGORIES,
-  YEAR_OF_STUDY_OPTIONS,
 } from "@/lib/platform";
 import { UNIVERSITIES } from "@/lib/universities";
 
-export type LookupGroupKey =
+export type AddAndManageGroupKey =
   | "serviceCategories"
   | "universities"
   | "issueTypes"
-  | "yearOfStudyOptions"
   | "availabilityTimeSlots";
 
-type LookupItem = {
+type AddAndManageItem = {
   id: string;
   name?: string;
   active?: boolean;
   createdAt?: unknown;
 };
 
-type LookupGroup = {
-  key: LookupGroupKey;
+type AddAndManageGroup = {
+  key: AddAndManageGroupKey;
   title: string;
   singular: string;
   defaults: readonly string[];
 };
 
-const lookupGroups: Record<LookupGroupKey, LookupGroup> = {
+const addAndManageGroups: Record<AddAndManageGroupKey, AddAndManageGroup> = {
   serviceCategories: {
     key: "serviceCategories",
     title: "Service Categories",
@@ -59,12 +57,6 @@ const lookupGroups: Record<LookupGroupKey, LookupGroup> = {
     singular: "issue type",
     defaults: ISSUE_TYPES,
   },
-  yearOfStudyOptions: {
-    key: "yearOfStudyOptions",
-    title: "Year of Study Options",
-    singular: "year option",
-    defaults: YEAR_OF_STUDY_OPTIONS,
-  },
   availabilityTimeSlots: {
     key: "availabilityTimeSlots",
     title: "Availability Time Slots",
@@ -73,13 +65,13 @@ const lookupGroups: Record<LookupGroupKey, LookupGroup> = {
   },
 };
 
-export default function AdminLookupGroupPage({
+export default function AdminAddAndManageGroupPage({
   groupKey,
 }: {
-  groupKey: LookupGroupKey;
+  groupKey: AddAndManageGroupKey;
 }) {
-  const group = lookupGroups[groupKey];
-  const [items, setItems] = useState<LookupItem[]>([]);
+  const group = addAndManageGroups[groupKey];
+  const [items, setItems] = useState<AddAndManageItem[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState("");
@@ -92,7 +84,7 @@ export default function AdminLookupGroupPage({
         const nextItems = snapshot.docs
           .map((docSnap) => ({
             id: docSnap.id,
-            ...(docSnap.data() as Omit<LookupItem, "id">),
+            ...(docSnap.data() as Omit<AddAndManageItem, "id">),
           }))
           .sort((left, right) => itemName(left).localeCompare(itemName(right)));
 
@@ -109,7 +101,7 @@ export default function AdminLookupGroupPage({
     return () => unsubscribe();
   }, [group.key, group.title]);
 
-  const addLookupItem = async () => {
+  const addAddAndManageItem = async () => {
     const name = inputValue.trim();
     if (!name) {
       setNotice({ type: "error", text: `Enter a ${group.singular} name first.` });
@@ -170,7 +162,7 @@ export default function AdminLookupGroupPage({
     }
   };
 
-  const toggleLookupItem = async (item: LookupItem) => {
+  const toggleAddAndManageItem = async (item: AddAndManageItem) => {
     const nextActive = item.active === false;
     setBusyKey(`${group.key}-${item.id}`);
     setNotice(null);
@@ -203,11 +195,11 @@ export default function AdminLookupGroupPage({
           <div>
             <h1 className="text-[30px] font-semibold tracking-tight text-slate-900">{group.title}</h1>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Manage and review the lookup values used across the admin and user flows.
+              Add new entries and manage the shared values used across the admin and user flows.
             </p>
           </div>
           <Link
-            href="/admin/lookup-settings"
+            href="/admin/add-and-manage"
             className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             Back
@@ -240,7 +232,7 @@ export default function AdminLookupGroupPage({
             </label>
             <button
               type="button"
-              onClick={addLookupItem}
+              onClick={addAddAndManageItem}
               disabled={busyKey !== ""}
               className="inline-flex h-11 items-center justify-center rounded-lg bg-[#2f66e7] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2356cb] disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -279,7 +271,7 @@ export default function AdminLookupGroupPage({
                       </div>
                       <button
                         type="button"
-                        onClick={() => toggleLookupItem(item)}
+                        onClick={() => toggleAddAndManageItem(item)}
                         disabled={busyKey !== ""}
                         className={`inline-flex h-9 shrink-0 items-center rounded-lg px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                           active
@@ -318,7 +310,7 @@ function EmptyState({ children }: { children: ReactNode }) {
   return <p className="px-4 py-8 text-center text-sm font-medium text-slate-400">{children}</p>;
 }
 
-function itemName(item: LookupItem) {
+function itemName(item: AddAndManageItem) {
   return item.name?.trim() || item.id;
 }
 

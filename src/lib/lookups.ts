@@ -38,6 +38,10 @@ const lookupDefaults: Record<LookupCollection, readonly string[]> = {
   availabilityTimeSlots: AVAILABILITY_TIME_SLOTS,
 };
 
+const STATIC_LOOKUP_COLLECTIONS: ReadonlySet<LookupCollection> = new Set([
+  "yearOfStudyOptions",
+]);
+
 function readLookupName(data: LookupRecord, fallbackId: string) {
   return (
     data.name ||
@@ -71,9 +75,17 @@ function uniqueOptions(values: readonly string[]) {
 
 export function useLookupOptions(collectionName: LookupCollection) {
   const defaults = lookupDefaults[collectionName];
-  const [remoteOptions, setRemoteOptions] = useState<string[]>([]);
+  const isStaticCollection = STATIC_LOOKUP_COLLECTIONS.has(collectionName);
+  const [remoteState, setRemoteState] = useState<{
+    collectionName: LookupCollection;
+    options: string[];
+  } | null>(null);
 
   useEffect(() => {
+    if (isStaticCollection) {
+      return;
+    }
+
     const unsubscribe = onSnapshot(
       collection(db, collectionName),
       (snapshot) => {
@@ -85,20 +97,26 @@ export function useLookupOptions(collectionName: LookupCollection) {
           .filter(Boolean)
           .sort((left, right) => left.localeCompare(right));
 
-        setRemoteOptions(uniqueOptions(nextOptions));
+        setRemoteState({
+          collectionName,
+          options: uniqueOptions(nextOptions),
+        });
       },
       (error) => {
         console.error(`Error loading ${collectionName} lookup values:`, error);
-        setRemoteOptions([]);
+        setRemoteState({ collectionName, options: [] });
       },
     );
 
     return () => unsubscribe();
-  }, [collectionName]);
+  }, [collectionName, isStaticCollection]);
 
-  return useMemo(
-    () => uniqueOptions(remoteOptions.length ? remoteOptions : defaults),
-    [defaults, remoteOptions],
-  );
+  return useMemo(() => {
+    const remoteOptions =
+      remoteState?.collectionName === collectionName ? remoteState.options : [];
+
+    return uniqueOptions(
+      isStaticCollection ? defaults : remoteOptions.length ? remoteOptions : defaults,
+    );
+  }, [collectionName, defaults, isStaticCollection, remoteState]);
 }
-

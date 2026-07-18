@@ -60,6 +60,7 @@ type StatCard = {
   accent: string;
   icon: ReactNode;
   muted?: boolean;
+  hoverClassName: string;
 };
 
 type CategoryRow = {
@@ -209,17 +210,17 @@ export default function AdminDashboard() {
   );
 
   const topStats: StatCard[] = [
-    { label: "Total Users", value: String(users.length), accent: "#1d4ed8", icon: <UsersIcon /> },
-    { label: "Pending Student Verifications", value: String(pendingVerifications.length), accent: "#b45309", icon: <ClipboardIcon /> },
-    { label: "Approved Providers", value: String(approvedProviders.length), accent: "#0f766e", icon: <BadgeCheckIcon /> },
-    { label: "Pending Reports", value: String(pendingReports.length), accent: "#b91c1c", icon: <FlagIcon />, muted: pendingReports.length > 0 },
+    { label: "Total Users", value: String(users.length), accent: "#1d4ed8", icon: <UsersIcon />, hoverClassName: "hover:border-blue-300 hover:bg-blue-50/40" },
+    { label: "Pending Student Verifications", value: String(pendingVerifications.length), accent: "#b45309", icon: <ClipboardIcon />, hoverClassName: "hover:border-amber-300 hover:bg-amber-50/50" },
+    { label: "Approved Providers", value: String(approvedProviders.length), accent: "#0f766e", icon: <BadgeCheckIcon />, hoverClassName: "hover:border-teal-300 hover:bg-teal-50/40" },
+    { label: "Pending Reports", value: String(pendingReports.length), accent: "#b91c1c", icon: <FlagIcon />, muted: pendingReports.length > 0, hoverClassName: "hover:border-rose-300 hover:bg-rose-50/50" },
   ];
 
   const secondaryStats: StatCard[] = [
-    { label: "Active Buyers", value: String(activeBuyers.length), accent: "#2563eb", icon: <BuyerGroupIcon /> },
-    { label: "Active Providers", value: String(activeProviders.length), accent: "#0f766e", icon: <ShieldIcon /> },
-    { label: "Completed Orders", value: String(completedOrders.length), accent: "#7c3aed", icon: <CompletedOrdersIcon /> },
-    { label: "Active Gigs", value: String(activeGigs.length), accent: "#2563eb", icon: <ActiveGigsIcon /> },
+    { label: "Active Buyers", value: String(activeBuyers.length), accent: "#2563eb", icon: <BuyerGroupIcon />, hoverClassName: "hover:border-blue-300 hover:bg-blue-50/40" },
+    { label: "Active Providers", value: String(activeProviders.length), accent: "#0f766e", icon: <ShieldIcon />, hoverClassName: "hover:border-teal-300 hover:bg-teal-50/40" },
+    { label: "Completed Orders", value: String(completedOrders.length), accent: "#7c3aed", icon: <CompletedOrdersIcon />, hoverClassName: "hover:border-violet-300 hover:bg-violet-50/40" },
+    { label: "Active Gigs", value: String(activeGigs.length), accent: "#2563eb", icon: <ActiveGigsIcon />, hoverClassName: "hover:border-blue-300 hover:bg-blue-50/40" },
   ];
   const allStats = [...topStats, ...secondaryStats];
   const activityBuckets = useMemo(
@@ -433,7 +434,9 @@ function normalizeStatus(value: string) {
 function StatCardBlock({ stat, loading }: { stat: StatCard; loading: boolean }) {
   return (
     <article
-      className={`rounded-2xl border bg-white p-5 shadow-sm ${
+      className={`rounded-2xl border bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01] hover:shadow-md ${
+        stat.hoverClassName
+      } ${
         stat.muted ? "border-red-200 bg-[#ffe3df]" : "border-slate-200"
       }`}
     >

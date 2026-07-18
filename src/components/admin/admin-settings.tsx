@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword,
 } from "firebase/auth";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
+import { changeSignedInEmail } from "@/lib/auth";
 import { db } from "@/lib/firebase";
 
 const strongPasswordMessage =
@@ -72,10 +73,16 @@ function compressImageToBase64(
 
 export default function AdminSettings() {
   const { firebaseUser, userProfile, refreshProfile } = useAuth();
-  const [displayName, setDisplayName] = useState("");
-  const [profileImageUrl, setProfileImageUrl] = useState("");
+  const [displayName, setDisplayName] = useState(userProfile?.name || "");
+  const [profileImageUrl, setProfileImageUrl] = useState(
+    userProfile?.profileImageUrl || "",
+  );
+  const [adminEmail, setAdminEmail] = useState(userProfile?.email || "");
+  const [emailPassword, setEmailPassword] = useState("");
   const [nameBusy, setNameBusy] = useState(false);
   const [nameNotice, setNameNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailNotice, setEmailNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileNotice, setProfileNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -87,11 +94,6 @@ export default function AdminSettings() {
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [passwordNotice, setPasswordNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    setDisplayName(userProfile?.name || "");
-    setProfileImageUrl(userProfile?.profileImageUrl || "");
-  }, [userProfile?.name, userProfile?.profileImageUrl]);
 
   const saveDisplayName = async () => {
     if (!userProfile) return;
@@ -109,6 +111,7 @@ export default function AdminSettings() {
       await updateDoc(doc(db, "users", userProfile.uid), {
         name: trimmedName,
       });
+      setDisplayName(trimmedName);
       await refreshProfile();
       setNameNotice({ type: "success", text: "Admin name updated." });
     } catch (error) {
@@ -116,6 +119,43 @@ export default function AdminSettings() {
       setNameNotice({ type: "error", text: "Could not update the admin name." });
     } finally {
       setNameBusy(false);
+    }
+  };
+
+  const saveAdminEmail = async () => {
+    if (!userProfile) return;
+
+    const trimmedEmail = adminEmail.trim().toLowerCase();
+    if (!trimmedEmail) {
+      setEmailNotice({ type: "error", text: "Enter the admin email first." });
+      return;
+    }
+
+    if (!emailPassword) {
+      setEmailNotice({ type: "error", text: "Enter the current password to change the admin email." });
+      return;
+    }
+
+    setEmailBusy(true);
+    setEmailNotice(null);
+
+    try {
+      await changeSignedInEmail(emailPassword, trimmedEmail);
+      await updateDoc(doc(db, "users", userProfile.uid), {
+        email: trimmedEmail,
+        emailVerified: false,
+        updatedAt: serverTimestamp(),
+      });
+      setAdminEmail(trimmedEmail);
+      await refreshProfile();
+      setEmailPassword("");
+      setEmailNotice({ type: "success", text: "Admin email updated. Please verify the new email from your inbox." });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Could not update the admin email.";
+      setEmailNotice({ type: "error", text: message });
+    } finally {
+      setEmailBusy(false);
     }
   };
 
@@ -218,6 +258,9 @@ export default function AdminSettings() {
               {nameNotice ? (
                 <Notice tone={nameNotice.type}>{nameNotice.text}</Notice>
               ) : null}
+              {emailNotice ? (
+                <Notice tone={emailNotice.type}>{emailNotice.text}</Notice>
+              ) : null}
 
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Admin Name">
@@ -230,10 +273,18 @@ export default function AdminSettings() {
                 </Field>
                 <Field label="Admin Email">
                   <input
-                    type="text"
-                    value={userProfile?.email || ""}
-                    readOnly
-                    className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 outline-none"
+                    type="email"
+                    value={adminEmail}
+                    onChange={(event) => setAdminEmail(event.target.value)}
+                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+                  />
+                </Field>
+                <Field label="Current Password">
+                  <input
+                    type="password"
+                    value={emailPassword}
+                    onChange={(event) => setEmailPassword(event.target.value)}
+                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
                   />
                 </Field>
                 <Field label="Role">
@@ -254,7 +305,15 @@ export default function AdminSettings() {
                 </Field>
               </div>
 
-              <div className="mt-5 flex justify-end">
+              <div className="mt-5 flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={saveAdminEmail}
+                  disabled={emailBusy}
+                  className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {emailBusy ? "Updating Email..." : "Update Email"}
+                </button>
                 <button
                   type="button"
                   onClick={saveDisplayName}

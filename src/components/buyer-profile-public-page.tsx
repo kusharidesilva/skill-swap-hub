@@ -29,6 +29,8 @@ type BuyerProfileData = {
   degree: string;
   university: string;
   yearOfStudy: string;
+  accountType: string;
+  metaLine: string;
   image: string;
   verified: boolean;
   bio: string;
@@ -57,6 +59,8 @@ type FirebaseRequestDoc = {
 type FirestoreUserProfile = {
   uid?: string;
   name?: string;
+  email?: string;
+  accountType?: string;
   degree?: string;
   university?: string;
   yearOfStudy?: string;
@@ -226,7 +230,13 @@ export default function BuyerProfilePublicPage({
                 {profile.name}
               </h1>
               <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-[#1453c4]">
-                {profile.verified ? "Verified Student" : "Student Member"}
+                {profile.accountType === "student"
+                  ? profile.verified
+                    ? "Verified Student"
+                    : "Student Member"
+                  : profile.verified
+                    ? "Verified Buyer"
+                    : "Buyer Member"}
               </span>
               <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
                 Buyer Profile
@@ -234,12 +244,14 @@ export default function BuyerProfilePublicPage({
             </div>
 
             <p className="mt-1 break-words text-sm font-semibold text-slate-700 sm:text-base">
-              {profile.university}
+              {profile.metaLine}
             </p>
-            <p className="mt-0.5 break-words text-xs font-semibold text-slate-500">
-              {profile.degree}
-              {profile.yearOfStudy ? ` | ${profile.yearOfStudy}` : ""}
-            </p>
+            {profile.accountType === "student" ? (
+              <p className="mt-0.5 break-words text-xs font-semibold text-slate-500">
+                {profile.degree}
+                {profile.yearOfStudy ? ` | ${profile.yearOfStudy}` : ""}
+              </p>
+            ) : null}
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Link
@@ -447,6 +459,7 @@ function buildBuyerProfile(
   member: FirestoreUserProfile,
   completedRequests: FirebaseRequestDoc[]
 ): BuyerProfileData {
+  const isNonStudentBuyer = member.accountType === "non-student";
   const reviewsReceived: BuyerActivityReview[] = [];
   const reviewsGiven: BuyerActivityReview[] = [];
 
@@ -493,14 +506,20 @@ function buildBuyerProfile(
 
   return {
     name: member.name || "Anonymous Member",
-    degree: member.degree || "Undergraduate",
-    university: member.university || "Sri Lankan University",
-    yearOfStudy: member.yearOfStudy || "",
+    degree: isNonStudentBuyer ? "" : member.degree || "Undergraduate",
+    university: isNonStudentBuyer ? "" : member.university || "Sri Lankan University",
+    yearOfStudy: isNonStudentBuyer ? "" : member.yearOfStudy || "",
+    accountType: member.accountType || "student",
+    metaLine: isNonStudentBuyer
+      ? "Non-student Buyer"
+      : member.university || "Sri Lankan University",
     image: member.profileImageUrl || "",
     verified: member.emailVerified !== false,
     bio:
       member.providerProfile?.bio ||
-      `Student at ${member.university || "a Sri Lankan university"} using Skill Swap Hub to connect with helpful peers and complete meaningful collaborations.`,
+      (isNonStudentBuyer
+        ? "Non-student buyer using Skill Swap Hub to find useful services and connect with trusted members."
+        : `Student at ${member.university || "a Sri Lankan university"} using Skill Swap Hub to connect with helpful peers and complete meaningful collaborations.`),
     neededSkills: member.neededSkills || [],
     completedSwaps: completedRequests.length,
     avgRatingReceived,

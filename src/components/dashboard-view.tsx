@@ -151,7 +151,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
             {userRole === "buyer" && (
               <>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                <div className="dashboard-stat-card rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
                     Active Requests
                   </p>
@@ -159,7 +159,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                     {buyerActiveRequests}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                <div className="dashboard-stat-card rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
                     Swaps Completed
                   </p>
@@ -167,7 +167,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                     {buyerCompletedRequests}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                <div className="dashboard-stat-card rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
                     {isNonStudentBuyer ? "Account Type" : "University Name"}
                   </p>
@@ -182,7 +182,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
 
             {userRole === "provider" && (
               <>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                <div className="dashboard-stat-card rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
                     Incoming Requests
                   </p>
@@ -190,7 +190,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                     {providerIncomingRequests}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                <div className="dashboard-stat-card rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
                     Active Swaps
                   </p>
@@ -198,7 +198,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                     {providerActiveJobs}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                <div className="dashboard-stat-card rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
                     Average Rating
                   </p>
@@ -216,7 +216,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
 
             {userRole === "both" && (
               <>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                <div className="dashboard-stat-card rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
                     Service Requests
                   </p>
@@ -224,7 +224,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                     {buyerActiveRequests}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                <div className="dashboard-stat-card rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
                     Provided Swaps
                   </p>
@@ -232,7 +232,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                     {providerIncomingRequests + providerActiveJobs}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                <div className="dashboard-stat-card rounded-xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold text-slate-600">
                     Rating & Reviews
                   </p>

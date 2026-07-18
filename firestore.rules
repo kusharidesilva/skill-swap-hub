@@ -24,8 +24,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return hasProfile() &&
-        signedInProfile().data.role == 'admin' &&
-        signedInProfile().data.email == authorizedAdminEmail();
+        signedInProfile().data.role == 'admin';
     }
 
     function hasActiveAccount() {
@@ -156,11 +155,6 @@ service cloud.firestore {
 
     match /issueTypes/{issueTypeId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /yearOfStudyOptions/{yearOptionId} {
-      allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
