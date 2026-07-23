@@ -15,8 +15,8 @@ type Highlight = {
 };
 
 const highlights: Highlight[] = [
-  { label: "VERIFIED STUDENTS", Icon: VerifiedIcon },
-  { label: "PEER MATCHING", Icon: MatchIcon },
+  { label: "VERIFIED PROVIDERS", Icon: VerifiedIcon },
+  { label: "TRUSTED MATCHING", Icon: MatchIcon },
 ];
 
 type HeroSectionProps = {
@@ -78,8 +78,8 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
             <span className="block">Grow Faster</span>
           </h1>
           <p className="mt-6 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base"> 
-            A trusted student-only platform for Sri Lankan university students to offer skills, 
-            request services, and connect with verified peers. 
+            A trusted platform where verified university students offer skills
+            and both students and buyers can request services with confidence.
           </p>
           <div className="mt-8 flex flex-wrap gap-4"> 
             <Link 
@@ -107,7 +107,7 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
                 onChange={(event) => setSearchQuery(event.target.value)}
                 className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
                 type="text"
-                placeholder="Search for skills"
+                placeholder="Search for skills or services"
               />
             </div>
             {role === "guest" ? (

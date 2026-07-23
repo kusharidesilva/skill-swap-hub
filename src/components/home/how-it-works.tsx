@@ -1,18 +1,18 @@
 const steps = [
   {
-    title: "Verify Email",
+    title: "Create Your Account",
     description:
-      "Sign up with your .edu email address to join the verified student network.",
+      "Join as a student or buyer and complete the account setup needed for your role.",
   },
   {
-    title: "Post Skills",
+    title: "Complete Verification",
     description:
-      "List what you can teach and what you want to learn to build your profile.",
+      "Student providers verify their campus details before publishing skills and services.",
   },
   {
-    title: "Match and Swap",
+    title: "Request or Offer Services",
     description:
-      "Connect with peers, arrange a session, and start mastering new skills together.",
+      "Post what you offer or need, connect through chat, and complete the exchange with ratings and reviews.",
   },
 ];
 
@@ -26,7 +26,7 @@ export default function HowItWorksSection() {
             How It Works
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-base sm:text-lg text-slate-700">
-            Simple steps to start learning and teaching.
+            Simple steps to start offering or requesting trusted skill-based support.
           </p>
         </div>
         <div className="mt-14 grid gap-8 md:grid-cols-3">

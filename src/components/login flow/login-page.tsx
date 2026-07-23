@@ -86,12 +86,12 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="relative min-h-screen bg-white">
-      <div className="fixed inset-0 bg-black/20" aria-hidden="true" />
+    <main className="relative min-h-screen bg-[linear-gradient(140deg,#f0fdfa_0%,#e0f2fe_44%,#f8fbff_100%)]">
+      <div className="fixed inset-0 bg-[linear-gradient(120deg,rgba(15,118,110,0.16),rgba(37,99,235,0.12),rgba(255,255,255,0.22))]" aria-hidden="true" />
       <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
         <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
           {/* Brand message and platform benefits */}
-          <section className="relative flex flex-col justify-between bg-linear-to-br from-[#2b62e6] via-[#1f5ad7] to-[#0e3a9e] px-10 py-12 text-white">
+          <section className="relative flex flex-col justify-between bg-linear-to-br from-[#0f9f93] via-[#1d7fe7] to-[#173b8f] px-10 py-12 text-white">
             <div className="absolute inset-0 opacity-10">
               <div className="h-full w-full bg-[linear-gradient(120deg,rgba(255,255,255,0.15)_0%,rgba(255,255,255,0.02)_50%,transparent_100%)]" />
             </div>
@@ -213,7 +213,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="text-slate-400 hover:text-slate-600 focus:outline-none"
+                      className="cursor-pointer text-slate-400 hover:text-slate-600 focus:outline-none"
                     >
                       {showPassword ? (
                         <EyeOffIcon className="h-5 w-5" />
@@ -245,7 +245,7 @@ export default function LoginPage() {
                   id="login-submit"
                   type="submit"
                   disabled={loading}
-                  className="w-full rounded-lg bg-[#2b62e6] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc] disabled:opacity-60"
+                  className="w-full cursor-pointer rounded-lg bg-[#168bd8] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0f75bd] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? "Logging in…" : "Login"}
                 </button>

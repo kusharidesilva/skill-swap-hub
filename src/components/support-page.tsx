@@ -4,7 +4,7 @@ const categories = [
   {
     title: "Account & Profile",
     description:
-      "Guidance on creating an account, verifying normal email, uploading student proof, updating profile details, adding services, and managing account settings.",
+      "Guidance on creating an account, verifying email, uploading student proof, updating profile details, adding services, and managing account settings.",
     tone: "bg-[#e7edff] text-[#2452da]",
     cardTone: "bg-white",
     icon: "user",
@@ -12,7 +12,7 @@ const categories = [
   {
     title: "Safety & Security",
     description:
-      "Learn how student proof review, private chat, ratings, reviews, and report options help maintain a trusted service environment.",
+      "Learn how provider verification, private chat, ratings, reviews, and report options help maintain a trusted service environment.",
     tone: "bg-[#ffe8e3] text-[#f06447]",
     cardTone: "bg-[#f4f5ff]",
     icon: "shield",
@@ -20,7 +20,7 @@ const categories = [
   {
     title: "Skill Swapping",
     description:
-      "Understand how to post skill offers, request services, find matching students, filter by ratings, and start a skill exchange with verified peers.",
+      "Understand how to post skill offers, request services, find matching providers, filter by ratings, and start a skill exchange with confidence.",
     tone: "bg-[#77efe0] text-[#087e78]",
     cardTone: "bg-[#ecfbfa]",
     icon: "swap",
@@ -28,7 +28,7 @@ const categories = [
   {
     title: "Payments & Private Agreements",
     description:
-      "Skill Swap Hub does not process payments. If students agree on a paid service, payment discussions and slip sharing happen privately inside chat.",
+      "Skill Swap Hub does not process payments. If users agree on a paid service, payment discussions and slip sharing happen privately inside chat.",
     tone: "bg-[#ffe9dc] text-[#bf642e]",
     cardTone: "bg-white",
     icon: "wallet",
@@ -47,25 +47,25 @@ const faqs = [
       "Buyers can be students or non-students. Only verified university students can become providers, and admin approval is required before they can sell services.",
   },
   {
-    question: "How can I find a student for a service?",
+    question: "How can I find a provider for a service?",
     answer:
-      "You can search by skill name, category, university, availability, rating, and review count. This helps you select the most suitable student for your required skill or service.",
+      "You can search by skill name, category, university, availability, rating, and review count. This helps you select the most suitable provider for your required skill or service.",
   },
   {
     question: "How do ratings and reviews help?",
     answer:
-      "Ratings and reviews show how reliable a student is based on previous exchanges. Students can use ratings to choose better service providers and avoid low-quality services.",
+      "Ratings and reviews show how reliable a provider is based on previous exchanges. Users can use that feedback to choose better service providers and avoid low-quality services.",
   },
   {
     question: "Does the platform handle payments?",
     answer:
-      "No. Skill Swap Hub does not process bank transactions. If two students agree on a paid service, payment is handled outside the platform and the payment slip can be shared privately inside chat.",
+      "No. Skill Swap Hub does not process bank transactions. If two users agree on a paid service, payment is handled outside the platform and the payment slip can be shared privately inside chat.",
   },
   {
     question:
-      "What happens if a student takes money but does not complete the service?",
+      "What happens if a provider takes money but does not complete the service?",
     answer:
-      "The affected student can give a low rating, write a review, and report the issue. These ratings and reports help other students identify unreliable users.",
+      "The affected user can give a low rating, write a review, and report the issue. These ratings and reports help others identify unreliable providers.",
   },
   {
     question: "Can admin see private chats?",
@@ -73,9 +73,9 @@ const faqs = [
       "No. Admin does not normally view private chats. Admin can only review evidence if a student submits a report.",
   },
   {
-    question: "Can I swap skills with students from other universities?",
+    question: "Can I request services from students at other universities?",
     answer:
-      "Yes. The platform supports skill exchange between verified students from different Sri Lankan universities.",
+      "Yes. The platform supports service requests and skill exchanges with verified student providers from different Sri Lankan universities.",
   },
 ];
 
@@ -93,9 +93,9 @@ export default function SupportPage() {
             Skill Swap Hub Help & Support
           </h1>
           <p className="max-w-2xl text-sm text-slate-600">
-            Find simple guides for account setup, email verification, student proof review,
-            skill swapping, private chat, ratings, reviews, and safe
-            student-to-student communication.
+            Find simple guides for account setup, email verification, student
+            proof review, skill swapping, private chat, ratings, reviews, and
+            safe communication across the platform.
           </p>
         </div>
       </section>
@@ -173,7 +173,7 @@ export default function SupportPage() {
                 Contact Information
               </h2>
               <p className="mt-4 max-w-[32rem] text-[14px] leading-[1.6] text-white/82">
-                Our support team is available to help students with account
+                Our support team is available to help users with account
                 issues, verification problems, reports, and platform-related
                 questions.
               </p>
@@ -184,7 +184,7 @@ export default function SupportPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <HelpDeskIcon className="h-[18px] w-[18px] shrink-0" />
-                  <span>Student Help Desk</span>
+                  <span>Platform Help Desk</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <ClockIcon className="h-[18px] w-[18px] shrink-0" />

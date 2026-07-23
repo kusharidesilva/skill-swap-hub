@@ -61,7 +61,7 @@ export default function SiteFooter({ role = "guest" }: SiteFooterProps) {
               />
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-600 sm:text-base">
-              Connecting Sri Lankan university students through peer-to-peer knowledge sharing.
+              Connecting verified student providers and service seekers through trusted skill sharing.
             </p>
           </div>
 
@@ -94,7 +94,7 @@ export default function SiteFooter({ role = "guest" }: SiteFooterProps) {
         </div>
 
         <div className="mt-12 border-t border-slate-200/80 pt-8 text-center text-sm font-semibold text-slate-500">
-          © {currentYear} Skill Swap Hub | All Rights Reserved
+          &copy; {currentYear} Skill Swap Hub | All Rights Reserved
         </div>
       </div>
     </footer>

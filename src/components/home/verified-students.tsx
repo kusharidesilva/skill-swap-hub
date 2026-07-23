@@ -12,16 +12,16 @@ type Feature = {
 
 const features: Feature[] = [
   {
-    title: "University Email Verification",
+    title: "Provider Verification",
     description:
-      "Strict access for students only. Every user must have a valid campus domain email.",
+      "Student providers complete campus email and proof verification before offering services on the platform.",
     Icon: MailIcon,
     tone: "bg-[#e8f1ff] text-[#0f4cbf]",
   },
   {
-    title: "Student-Only Community",
+    title: "Trusted Access",
     description:
-      "A safe space designed specifically for the academic community, free from outside noise.",
+      "Students and non-student buyers can join safely while provider access stays limited to verified university students.",
     Icon: UsersIcon,
     tone: "bg-[#e7f8f1] text-[#0f8a6b]",
   },
@@ -41,11 +41,11 @@ export default function VerifiedStudentsSection() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center">
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl leading-tight">
-            Built for Verified University Students
+            Built for Verified Student Providers
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm sm:text-base text-slate-600">
-            Students are verified using their official email and a verification
-            code to create a trusted student-only environment.
+            Verified university students can offer services, while buyers and
+            students request support inside a more trusted platform experience.
           </p>
         </div>
         <div className="mt-12 grid gap-6 md:grid-cols-3">

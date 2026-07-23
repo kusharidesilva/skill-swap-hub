@@ -40,10 +40,14 @@ export default function AdminSignOutPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-6 py-10">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[linear-gradient(135deg,#d7f0ff_0%,#eafcf5_42%,#f6fbff_100%)] px-6 py-10">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.2),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(20,184,166,0.18),transparent_30%)]"
+      />
       {step === "confirm" ? (
-        <section className="w-full max-w-[390px] rounded-xl border border-[#d7dbe8] bg-white p-6 shadow-[0_28px_60px_rgba(15,23,42,0.18)]">
-          <div className="flex items-center gap-2 text-[#d93939]">
+        <section className="relative w-full max-w-[410px] rounded-[28px] border border-white/70 bg-white/88 p-6 shadow-[0_28px_60px_rgba(15,23,42,0.16)] backdrop-blur-md">
+          <div className="flex items-center gap-2 text-[#0b7c8f]">
             <SignOutIcon className="h-5 w-5" />
             <h1 className="text-xl font-bold">Sign Out</h1>
           </div>
@@ -51,8 +55,8 @@ export default function AdminSignOutPage() {
             Are you sure you want to sign out? You will need to log back in to manage the platform.
           </p>
 
-          <div className="mt-5 flex items-center gap-3 rounded-lg border border-[#dfe2f1] bg-[#f1f2ff] px-4 py-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e0e8ff] text-sm font-bold text-[#2f66e7]">
+          <div className="mt-5 flex items-center gap-3 rounded-2xl border border-[#d9ebe7] bg-[linear-gradient(135deg,#eef6ff_0%,#eefcf8_100%)] px-4 py-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#dbeafe,#ccfbf1)] text-sm font-bold text-[#1f5fcf]">
               {displayName.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
@@ -72,7 +76,7 @@ export default function AdminSignOutPage() {
               type="button"
               onClick={() => router.push("/admin")}
               disabled={loading}
-              className="flex h-11 items-center justify-center rounded-md border border-[#bfc4d2] bg-white text-sm font-bold text-[#343947] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-11 cursor-pointer items-center justify-center rounded-xl border border-[#c8d8df] bg-white/90 text-sm font-bold text-[#343947] transition hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancel
             </button>
@@ -80,14 +84,14 @@ export default function AdminSignOutPage() {
               type="button"
               onClick={handleSignOut}
               disabled={loading}
-              className="flex h-11 items-center justify-center rounded-md bg-[#0957c9] text-sm font-bold text-white shadow-sm transition hover:bg-[#0649ab] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-11 cursor-pointer items-center justify-center rounded-xl bg-[linear-gradient(135deg,#2563eb,#0ea5a6)] text-sm font-bold text-white shadow-[0_16px_34px_rgba(37,99,235,0.24)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Signing Out..." : "Sign Out"}
             </button>
           </div>
         </section>
       ) : (
-        <section className="relative flex h-[330px] w-full max-w-[370px] flex-col items-center justify-center rounded-[24px] bg-[#f0f0ff] text-center">
+        <section className="relative flex h-[330px] w-full max-w-[380px] flex-col items-center justify-center rounded-[28px] border border-white/70 bg-white/80 text-center shadow-[0_24px_70px_rgba(15,23,42,0.14)] backdrop-blur-md">
           <Link
             href="/admin/login"
             aria-label="Close"
@@ -95,7 +99,7 @@ export default function AdminSignOutPage() {
           >
             x
           </Link>
-          <div className="flex h-[68px] w-[68px] items-center justify-center rounded-full bg-[#2f66e7] text-white">
+          <div className="flex h-[68px] w-[68px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#2563eb,#14b8a6)] text-white shadow-[0_18px_38px_rgba(37,99,235,0.24)]">
             <CheckIcon className="h-10 w-10" />
           </div>
           <h2 className="mt-6 text-[22px] font-bold leading-8 text-[#272b35]">
@@ -105,7 +109,7 @@ export default function AdminSignOutPage() {
           </h2>
           <Link
             href="/admin/login"
-            className="mt-7 inline-flex h-10 items-center justify-center rounded-md bg-[#2f66e7] px-5 text-sm font-semibold text-white transition hover:bg-[#2356cb]"
+            className="mt-7 inline-flex cursor-pointer h-10 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#2563eb,#0ea5a6)] px-5 text-sm font-semibold text-white shadow-[0_16px_34px_rgba(37,99,235,0.22)] transition hover:brightness-105"
           >
             Back to Admin Login
           </Link>

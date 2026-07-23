@@ -191,7 +191,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               onClick={() => setMenuOpen((value) => !value)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-slate-200 text-slate-900 transition hover:border-slate-300 hover:text-slate-700"
+              className="flex h-12 w-12 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-slate-200 text-slate-900 transition hover:border-slate-300 hover:text-slate-700"
             >
               {userProfile.profileImageUrl ? (
                 <img

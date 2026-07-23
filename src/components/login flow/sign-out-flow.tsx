@@ -33,9 +33,9 @@ export default function SignOutFlow() {
   };
 
   return (
-    <main className="relative min-h-screen bg-[#f5f7ff]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#e6edff_0%,transparent_55%)]" />
-      <div className="absolute inset-x-0 top-0 h-36 bg-linear-to-b from-[#eaf0ff] to-transparent" />
+    <main className="relative min-h-screen bg-[linear-gradient(140deg,#eefdf8_0%,#e3f3ff_48%,#f8fbff_100%)]">
+      <div className="absolute inset-0 bg-[linear-gradient(125deg,rgba(20,184,166,0.14),rgba(37,99,235,0.1),rgba(255,255,255,0.24))]" />
+      <div className="absolute inset-x-0 top-0 h-36 bg-linear-to-b from-[#e9fbf6] to-transparent" />
       <div className="relative z-10 flex min-h-screen items-center justify-center px-6 py-10">
         {step === "confirm" ? (
           <ConfirmCard
@@ -113,7 +113,7 @@ function ConfirmCard({
           type="button"
           onClick={onCancel}
           disabled={loading}
-          className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:opacity-60"
+          className="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
         >
           Cancel
         </button>
@@ -122,7 +122,7 @@ function ConfirmCard({
           type="button"
           onClick={onSignOut}
           disabled={loading}
-          className="rounded-lg bg-[#3855f3] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#2e47d8] disabled:opacity-60"
+          className="cursor-pointer rounded-lg bg-[#168bd8] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#0f75bd] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Signing out…" : "Sign Out"}
         </button>
@@ -182,13 +182,13 @@ function SuccessCard() {
           <div className="mt-6 space-y-3">
             <Link
               href="/login"
-              className="block w-full rounded-lg bg-[#3855f3] px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-[#2e47d8]"
+              className="block w-full cursor-pointer rounded-lg bg-[#168bd8] px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-[#0f75bd]"
             >
               Log In Again
             </Link>
             <Link
               href="/"
-              className="block w-full rounded-lg border border-slate-200 px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+              className="block w-full cursor-pointer rounded-lg border border-slate-200 px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
             >
               Return to Homepage
             </Link>
@@ -217,7 +217,7 @@ function IconButton({ label, icon }: { label: string; icon: ReactNode }) {
     <button
       type="button"
       aria-label={label}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
+      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-slate-200 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
     >
       {icon}
     </button>

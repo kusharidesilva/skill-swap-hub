@@ -12,19 +12,19 @@ const values = [
   {
     title: "Skill Sharing",
     description:
-      "Students offer skills they already have and request the skills they need, creating a useful peer-to-peer network.",
+      "Verified student providers share practical skills while buyers and students request the support they need in one place.",
     icon: "book",
   },
   { 
-    title: "Trusted Student Community",
+    title: "Trusted Verification",
     description:
-      "Student providers are verified through uploaded proof documents reviewed by admin, keeping the service community safe.",
+      "Student providers complete campus email and proof review before offering services, helping the platform stay dependable.",
     icon: "shield",
   },
   {
-    title: "Peer Learning",
+    title: "Meaningful Connections",
     description:
-      "Students learn from others who understand their academic needs, study challenges, and practical skill gaps.",
+      "The platform helps students and buyers find the right provider faster, chat clearly, and build trust through reviews.",
     icon: "users",
   },
 ];
@@ -71,9 +71,9 @@ export default function AboutPage({
               <span className="block">to Grow Together.</span>
             </h1>
             <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
-              Skill Swap Hub is a trusted student-only platform for Sri Lankan
-              university students to share skills, request services, learn from
-              verified peers, and gain practical experience.
+              Skill Swap Hub is a trusted platform where verified Sri Lankan
+              university students can offer skills and both students and buyers
+              can request services, connect safely, and gain practical value.
             </p>
             <div className="mt-6 flex flex-wrap gap-4">
               <Link
@@ -131,24 +131,23 @@ export default function AboutPage({
             <div className="mt-4 space-y-4 text-sm leading-relaxed text-slate-600">
               <p>
                 Many university students in Sri Lanka have useful skills such as
-                programming, graphic design, tutoring, writing, CV preparation,
-                presentation design, and content creation. However, most
-                students do not have a trusted and organized platform to offer
-                these skills or request help from other students.
+                graphic design, tutoring, writing, CV preparation,
+                presentation design, event support, and content creation.
+                However, they often lack a trusted and organized platform to
+                offer those skills to people who genuinely need them.
               </p>
               <p>
-                At present, students often depend on friends, WhatsApp groups,
-                Facebook groups, or global freelance platforms. These methods
-                are not always reliable because students may face slow
-                responses, poor quality services, lack of trust, and difficulty
-                finding the right person for a specific skill.
+                Many users still depend on friends, social media groups, or
+                large freelance platforms. Those options can feel unstructured,
+                slow, and difficult to trust when someone wants a reliable
+                student provider for a specific task or learning need.
               </p>
               <p>
                 Skill Swap Hub was created to solve this problem by building a
-                student-focused platform where verified university students can
-                post skill offers, request services, find suitable matches, chat
-                privately, and give ratings and reviews after completing a
-                service or skill exchange.
+                structured platform where verified university students can offer
+                services, buyers can post requests, both sides can chat
+                privately, and completed exchanges can be rated and reviewed
+                with confidence.
               </p>
             </div>
 
@@ -218,9 +217,9 @@ export default function AboutPage({
               Ready to swap your first skill?
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm text-white/90">
-              Join a trusted student-only platform where Sri Lankan university
-              students can share skills, request services, connect with peers,
-              and grow together.
+              Join a trusted platform where verified student providers and
+              service seekers can connect, collaborate, and grow through
+              skill-based exchanges.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link

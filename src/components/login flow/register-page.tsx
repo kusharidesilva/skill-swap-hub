@@ -185,8 +185,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="relative min-h-screen bg-white">
-      <div className="fixed inset-0 bg-black/25 backdrop-blur-sm" aria-hidden="true" />
+    <main className="relative min-h-screen bg-[linear-gradient(140deg,#effdf9_0%,#dff4ff_48%,#f8fbff_100%)]">
+      <div className="fixed inset-0 bg-[linear-gradient(120deg,rgba(13,148,136,0.16),rgba(37,99,235,0.12),rgba(255,255,255,0.2))] backdrop-blur-sm" aria-hidden="true" />
       <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
         <div className="grid w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
           {/* Buyer registration form */}
@@ -228,7 +228,7 @@ export default function RegisterPage() {
                             shouldValidate: true,
                           })
                         }
-                        className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
+                        className={`cursor-pointer rounded-md px-3 py-2 text-xs font-semibold transition ${
                           accountType === option.value
                             ? "bg-white text-[#2b62e6] shadow-sm"
                             : "text-slate-500 hover:text-slate-700"
@@ -276,7 +276,7 @@ export default function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="text-slate-400 hover:text-slate-600 focus:outline-none ml-2"
+                        className="ml-2 cursor-pointer text-slate-400 hover:text-slate-600 focus:outline-none"
                       >
                         {showPassword ? (
                           <EyeOffIcon className="h-4 w-4" />
@@ -301,7 +301,7 @@ export default function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="text-slate-400 hover:text-slate-600 focus:outline-none ml-2"
+                        className="ml-2 cursor-pointer text-slate-400 hover:text-slate-600 focus:outline-none"
                       >
                         {showConfirmPassword ? (
                           <EyeOffIcon className="h-4 w-4" />
@@ -391,7 +391,7 @@ export default function RegisterPage() {
                                     event.stopPropagation();
                                     clearProofFile();
                                   }}
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-red-600"
+                                  className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-red-600"
                                   aria-label="Remove selected file"
                                 >
                                   <CloseIcon className="h-3.5 w-3.5" />
@@ -428,7 +428,7 @@ export default function RegisterPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-2 flex h-[50px] w-full items-center justify-center gap-2 rounded-lg bg-[#2b62e6] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-2 flex h-[50px] w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#168bd8] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0f75bd] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading
                     ? "Creating Account..."
@@ -448,8 +448,8 @@ export default function RegisterPage() {
           </section>
 
           {/* Registration benefits */}
-          <section className="flex items-center justify-center bg-[#eef1ff] px-8 py-10">
-            <div className="max-w-sm rounded-3xl bg-[#e4e9ff] p-6 text-center shadow-sm">
+          <section className="flex items-center justify-center bg-[linear-gradient(145deg,#e9fbf6_0%,#e6f3ff_100%)] px-8 py-10">
+            <div className="max-w-sm rounded-3xl bg-white/70 p-6 text-center shadow-sm">
               <div className="overflow-hidden rounded-2xl bg-white shadow-lg">
                 <Image src="/img/01.png" alt="Students working together" width={420} height={300} className="h-auto w-full object-cover" />
               </div>

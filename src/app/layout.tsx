@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Skill Swap Hub",
   description:
-    "A trusted student-only platform for Sri Lankan university students to exchange skills and learn together.",
+    "A trusted platform where verified university students offer skills and buyers can request services with confidence.",
 };
 
 export default function RootLayout({
