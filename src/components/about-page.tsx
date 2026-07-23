@@ -58,7 +58,7 @@ export default function AboutPage({
           className="ssh-hero-orbit ssh-hero-orbit-right"
           aria-hidden="true"
         />
-        <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_85px)]">
+        <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_72px)]">
           <div className="ssh-hero-copy relative z-10 flex flex-col justify-center">
             <span className="ssh-highlight-badge inline-flex items-center gap-2 self-start rounded-full bg-[#dfe8ff] px-3 py-1 text-xs font-semibold text-[#315ccf]">
               WHY SKILL SWAP HUB

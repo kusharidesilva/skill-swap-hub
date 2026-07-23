@@ -199,16 +199,36 @@ body {
 }
 
 .ssh-navbar {
-  border-color: rgb(117 139 178 / 24%);
-  background: rgb(255 255 255 / 76%);
-  box-shadow: 0 10px 34px -30px rgb(15 23 42 / 70%);
-  backdrop-filter: blur(18px);
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  border-color: rgb(255 255 255 / 46%);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 64%), rgb(255 255 255 / 42%)),
+    radial-gradient(circle at 18% 0%, rgb(47 102 231 / 10%), transparent 18rem),
+    radial-gradient(circle at 86% 20%, rgb(15 138 107 / 9%), transparent 16rem);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 70%) inset,
+    0 18px 42px -34px rgb(15 23 42 / 80%);
+  backdrop-filter: blur(24px) saturate(1.34);
+  -webkit-backdrop-filter: blur(24px) saturate(1.34);
+  transform: translateZ(0);
+}
+
+.ssh-navbar::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(47 102 231 / 20%), rgb(15 138 107 / 18%), transparent);
 }
 
 .ssh-footer {
   position: relative;
   overflow: hidden;
-  border-top: 0;
+  border-top: 1px solid rgb(117 139 178 / 18%);
   background:
     radial-gradient(circle at 18% 0%, rgb(47 102 231 / 16%), transparent 26rem),
     radial-gradient(circle at 82% 18%, rgb(15 138 107 / 16%), transparent 24rem),
@@ -422,6 +442,21 @@ body {
 .ssh-pulse-dot {
   box-shadow: 0 0 0 0 rgb(47 102 231 / 45%);
   animation: user-pulse-ring 2.4s ease-out infinite;
+}
+
+.user-motion-scope .profile-steady-cards
+  :where(article, section, div)[class*="rounded-"][class*="shadow"] {
+  transition:
+    box-shadow var(--motion-base) var(--motion-ease),
+    border-color var(--motion-base) ease,
+    background-color var(--motion-base) ease;
+}
+
+.user-motion-scope .profile-steady-cards
+  :where(article, section, div)[class*="rounded-"][class*="shadow"]:hover,
+.user-motion-scope .profile-steady-cards
+  :where(article, section, div)[class*="rounded-"][class*="shadow"]:focus-within {
+  transform: none !important;
 }
 
 /* Page content enters gently without changing component structure or state. */

@@ -181,14 +181,14 @@ export default function Navbar({ role: propRole }: NavbarProps) {
           aria-label="Toggle navigation menu"
           aria-controls="mobile-nav"
         />
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-10 py-5">
+        <div className="mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between px-6 sm:px-8 lg:px-10">
           <Link href={homeLinkHref} className="flex items-center gap-3">
             <Image
               src="/img/Skill%20Swap%20Hub%20Logo%20icon-no%20bg.svg"
               alt="Skill Swap Hub"
               width={44}
               height={44}
-              className="h-11 w-11"
+              className="h-10 w-10"
               priority
             />
           </Link>
@@ -304,7 +304,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
         {/* Hamburger Toggle Label (Mobile) */}
         <label
           htmlFor="nav-toggle"
-          className="absolute right-6 top-5 inline-flex items-center rounded-md p-2 text-slate-700 transition-colors hover:text-slate-900 md:hidden cursor-pointer"
+          className="absolute right-5 top-4 inline-flex items-center rounded-md p-2 text-slate-700 transition-colors hover:text-slate-900 md:hidden cursor-pointer"
         >
           <svg
             className="h-6 w-6"
@@ -407,7 +407,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
           </nav>
         </div>
       </header>
-      <div className="h-[85px] shrink-0" aria-hidden="true" />
+      <div className="h-[72px] shrink-0" aria-hidden="true" />
     </>
   );
 }

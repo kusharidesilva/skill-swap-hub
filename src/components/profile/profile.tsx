@@ -166,7 +166,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
   });
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="profile-steady-cards flex flex-col gap-6">
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-5 sm:items-center">
