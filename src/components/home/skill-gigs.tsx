@@ -167,7 +167,7 @@ export default function SkillGigsSection() {
   }, [ratingsVersion, userProfile]);
 
   return (
-    <section id="explore-skills" className="bg-white scroll-mt-20">
+    <section id="explore-skills" className="ssh-section-clear bg-white scroll-mt-20">
       {/* Featured live service gigs */}
       <div className="mx-auto max-w-6xl px-6 py-14">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -193,7 +193,7 @@ export default function SkillGigsSection() {
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+              className="ssh-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
               >
                 <div className="h-40 w-full animate-pulse bg-slate-200" />
                 <div className="space-y-3 p-5">
@@ -208,7 +208,7 @@ export default function SkillGigsSection() {
             ))}
           </div>
         ) : gigs.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
+          <div className="ssh-card mt-8 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
             <p className="text-sm font-semibold text-slate-900">No live gigs yet</p>
             <p className="mt-2 text-sm text-slate-600">
               Providers have not published any gigs yet. Once they do, the latest gigs will appear here.
@@ -295,8 +295,8 @@ function GigCard({ gig }: { gig: LiveGig }) {
   };
 
   return (
-    <article className="flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
-      <div className="relative h-40 bg-slate-100">
+    <article className="ssh-card flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
+      <div className="ssh-card-image relative h-40 bg-slate-100">
         <Image
           src={gig.image}
           alt={gig.title}
@@ -364,7 +364,7 @@ function GigCard({ gig }: { gig: LiveGig }) {
             </Link>
             <Link
               href={previewHref}
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-[#2f66e7] px-2 text-xs font-semibold text-white transition hover:bg-[#2557cf]"
+              className="ssh-primary-action inline-flex h-9 items-center justify-center rounded-lg bg-[#2f66e7] px-2 text-xs font-semibold text-white transition hover:bg-[#2557cf]"
             >
               Request Now
             </Link>

@@ -173,7 +173,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <header className="ssh-navbar fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
         <input
           id="nav-toggle"
           type="checkbox"
@@ -225,7 +225,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                 </Link>
                 <Link
                   href="/get-started"
-                  className="rounded-full bg-[#0f4cbf] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0d3fa1]"
+                  className="ssh-primary-action rounded-full bg-[#0f4cbf] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0d3fa1]"
                 >
                   Get Started
                 </Link>
@@ -243,7 +243,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                 >
                   <BellIcon className="h-5 w-5" />
                   {showUnreadNotifications ? (
-                    <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-[#2f66e7] ring-2 ring-white" />
+                    <span className="ssh-pulse-dot absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-[#2f66e7] ring-2 ring-white" />
                   ) : null}
                 </Link>
                 <Link
@@ -269,7 +269,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                       <UserIcon className="h-5 w-5" />
                     )}
                   </summary>
-                  <div className="absolute right-0 mt-3 w-48 rounded-xl border border-slate-200 bg-white p-2 text-sm text-slate-600 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="ssh-menu absolute right-0 mt-3 w-48 rounded-xl border border-slate-200 bg-white p-2 text-sm text-slate-600 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
                     <Link
                       href={profileHref}
                       className="block rounded-lg px-3 py-2 hover:bg-slate-100"
@@ -322,7 +322,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
         </label>
 
         {/* Mobile Menu */}
-        <div className="max-h-0 overflow-hidden border-b border-slate-200 bg-white/95 opacity-0 transition-[max-height,opacity] duration-300 ease-out peer-checked:max-h-96 peer-checked:opacity-100 md:hidden">
+        <div className="ssh-menu max-h-0 overflow-hidden border-b border-slate-200 bg-white/95 opacity-0 transition-[max-height,opacity] duration-300 ease-out peer-checked:max-h-96 peer-checked:opacity-100 md:hidden">
           <nav
             id="mobile-nav"
             className="flex flex-col gap-4 px-6 pb-6 pt-4 text-sm font-medium"
@@ -355,7 +355,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                   </Link>
                   <Link
                     href="/get-started"
-                    className="rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
+                    className="ssh-primary-action rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
                   >
                     Get Started
                   </Link>
@@ -368,7 +368,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                   >
                     Notifications
                     {showUnreadNotifications ? (
-                      <span className="h-2.5 w-2.5 rounded-full bg-[#2f66e7]" />
+                      <span className="ssh-pulse-dot h-2.5 w-2.5 rounded-full bg-[#2f66e7]" />
                     ) : null}
                   </Link>
                   <Link
@@ -379,7 +379,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                   </Link>
                   <Link
                     href={profileHref}
-                    className="rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
+                    className="ssh-primary-action rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
                   >
                     Profile
                   </Link>

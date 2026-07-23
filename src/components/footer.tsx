@@ -46,7 +46,7 @@ export default function SiteFooter({ role = "guest" }: SiteFooterProps) {
   ];
 
   return (
-    <footer className="border-t border-slate-200/80 bg-[#f3f5ff]">
+    <footer className="ssh-footer border-t border-slate-200/80 bg-[#f3f5ff]">
       {/* Brand links, role-aware navigation, and legal links */}
       <div className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
         <div className="grid gap-10 md:grid-cols-[1.1fr_2fr]">

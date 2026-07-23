@@ -185,7 +185,7 @@ export default function MobileNav({ role }: { role: Role }) {
 
   return (
     <nav
-      className="flex items-center gap-4 overflow-x-auto px-4 py-3.5 bg-white/80 backdrop-blur-md scrollbar-none"
+      className="ssh-mobile-nav flex items-center gap-4 overflow-x-auto px-4 py-3.5 bg-white/80 backdrop-blur-md scrollbar-none"
       aria-label="Mobile navigation"
     >
       {/* General/Default group */}

@@ -13,11 +13,11 @@ type ProfileShellProps = {
 
 export default function ProfileShell({ role, children }: ProfileShellProps) {
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#f5f7ff] text-slate-900">
+    <div className="ssh-page-shell flex h-screen flex-col overflow-hidden bg-[#f5f7ff] text-slate-900">
       <Navbar role={role} />
 
       {/* Mobile and tablet navigation */}
-      <div className="fixed inset-x-0 top-[85px] z-40 border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm xl:hidden">
+      <div className="ssh-mobile-rail fixed inset-x-0 top-[85px] z-40 border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm xl:hidden">
         <MobileNav role={role} />
       </div>
       <div className="h-[61px] shrink-0 xl:hidden" aria-hidden="true" />
@@ -28,7 +28,7 @@ export default function ProfileShell({ role, children }: ProfileShellProps) {
           <div className="hidden xl:sticky xl:top-0 xl:block xl:h-[calc(100vh-85px)]">
             <SideNav role={role} />
           </div>
-          <main className="min-w-0 px-5 py-6 sm:px-6 lg:px-8 xl:px-10">
+          <main className="ssh-user-main min-w-0 px-5 py-6 sm:px-6 lg:px-8 xl:px-10">
             <div className="app-route-stage mx-auto flex w-full max-w-[1220px] flex-col gap-8">
               {children}
             </div>

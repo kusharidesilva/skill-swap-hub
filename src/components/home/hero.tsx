@@ -52,17 +52,17 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
 
   return (
     // The first screen introduces the platform and directs users to the right action.
-    <section className="relative overflow-hidden bg-[#ebf5f0]">
+    <section className="ssh-home-hero ssh-hero-section relative overflow-hidden bg-[#ebf5f0]">
       <div
-        className="absolute -left-24 top-8 h-64 w-64 rounded-full bg-white/70 blur-3xl"
+        className="ssh-hero-orbit ssh-hero-orbit-left"
         aria-hidden="true"
       />
       <div
-        className="absolute right-0 top-0 h-72 w-72 rounded-full bg-[#d2f1e4] blur-3xl"
+        className="ssh-hero-orbit ssh-hero-orbit-right"
         aria-hidden="true"
       />
       <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_85px)]"> 
-        <div className="relative z-10"> 
+        <div className="ssh-hero-copy relative z-10"> 
           <div className="flex flex-wrap items-center gap-3"> 
             {highlights.map((item) => (
               <HighlightBadge
@@ -84,20 +84,20 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
           <div className="mt-8 flex flex-wrap gap-4"> 
             <Link 
               href={primaryHref}
-              className="rounded-lg bg-[#2b62e6] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]" 
+              className="ssh-primary-action rounded-lg bg-[#2b62e6] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]" 
             >
               {primaryLabel}
             </Link>
             <Link
               href={exploreHref}
-              className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900" 
+              className="ssh-secondary-action rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900" 
             >
               Explore Skills
             </Link>
           </div>
           <form
             onSubmit={handleSearchSubmit}
-            className="mt-8 flex w-full max-w-xl items-center gap-3 rounded-xl bg-white p-1.5 shadow-md border border-slate-200/80"
+            className="ssh-search-card mt-8 flex w-full max-w-xl items-center gap-3 rounded-xl bg-white p-1.5 shadow-md border border-slate-200/80"
             role="search"
           >
             <div className="flex flex-1 items-center gap-2.5 px-3 text-slate-400"> 
@@ -113,27 +113,27 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
             {role === "guest" ? (
               <Link
                 href={searchResultsHref}
-                className="rounded-lg bg-[#2b62e6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+                className="ssh-primary-action rounded-lg bg-[#2b62e6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
               >
                 Search Skills
               </Link>
             ) : (
               <button
                 type="submit"
-                className="rounded-lg bg-[#2b62e6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+                className="ssh-primary-action rounded-lg bg-[#2b62e6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
               >
                 Search Skills
               </button>
             )}
           </form>
         </div>
-        <div className="relative flex items-end justify-center lg:justify-end -mb-5 lg:-mb-10 self-end lg:translate-x-16">
+        <div className="ssh-hero-art relative flex items-end justify-center lg:justify-end -mb-5 lg:-mb-10 self-end lg:translate-x-16">
           <Image
             src="/img/hero-illustration.png"
             alt="Student learning with laptop"
             width={720}
             height={720}
-            className="h-auto w-full max-w-md object-contain sm:max-w-lg lg:max-w-[630px] lg:w-[630px] transition-all duration-300 hover:scale-[1.02]"
+            className="ssh-hero-image h-auto w-full max-w-md object-contain sm:max-w-lg lg:max-w-[630px] lg:w-[630px] transition-all duration-300 hover:scale-[1.02]"
             priority
             sizes="(min-width: 1024px) 630px, 80vw"
           />
@@ -151,7 +151,7 @@ function HighlightBadge({
   Icon: IconType; 
 }) { 
   return ( 
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e6fcf4] px-3 py-1 text-xs font-semibold text-[#0f8a6b] shadow-xs"> 
+    <span className="ssh-highlight-badge inline-flex items-center gap-1.5 rounded-full bg-[#e6fcf4] px-3 py-1 text-xs font-semibold text-[#0f8a6b] shadow-xs"> 
       <Icon className="h-4 w-4" aria-hidden="true" /> 
       {label} 
     </span> 

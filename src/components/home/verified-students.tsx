@@ -37,7 +37,7 @@ const features: Feature[] = [
 export default function VerifiedStudentsSection() {
   return (
     // This section explains the trust checks behind the student community.
-    <section id="trust-section" className="bg-[#f3f5ff] py-16 sm:py-20 scroll-mt-20">
+    <section id="trust-section" className="ssh-section-band bg-[#f3f5ff] py-16 sm:py-20 scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center">
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl leading-tight">
@@ -52,7 +52,7 @@ export default function VerifiedStudentsSection() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="group rounded-2xl bg-white p-6 border border-slate-100/80 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
+              className="ssh-card group rounded-2xl bg-white p-6 border border-slate-100/80 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
             >
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 ${feature.tone}`}

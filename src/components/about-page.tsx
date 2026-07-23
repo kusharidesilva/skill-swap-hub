@@ -47,21 +47,20 @@ export default function AboutPage({
   ctaButtonHref,
 }: AboutPageProps) {
   return (
-    <main className="bg-white">
+    <main className="ssh-page-main bg-white">
       {/* Mission statement */}
-      <section className="relative overflow-hidden bg-[#eef1ff]">
+      <section className="ssh-hero-section relative overflow-hidden bg-[#eef1ff]">
         <div
-          className="absolute -left-24 top-8 h-64 w-64 rounded-full bg-white/70 blur-3xl"
+          className="ssh-hero-orbit ssh-hero-orbit-left"
           aria-hidden="true"
         />
         <div
-          className="absolute right-0 top-0 h-72 w-72 rounded-full bg-[#c3cfff] blur-3xl"
+          className="ssh-hero-orbit ssh-hero-orbit-right"
           aria-hidden="true"
         />
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_85px)]">
-          <div className="relative z-10 flex flex-col justify-center">
-            <span className="inline-flex items-center gap-2 self-start rounded-full bg-[#dfe8ff] px-3 py-1 text-xs font-semibold text-[#315ccf]">
-              <span className="h-2 w-2 rounded-full bg-[#315ccf]" />
+          <div className="ssh-hero-copy relative z-10 flex flex-col justify-center">
+            <span className="ssh-highlight-badge inline-flex items-center gap-2 self-start rounded-full bg-[#dfe8ff] px-3 py-1 text-xs font-semibold text-[#315ccf]">
               WHY SKILL SWAP HUB
             </span>
             <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl leading-tight">
@@ -78,25 +77,25 @@ export default function AboutPage({
             <div className="mt-6 flex flex-wrap gap-4">
               <Link
                 href={primaryCtaHref}
-                className="rounded-lg bg-[#2b62e6] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+                className="ssh-primary-action rounded-lg bg-[#2b62e6] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
               >
                 {primaryCtaLabel}
               </Link>
               <Link
                 href={secondaryCtaHref}
-                className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900"
+                className="ssh-secondary-action rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900"
               >
                 {secondaryCtaLabel}
               </Link>
             </div>
           </div>
-          <div className="relative flex items-end justify-center lg:justify-end -mb-5 lg:-mb-10 self-end lg:translate-x-16">
+          <div className="ssh-hero-art relative flex items-end justify-center lg:justify-end -mb-5 lg:-mb-10 self-end lg:translate-x-16">
             <Image
               src="/img/about%20img.png"
               alt="Student using a laptop"
               width={720}
               height={720}
-              className="h-auto w-full max-w-md object-contain sm:max-w-lg lg:max-w-[590px] lg:w-[590px] transition-all duration-300 hover:scale-[1.02] block"
+              className="ssh-hero-image h-auto w-full max-w-md object-contain sm:max-w-lg lg:max-w-[590px] lg:w-[590px] transition-all duration-300 hover:scale-[1.02] block"
               priority
               sizes="(min-width: 1024px) 590px, 80vw"
             />
@@ -105,13 +104,13 @@ export default function AboutPage({
       </section>
 
       {/* Platform story and purpose */}
-      <section id="story" className="bg-white scroll-mt-20">
+      <section id="story" className="ssh-section-clear bg-white scroll-mt-20">
         <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1fr_1.05fr]">
           <div className="grid grid-cols-2 gap-4">
             {storyImages.map((image) => (
               <div
                 key={image.src}
-                className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-100 shadow-sm"
+                className="ssh-card ssh-card-image relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-100 shadow-sm"
               >
                 <Image
                   src={image.src}
@@ -176,7 +175,7 @@ export default function AboutPage({
       </section>
 
       {/* Community values */}
-      <section className="bg-white">
+      <section className="ssh-section-clear bg-white">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-slate-900">
@@ -190,7 +189,7 @@ export default function AboutPage({
             {values.map((value) => (
               <div
                 key={value.title}
-                className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm"
+                className="ssh-card rounded-2xl border border-slate-100 bg-white p-6 shadow-sm"
               >
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef1ff] text-[#0f4cbf]">
                   <ValueIcon type={value.icon} className="h-5 w-5" />
@@ -208,9 +207,9 @@ export default function AboutPage({
       </section>
 
       {/* Join the community call to action */}
-      <section className="bg-white pb-16">
+      <section className="ssh-section-clear bg-white pb-16">
         <div className="mx-auto max-w-6xl px-6">
-          <div className="relative overflow-hidden rounded-3xl bg-[#0f4cbf] px-8 py-10 text-center text-white shadow-lg">
+          <div className="ssh-cta-panel relative overflow-hidden rounded-3xl bg-[#0f4cbf] px-8 py-10 text-center text-white shadow-lg">
             <div className="absolute -left-10 top-10 h-32 w-32 rounded-full bg-white/10" />
             <div className="absolute -right-16 -top-12 h-44 w-44 rounded-full bg-white/10" />
             <h2 className="text-2xl font-semibold sm:text-3xl">

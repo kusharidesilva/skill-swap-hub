@@ -7,7 +7,7 @@ import Navbar from "@/components/navbar";
 
 export default function BuyerHome() {
   return (
-    <div className="min-h-screen bg-[#f5f7ff] text-slate-900">
+    <div className="ssh-page-shell min-h-screen bg-[#f5f7ff] text-slate-900">
       <Navbar />
       <main>
         <HeroSection role="buyer" />

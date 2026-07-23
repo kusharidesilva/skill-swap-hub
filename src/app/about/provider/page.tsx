@@ -4,7 +4,7 @@ import SiteFooter from "@/components/footer";
 
 export default function AboutProvider() {
   return (
-    <div className="min-h-screen bg-[#f5f7ff] text-slate-900">
+    <div className="ssh-page-shell min-h-screen bg-[#f5f7ff] text-slate-900">
       <Navbar />
       <AboutPage
         primaryCtaLabel="Learn More"
