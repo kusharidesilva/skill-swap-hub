@@ -24,9 +24,18 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 If profile photo uploads fail in the browser with a CORS error, the Firebase Storage bucket needs an allowed origin entry for your local app.
 
-Use the template in [`storage-cors.json`](C:\Users\DELL\Desktop\skill-swap-hub\storage-cors.json) and apply it to the bucket configured in your Firebase env, for example with `gsutil cors set`.
+Use the template in [`storage-cors.json`](./storage-cors.json) and apply it to the bucket configured in your Firebase env, for example with `gsutil cors set`.
 
-For local development, `http://localhost:3000` must be allowed. Add your deployed domain too before shipping.
+The checked-in template now includes:
+
+- `http://localhost:3000`
+- `http://localhost:3001`
+- `http://127.0.0.1:3000`
+- `http://127.0.0.1:3001`
+- `https://skill-swap-hub-eca37.web.app`
+- `https://skill-swap-hub-eca37.firebaseapp.com`
+
+Add any LAN or preview origin you use before testing uploads there, then re-apply the CORS file to the bucket.
 
 ## Learn More
 

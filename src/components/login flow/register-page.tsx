@@ -79,7 +79,7 @@ const registerSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["proofFile"],
-        message: "Upload a PDF, DOC, PNG, JPG, or JPEG file under 8 MB.",
+        message: "Upload a PDF, DOC, DOCX, PNG, JPG, or JPEG file under 8 MB.",
       });
     }
   });
@@ -145,17 +145,35 @@ export default function RegisterPage() {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Registration failed.";
+
       if (msg.includes("email-already-in-use")) {
         setServerError("This email is already registered. Please login.");
+      } else if (msg.includes("Student proof must")) {
+        setServerError(
+          "Upload a PDF, DOC, DOCX, PNG, JPG, or JPEG file under 8 MB.",
+        );
+      } else if (
+        msg.includes("Student proof upload timed out") ||
+        msg.includes("storage/retry-limit-exceeded") ||
+        msg.includes("storage/canceled")
+      ) {
+        setServerError(
+          "Student proof upload could not reach Firebase Storage. Please check the Storage bucket setup, rules, and CORS, then try again.",
+        );
       } else if (
         msg.includes("storage/unauthorized") ||
-        msg.includes("storage/unknown") ||
-        msg.includes("Student proof must") ||
-        msg.includes("Student proof upload timed out")
+        msg.includes("storage/unknown")
       ) {
-        setServerError("Student proof upload failed. Please choose a PDF, DOC, DOCX, PNG, or JPG file and try again.");
-      } else if (msg.includes("Account profile setup timed out") || msg.includes("Verification request setup timed out")) {
-        setServerError("Your account was almost created, but saving the verification request took too long. Please try again.");
+        setServerError(
+          "Student proof upload failed before your account could be created. Please try again with a PDF, DOC, DOCX, PNG, JPG, or JPEG file under 8 MB.",
+        );
+      } else if (
+        msg.includes("Account profile setup timed out") ||
+        msg.includes("Verification request setup timed out")
+      ) {
+        setServerError(
+          "Your account was almost created, but saving the verification request took too long. Please try again.",
+        );
       } else {
         setServerError(msg);
       }
@@ -392,7 +410,7 @@ export default function RegisterPage() {
                         <div className="grid gap-1">
                           <label className="grid h-9 cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-slate-200 px-3 text-[11px] text-slate-500 transition hover:border-[#2b62e6]">
                             <span className="block min-w-0 truncate">
-                              {proofFileValue?.name || "PDF, DOC, PNG, JPG"}
+                              {proofFileValue?.name || "PDF, DOC, DOCX, PNG, JPG"}
                             </span>
                             <span className="flex shrink-0 items-center gap-2">
                               {proofFileValue ? (

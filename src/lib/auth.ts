@@ -30,7 +30,9 @@ import {
   type UserRole,
 } from "./role-routes";
 import {
+  ALLOWED_STUDENT_PROOF_MIME_TYPES,
   isAllowedStudentProofFile,
+  STUDENT_PROOF_EXTENSIONS,
   type AccountStatus,
   type AccountType,
   type AvailabilitySlot,
@@ -40,7 +42,10 @@ import {
   isPendingAdminVerificationStatus,
 } from "./platform";
 
-const STUDENT_PROOF_CONTENT_TYPES: Record<string, string> = {
+const STUDENT_PROOF_CONTENT_TYPES: Record<
+  (typeof STUDENT_PROOF_EXTENSIONS)[number],
+  string
+> = {
   pdf: "application/pdf",
   doc: "application/msword",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -215,14 +220,18 @@ function safeStorageFileName(fileName: string) {
 function resolveStudentProofContentType(file: File) {
   if (
     file.type &&
-    Object.values(STUDENT_PROOF_CONTENT_TYPES).includes(file.type)
+    (ALLOWED_STUDENT_PROOF_MIME_TYPES as readonly string[]).includes(file.type)
   ) {
     return file.type;
   }
 
   const extension = file.name.split(".").pop()?.toLowerCase();
+  const allowedExtension = STUDENT_PROOF_EXTENSIONS.find(
+    (item) => item === extension,
+  );
+
   return (
-    (extension && STUDENT_PROOF_CONTENT_TYPES[extension]) ||
+    (allowedExtension && STUDENT_PROOF_CONTENT_TYPES[allowedExtension]) ||
     "application/octet-stream"
   );
 }
@@ -262,17 +271,13 @@ async function uploadStudentProof(
   const proofRef = ref(storage, storagePath);
   const contentType = resolveStudentProofContentType(file);
 
-  await runWithTimeout(
-    uploadBytes(proofRef, file, {
-      contentType,
-      customMetadata: {
-        proofType,
-        userId,
-      },
-    }),
-    15000,
-    "Student proof upload",
-  );
+  await uploadBytes(proofRef, file, {
+    contentType,
+    customMetadata: {
+      proofType,
+      userId,
+    },
+  });
 
   return {
     fileName: file.name,
@@ -284,15 +289,57 @@ async function uploadStudentProof(
   };
 }
 
+function isEmailAlreadyInUseError(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+  return message.includes("email-already-in-use");
+}
+
+async function createOrResumeRegistrationUser(data: RegisterUserData) {
+  try {
+    const credential = await createUserWithEmailAndPassword(
+      auth,
+      data.email,
+      data.password,
+    );
+
+    return {
+      user: credential.user,
+      canCleanupAuthUser: true,
+    };
+  } catch (error) {
+    if (!isEmailAlreadyInUseError(error)) {
+      throw error;
+    }
+
+    let credential: Awaited<ReturnType<typeof signInWithEmailAndPassword>>;
+
+    try {
+      credential = await signInWithEmailAndPassword(
+        auth,
+        data.email,
+        data.password,
+      );
+    } catch {
+      throw error;
+    }
+
+    const existingProfile = await getUserProfile(credential.user.uid);
+    if (existingProfile) {
+      throw error;
+    }
+
+    return {
+      user: credential.user,
+      canCleanupAuthUser: true,
+    };
+  }
+}
+
 // Creates the Firebase login, main user record, and student approval request when needed.
 export async function registerUser(data: RegisterUserData): Promise<User> {
-  const credential = await createUserWithEmailAndPassword(
-    auth,
-    data.email,
-    data.password,
-  );
+  const { user, canCleanupAuthUser } = await createOrResumeRegistrationUser(data);
+  await user.getIdToken(true);
 
-  const user = credential.user;
   try {
     const isStudent = data.accountType === "student";
     const studentProof = isStudent
@@ -358,11 +405,14 @@ export async function registerUser(data: RegisterUserData): Promise<User> {
       await sendEmailVerification(user);
     }
   } catch (error) {
-    try {
-      await deleteUser(user);
-    } catch {
-      // Best-effort cleanup for partially created auth accounts.
+    if (canCleanupAuthUser) {
+      try {
+        await deleteUser(user);
+      } catch {
+        // Best-effort cleanup for partially created auth accounts.
+      }
     }
+
     throw error;
   }
 

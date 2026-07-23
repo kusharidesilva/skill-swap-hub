@@ -51,6 +51,15 @@ export const STUDENT_PROOF_TYPES = [
 export const STUDENT_PROOF_ACCEPT =
   ".pdf,.doc,.docx,.png,.jpg,.jpeg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg";
 
+export const STUDENT_PROOF_EXTENSIONS = [
+  "pdf",
+  "doc",
+  "docx",
+  "png",
+  "jpg",
+  "jpeg",
+] as const;
+
 export const ALLOWED_STUDENT_PROOF_MIME_TYPES = [
   "application/pdf",
   "application/msword",
@@ -94,9 +103,10 @@ export function isPendingAdminVerificationStatus(status?: string | null) {
 export function isAllowedStudentProofFile(file: File): boolean {
   const allowedTypes = ALLOWED_STUDENT_PROOF_MIME_TYPES as readonly string[];
   const extension = file.name.split(".").pop()?.toLowerCase();
-  const allowedExtensions = ["pdf", "doc", "docx", "png", "jpg", "jpeg"];
+  const allowedExtensions = STUDENT_PROOF_EXTENSIONS as readonly string[];
 
   return (
+    file.size > 0 &&
     file.size <= MAX_STUDENT_PROOF_SIZE_BYTES &&
     (allowedTypes.includes(file.type) ||
       Boolean(extension && allowedExtensions.includes(extension)))
