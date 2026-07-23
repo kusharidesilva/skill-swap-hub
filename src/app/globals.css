@@ -250,6 +250,23 @@ body {
   }
 }
 
+.auth-gradient-animate {
+  background-size: 240% 240%;
+  animation: auth-gradient-drift 18s ease-in-out infinite alternate;
+}
+
+@keyframes auth-gradient-drift {
+  0% {
+    background-position: 0% 45%;
+  }
+  50% {
+    background-position: 100% 55%;
+  }
+  100% {
+    background-position: 35% 100%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -261,7 +278,8 @@ body {
   .user-motion-scope [class*="fixed"][class*="inset-0"],
   .user-motion-scope [class*="fixed"][class*="inset-0"] > [class*="rounded-"][class*="bg-white"],
   .user-motion-scope [class*="absolute"][class*="shadow"],
-  .user-motion-scope [class*="fixed"][class*="top-"][class*="shadow"]:not([class*="inset-0"]) {
+  .user-motion-scope [class*="fixed"][class*="top-"][class*="shadow"]:not([class*="inset-0"]),
+  .auth-gradient-animate {
     animation: none;
   }
 

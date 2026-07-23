@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 const storyImages = [
-  { src: "/img/01.png", alt: "Students collaborating" },
+  { src: "/img/about-story-students.jpg", alt: "Students collaborating" },
   { src: "/img/02.jpg", alt: "Design work session" },
   { src: "/img/03.jpg", alt: "Editing presentation" },
   { src: "/img/04.jpg", alt: "Study group" },

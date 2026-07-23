@@ -33,9 +33,9 @@ export default function SignOutFlow() {
   };
 
   return (
-    <main className="relative min-h-screen bg-[linear-gradient(140deg,#eefdf8_0%,#e3f3ff_48%,#f8fbff_100%)]">
-      <div className="absolute inset-0 bg-[linear-gradient(125deg,rgba(20,184,166,0.14),rgba(37,99,235,0.1),rgba(255,255,255,0.24))]" />
-      <div className="absolute inset-x-0 top-0 h-36 bg-linear-to-b from-[#e9fbf6] to-transparent" />
+    <main className="auth-gradient-animate relative min-h-screen bg-[linear-gradient(140deg,#eefdf8_0%,#e3f3ff_48%,#f8fbff_100%)]">
+      <div className="auth-gradient-animate absolute inset-0 bg-[linear-gradient(125deg,rgba(20,184,166,0.14),rgba(37,99,235,0.1),rgba(255,255,255,0.24))]" />
+      <div className="auth-gradient-animate absolute inset-x-0 top-0 h-36 bg-linear-to-b from-[#e9fbf6] to-transparent" />
       <div className="relative z-10 flex min-h-screen items-center justify-center px-6 py-10">
         {step === "confirm" ? (
           <ConfirmCard

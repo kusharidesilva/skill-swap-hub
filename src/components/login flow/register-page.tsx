@@ -169,6 +169,19 @@ export default function RegisterPage() {
   const yearOfStudyValue = useWatch({ control, name: "yearOfStudy" }) || "1st Year";
   const proofTypeValue = useWatch({ control, name: "proofType" }) || "Student ID";
   const proofFileValue = useWatch({ control, name: "proofFile" });
+  const isStudentRegistration = accountType === "student";
+  const fieldGridClass = "grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]";
+  const fieldWrapClass = "grid min-w-0 gap-1";
+  const formLabelClass = "text-[11px] font-semibold text-slate-600";
+  const compactInputClass =
+    "h-9 w-full rounded-lg border border-slate-200 px-3 text-[11px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#2b62e6]";
+  const compactPasswordBoxClass =
+    "relative flex h-9 items-center justify-between rounded-lg border border-slate-200 px-3";
+  const compactInputTextClass =
+    "w-full bg-transparent text-[11px] text-slate-700 placeholder:text-slate-400 focus:outline-none";
+  const compactSelectClass = "h-9 py-1 text-[11px]";
+  const compactSelectWrapperClass =
+    "gap-1 [&_button]:text-[11px] [&_[role=option]]:text-[11px] [&_.max-h-60]:max-h-40";
   const passwordHintInErrorState =
     errors.password?.message === strongPasswordMessage ||
     errors.confirmPassword?.message === strongPasswordMessage;
@@ -185,36 +198,30 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="relative min-h-screen bg-[linear-gradient(140deg,#effdf9_0%,#dff4ff_48%,#f8fbff_100%)]">
-      <div className="fixed inset-0 bg-[linear-gradient(120deg,rgba(13,148,136,0.16),rgba(37,99,235,0.12),rgba(255,255,255,0.2))] backdrop-blur-sm" aria-hidden="true" />
-      <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
-        <div className="grid w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
+    <main className="auth-gradient-animate relative min-h-screen bg-[linear-gradient(140deg,#effdf9_0%,#dff4ff_48%,#f8fbff_100%)]">
+      <div className="auth-gradient-animate fixed inset-0 bg-[linear-gradient(120deg,rgba(13,148,136,0.16),rgba(37,99,235,0.12),rgba(255,255,255,0.2))] backdrop-blur-sm" aria-hidden="true" />
+      <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-4 py-6 sm:px-6">
+        <div
+          className={`grid w-full max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl lg:max-h-[calc(100vh-3rem)] lg:overflow-hidden lg:grid-cols-[1.02fr_0.98fr] ${
+            isStudentRegistration ? "max-w-5xl" : "max-w-4xl"
+          }`}
+        >
           {/* Buyer registration form */}
-          <section className="relative bg-white px-10 py-10">
-            <Link
-              href="/"
-              aria-label="Close"
-              className="absolute right-6 top-6 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
-            >
-              <CloseIcon className="h-4 w-4" />
-            </Link>
-
-            <div className="max-w-md">
-              <h1 className="text-2xl font-semibold text-slate-900">Create Your Account</h1>
-              <p className="mt-2 text-sm text-slate-600">
-                Register as a student provider candidate or as a buyer.
-              </p>
-
+          <section className="relative flex justify-center bg-white px-7 py-7 sm:px-9 lg:px-10">
+            <div className="flex w-full max-w-md flex-col justify-center">
               {serverError && (
-                <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 border border-red-200">
+                <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[11px] text-red-600 border border-red-200">
                   {serverError}
                 </div>
               )}
 
-              <form className="mt-6 space-y-4" onSubmit={handleSubmit(onSubmit)}>
+              <form
+                className={isStudentRegistration ? "space-y-2.5" : "space-y-3"}
+                onSubmit={handleSubmit(onSubmit)}
+              >
                 <div>
-                  <label className="text-xs font-semibold text-slate-600">Registering As</label>
-                  <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+                  <label className={formLabelClass}>Registering As</label>
+                  <div className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-lg bg-slate-100 p-1">
                     {[
                       { label: "Student", value: "student" },
                       { label: "Non-student", value: "non-student" },
@@ -228,7 +235,7 @@ export default function RegisterPage() {
                             shouldValidate: true,
                           })
                         }
-                        className={`cursor-pointer rounded-md px-3 py-2 text-xs font-semibold transition ${
+                        className={`cursor-pointer rounded-md px-3 py-1.5 text-[11px] font-semibold transition ${
                           accountType === option.value
                             ? "bg-white text-[#2b62e6] shadow-sm"
                             : "text-slate-500 hover:text-slate-700"
@@ -240,38 +247,38 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                  <div className="grid min-w-0 gap-1.5">
-                    <label className="text-xs font-semibold text-slate-600">Full Name</label>
+                <div className={fieldGridClass}>
+                  <div className={fieldWrapClass}>
+                    <label className={formLabelClass}>Full Name</label>
                     <input
                       type="text"
                       placeholder="Your Full Name"
                       {...register("name")}
-                      className="h-[46px] w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#2b62e6]"
+                      className={compactInputClass}
                     />
-                    {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
+                    {errors.name && <p className="mt-1 text-[11px] text-red-500">{errors.name.message}</p>}
                   </div>
-                  <div className="grid min-w-0 gap-1.5">
-                    <label className="text-xs font-semibold text-slate-600">Email</label>
+                  <div className={fieldWrapClass}>
+                    <label className={formLabelClass}>Email</label>
                     <input
                       type="email"
                       placeholder="name@example.com"
                       {...register("email")}
-                      className="h-[46px] w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#2b62e6]"
+                      className={compactInputClass}
                     />
-                    {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
+                    {errors.email && <p className="mt-1 text-[11px] text-red-500">{errors.email.message}</p>}
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                  <div className="grid min-w-0 gap-1.5">
-                    <label className="text-xs font-semibold text-slate-600">Password</label>
-                    <div className="relative flex h-[46px] items-center justify-between rounded-lg border border-slate-200 px-3">
+                <div className={fieldGridClass}>
+                  <div className={fieldWrapClass}>
+                    <label className={formLabelClass}>Password</label>
+                    <div className={compactPasswordBoxClass}>
                       <input
                         type={showPassword ? "text" : "password"}
                         placeholder="Password"
                         {...register("password")}
-                        className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                        className={compactInputTextClass}
                       />
                       <button
                         type="button"
@@ -286,17 +293,17 @@ export default function RegisterPage() {
                       </button>
                     </div>
                     {errors.password && errors.password.message !== strongPasswordMessage && (
-                      <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
+                      <p className="mt-1 text-[11px] text-red-500">{errors.password.message}</p>
                     )}
                   </div>
-                  <div className="grid min-w-0 gap-1.5">
-                    <label className="text-xs font-semibold text-slate-600">Confirm Password</label>
-                    <div className="relative flex h-[46px] items-center justify-between rounded-lg border border-slate-200 px-3">
+                  <div className={fieldWrapClass}>
+                    <label className={formLabelClass}>Confirm Password</label>
+                    <div className={compactPasswordBoxClass}>
                       <input
                         type={showConfirmPassword ? "text" : "password"}
                         placeholder="Confirm Password"
                         {...register("confirmPassword")}
-                        className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                        className={compactInputTextClass}
                       />
                       <button
                         type="button"
@@ -312,11 +319,11 @@ export default function RegisterPage() {
                     </div>
                     {errors.confirmPassword &&
                       errors.confirmPassword.message !== strongPasswordMessage && (
-                        <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>
+                        <p className="mt-1 text-[11px] text-red-500">{errors.confirmPassword.message}</p>
                       )}
                   </div>
                 </div>
-                <p className={`text-xs ${passwordHintInErrorState ? "text-red-500" : "text-slate-500"}`}>
+                <p className={`text-[11px] leading-snug ${passwordHintInErrorState ? "text-red-500" : "text-slate-500"}`}>
                   {strongPasswordMessage}
                 </p>
 
@@ -333,19 +340,21 @@ export default function RegisterPage() {
                       }
                       placeholder="Type or select your University"
                       error={errors.university?.message}
-                      className="h-[46px]"
+                      className={`${compactSelectClass} [&_input]:text-[11px]`}
+                      labelClassName="text-[11px]"
+                      wrapperClassName={compactSelectWrapperClass}
                     />
 
-                    <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                      <div className="grid min-w-0 gap-1.5">
-                        <label className="text-xs font-semibold text-slate-600">Degree Programme</label>
+                    <div className={fieldGridClass}>
+                      <div className={fieldWrapClass}>
+                        <label className={formLabelClass}>Degree Programme</label>
                         <input
                           type="text"
                           placeholder="Degree Programme Name"
                           {...register("degree")}
-                          className="h-[46px] w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#2b62e6]"
+                          className={compactInputClass}
                         />
-                        {errors.degree && <p className="mt-1 text-xs text-red-500">{errors.degree.message}</p>}
+                        {errors.degree && <p className="mt-1 text-[11px] text-red-500">{errors.degree.message}</p>}
                       </div>
                       <SelectField
                         label="Year of Study"
@@ -357,11 +366,13 @@ export default function RegisterPage() {
                           })
                         }
                         options={yearOptions}
-                        className="h-[46px] text-sm"
+                        className={compactSelectClass}
+                        labelClassName="text-[11px]"
+                        wrapperClassName={compactSelectWrapperClass}
                       />
                     </div>
 
-                    <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-start">
+                    <div className={`${fieldGridClass} sm:items-start`}>
                       <SelectField
                         label="Proof Type"
                         value={proofTypeValue}
@@ -372,13 +383,14 @@ export default function RegisterPage() {
                           })
                         }
                         options={[...STUDENT_PROOF_TYPES]}
-                        className="h-[46px] text-sm"
-                        labelClassName="leading-5"
+                        className={compactSelectClass}
+                        labelClassName="text-[11px] leading-4"
+                        wrapperClassName={compactSelectWrapperClass}
                       />
-                      <div className="grid min-w-0 gap-1.5 self-start">
-                        <label className="text-xs font-semibold leading-5 text-slate-600">Student Proof Document</label>
-                        <div className="grid gap-1.5">
-                          <label className="grid h-[46px] cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-slate-200 px-3 text-sm text-slate-500 transition hover:border-[#2b62e6]">
+                      <div className="grid min-w-0 gap-1 self-start">
+                        <label className={formLabelClass}>Student Proof Document</label>
+                        <div className="grid gap-1">
+                          <label className="grid h-9 cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-slate-200 px-3 text-[11px] text-slate-500 transition hover:border-[#2b62e6]">
                             <span className="block min-w-0 truncate">
                               {proofFileValue?.name || "PDF, DOC, PNG, JPG"}
                             </span>
@@ -397,7 +409,7 @@ export default function RegisterPage() {
                                   <CloseIcon className="h-3.5 w-3.5" />
                                 </button>
                               ) : null}
-                              <span className="text-xs font-semibold text-[#2b62e6]">
+                              <span className="text-[11px] font-semibold text-[#2b62e6]">
                                 {proofFileValue ? "Change" : "Upload"}
                               </span>
                             </span>
@@ -415,9 +427,9 @@ export default function RegisterPage() {
                             />
                           </label>
                         </div>
-                        <div className="min-h-[20px]">
+                        <div className="min-h-[16px]">
                           {errors.proofFile ? (
-                            <p className="text-xs leading-5 text-red-500">{errors.proofFile.message}</p>
+                            <p className="text-[11px] leading-4 text-red-500">{errors.proofFile.message}</p>
                           ) : null}
                         </div>
                       </div>
@@ -428,16 +440,16 @@ export default function RegisterPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-2 flex h-[50px] w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#168bd8] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0f75bd] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-1 flex h-9 w-full cursor-pointer items-center justify-center rounded-lg bg-[#2b62e6] px-4 text-[11px] font-semibold text-white shadow-sm transition hover:bg-[#1f55cc] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading
                     ? "Creating Account..."
                     : accountType === "student"
-                      ? "Create Student Account ->"
-                      : "Create Buyer Account ->"}
+                      ? "Create Student Account"
+                      : "Create Buyer Account"}
                 </button>
 
-                <p className="text-center text-xs text-slate-500">
+                <p className="text-center text-[11px] text-slate-500">
                   Already have an account?{" "}
                   <Link href="/login" className="font-semibold text-[#0f4cbf]">
                     Login
@@ -448,18 +460,42 @@ export default function RegisterPage() {
           </section>
 
           {/* Registration benefits */}
-          <section className="flex items-center justify-center bg-[linear-gradient(145deg,#e9fbf6_0%,#e6f3ff_100%)] px-8 py-10">
-            <div className="max-w-sm rounded-3xl bg-white/70 p-6 text-center shadow-sm">
+          <section className="auth-gradient-animate relative flex items-center justify-center bg-[linear-gradient(145deg,#e9fbf6_0%,#e6f3ff_100%)] px-6 py-6 sm:px-8">
+            <Link
+              href="/"
+              aria-label="Close"
+              className="absolute right-6 top-6 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-500 shadow-sm transition hover:border-slate-300 hover:bg-white hover:text-slate-900"
+            >
+              <CloseIcon className="h-4 w-4" />
+            </Link>
+            <div className="w-full max-w-sm rounded-3xl bg-white/70 p-5 text-left shadow-sm">
+              <div className="mb-4">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[#2b62e6]">
+                  Join Skill Swap Hub
+                </p>
+                <h1 className="mt-1.5 text-xl font-semibold text-[#0f4cbf]">
+                  Create your account
+                </h1>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
+                  Build your profile as a verified student provider or join as a buyer to request trusted student services.
+                </p>
+              </div>
               <div className="overflow-hidden rounded-2xl bg-white shadow-lg">
-                <Image src="/img/01.png" alt="Students working together" width={420} height={300} className="h-auto w-full object-cover" />
+                <Image
+                  src="/img/about-story-students.jpg"
+                  alt="Students collaborating in a study group"
+                  width={1024}
+                  height={768}
+                  className="aspect-[4/3] w-full object-cover"
+                />
               </div>
               <div className="mt-5">
-                <span className="inline-flex items-center gap-2 rounded-full bg-[#c9f3e8] px-3 py-1 text-xs font-semibold text-[#0f8a6b]">
+                <span className="inline-flex items-center gap-2 rounded-full bg-[#c9f3e8] px-3 py-1 text-[11px] font-semibold text-[#0f8a6b]">
                   <ShieldIcon className="h-3 w-3" />
                   Verified Student Providers
                 </span>
-                <h2 className="mt-3 text-lg font-semibold text-slate-900">Proof-based Provider Approval</h2>
-                <p className="mt-2 text-xs text-slate-600">
+                <h2 className="mt-2.5 text-base font-semibold text-slate-900">Proof-based Provider Approval</h2>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
                   Students can become providers after admin approval. Buyers can register with a normal email.
                 </p>
               </div>

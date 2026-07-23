@@ -13,6 +13,7 @@ type UniversityComboboxProps = {
   emptyValue?: string;
   className?: string;
   labelClassName?: string;
+  wrapperClassName?: string;
   helperText?: string;
   error?: string;
   id?: string;
@@ -26,6 +27,7 @@ export default function UniversityCombobox({
   emptyValue = "",
   className = "",
   labelClassName = "",
+  wrapperClassName = "",
   helperText,
   error,
   id,
@@ -143,7 +145,7 @@ export default function UniversityCombobox({
   const renderedOptions = filteredUniversities.slice(0, 60);
 
   return (
-    <div className="grid min-w-0 gap-1.5" ref={rootRef}>
+    <div className={`grid min-w-0 gap-1.5 ${wrapperClassName}`} ref={rootRef}>
       <label
         htmlFor={inputId}
         className={`text-xs font-semibold text-slate-600 ${labelClassName}`}
