@@ -1,5 +1,6 @@
 import type { SVGProps } from "react";
 import * as React from "react";
+import ScrollReveal from "@/components/scroll-reveal";
 
 type IconType = (props: SVGProps<SVGSVGElement>) => React.ReactElement;
 
@@ -39,33 +40,36 @@ export default function VerifiedStudentsSection() {
     // This section explains the trust checks behind the student community.
     <section id="trust-section" className="ssh-section-band bg-[#f3f5ff] py-16 sm:py-20 scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl leading-tight">
-            Built for Verified Student Providers
-          </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-sm sm:text-base text-slate-600">
-            Verified university students can offer services, while buyers and
-            students request support inside a more trusted platform experience.
-          </p>
-        </div>
+        <ScrollReveal delayMs={30}>
+          <div className="text-center">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl leading-tight">
+              Built for Verified Student Providers
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm sm:text-base text-slate-600">
+              Verified university students can offer services, while buyers and
+              students request support inside a more trusted platform experience.
+            </p>
+          </div>
+        </ScrollReveal>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              className="ssh-card group rounded-2xl bg-white p-6 border border-slate-100/80 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
-            >
+          {features.map((feature, index) => (
+            <ScrollReveal key={feature.title} delayMs={90 + index * 70}>
               <div
-                className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 ${feature.tone}`}
+                className="ssh-card group rounded-2xl bg-white p-6 border border-slate-100/80 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
               >
-                <feature.Icon className="h-6 w-6" aria-hidden="true" />
+                <div
+                  className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 ${feature.tone}`}
+                >
+                  <feature.Icon className="h-6 w-6" aria-hidden="true" />
+                </div>
+                <h3 className="mt-5 text-base font-bold text-slate-900">
+                  {feature.title}
+                </h3>
+                <p className="mt-2 text-sm sm:text-base leading-relaxed text-slate-600">
+                  {feature.description}
+                </p>
               </div>
-              <h3 className="mt-5 text-base font-bold text-slate-900">
-                {feature.title}
-              </h3>
-              <p className="mt-2 text-sm sm:text-base leading-relaxed text-slate-600">
-                {feature.description}
-              </p>
-            </div>
+            </ScrollReveal>
           ))}
         </div>
       </div>

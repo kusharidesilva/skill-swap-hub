@@ -1,4 +1,5 @@
 import Image from "next/image";
+import ScrollReveal from "@/components/scroll-reveal";
 
 const categories = [
   {
@@ -102,32 +103,35 @@ export default function SupportPage() {
       {/* Support categories */}
       <section className="ssh-section-clear bg-white">
         <div className="mx-auto max-w-6xl px-6 py-14">
-          <h2 className="text-[18px] font-semibold leading-none text-slate-900 sm:text-[19px]">
-            Information Categories
-          </h2>
+          <ScrollReveal delayMs={30}>
+            <h2 className="text-[18px] font-semibold leading-none text-slate-900 sm:text-[19px]">
+              Information Categories
+            </h2>
+          </ScrollReveal>
           <div className="mt-8 grid gap-5 md:grid-cols-2">
-            {categories.map((item) => (
-              <div
-                key={item.title}
-                className={`ssh-card flex items-start gap-4 rounded-[14px] border border-[#d7def1] px-7 py-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${item.cardTone}`}
-              >
+            {categories.map((item, index) => (
+              <ScrollReveal key={item.title} delayMs={80 + index * 60}>
                 <div
-                  className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] ${item.tone}`}
+                  className={`ssh-card flex items-start gap-4 rounded-[14px] border border-[#d7def1] px-7 py-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${item.cardTone}`}
                 >
-                  <CategoryIcon
-                    type={item.icon}
-                    className="h-[17px] w-[17px]"
-                  />
+                  <div
+                    className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] ${item.tone}`}
+                  >
+                    <CategoryIcon
+                      type={item.icon}
+                      className="h-[17px] w-[17px]"
+                    />
+                  </div>
+                  <div className="max-w-[25rem]">
+                    <h3 className="text-[16px] font-semibold leading-[1.25] text-slate-900">
+                      {item.title}
+                    </h3>
+                    <p className="mt-2 text-[14px] leading-[1.55] text-slate-600">
+                      {item.description}
+                    </p>
+                  </div>
                 </div>
-                <div className="max-w-[25rem]">
-                  <h3 className="text-[16px] font-semibold leading-[1.25] text-slate-900">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-[14px] leading-[1.55] text-slate-600">
-                    {item.description}
-                  </p>
-                </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -135,29 +139,32 @@ export default function SupportPage() {
 
       {/* Frequently asked questions */}
       <section className="ssh-section-clear bg-white">
-        <div className="mx-auto max-w-4xl px-6 pb-6 pt-4 text-center">
-          <h2 className="text-xl font-semibold text-slate-900">
-            Frequently Asked Questions
-          </h2>
-          <p className="mt-2 text-sm text-slate-600">
-            Quick reference for common community inquiries.
-          </p>
-        </div>
+        <ScrollReveal delayMs={30}>
+          <div className="mx-auto max-w-4xl px-6 pb-6 pt-4 text-center">
+            <h2 className="text-xl font-semibold text-slate-900">
+              Frequently Asked Questions
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Quick reference for common community inquiries.
+            </p>
+          </div>
+        </ScrollReveal>
         <div className="mx-auto max-w-4xl px-6 pb-12">
           <div className="space-y-6 border-l-2 border-slate-200 pl-6">
-            {faqs.map((faq) => (
-              <div
-                key={faq.question}
-                className="group relative cursor-pointer transition-all duration-300 hover:translate-x-1 hover:scale-[1.02]"
-              >
-                <div className="absolute -left-8.5 top-1.5 h-6 w-1 rounded-full bg-slate-300 transition-all duration-300 group-hover:top-0 group-hover:h-10 group-hover:bg-[#0f4cbf]" />
-                <h3 className="text-sm font-semibold text-slate-900 transition-colors duration-300 group-hover:text-[#0f4cbf]">
-                  {faq.question}
-                </h3>
-                <p className="mt-2 text-sm text-slate-600 transition-colors duration-300 group-hover:text-slate-800">
-                  {faq.answer}
-                </p>
-              </div>
+            {faqs.map((faq, index) => (
+              <ScrollReveal key={faq.question} delayMs={70 + index * 45}>
+                <div
+                  className="group relative cursor-pointer transition-all duration-300 hover:translate-x-1 hover:scale-[1.02]"
+                >
+                  <div className="absolute -left-8.5 top-1.5 h-6 w-1 rounded-full bg-slate-300 transition-all duration-300 group-hover:top-0 group-hover:h-10 group-hover:bg-[#0f4cbf]" />
+                  <h3 className="text-sm font-semibold text-slate-900 transition-colors duration-300 group-hover:text-[#0f4cbf]">
+                    {faq.question}
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-600 transition-colors duration-300 group-hover:text-slate-800">
+                    {faq.answer}
+                  </p>
+                </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -166,7 +173,8 @@ export default function SupportPage() {
       {/* Contact support options */}
       <section id="contact-section" className="ssh-section-clear bg-white pb-16 scroll-mt-20">
         <div className="mx-auto max-w-6xl px-6">
-          <div className="ssh-cta-panel grid gap-8 rounded-[30px] bg-[#1654d1] px-10 py-10 text-white shadow-lg lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+          <ScrollReveal delayMs={70}>
+            <div className="ssh-cta-panel grid gap-8 rounded-[30px] bg-[#1654d1] px-10 py-10 text-white shadow-lg lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
             <div className="max-w-[35rem]">
               <h2 className="text-[20px] font-semibold leading-tight sm:text-[21px]">
                 Contact Information
@@ -200,7 +208,8 @@ export default function SupportPage() {
                 className="h-[210px] w-full object-cover sm:h-[230px] lg:h-[182px] lg:w-[330px]"
               />
             </div>
-          </div>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
     </main>

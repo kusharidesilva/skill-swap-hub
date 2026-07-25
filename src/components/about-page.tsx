@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import ScrollReveal from "@/components/scroll-reveal";
 
 const storyImages = [
   { src: "/img/about-story-students.jpg", alt: "Students collaborating" },
@@ -60,7 +61,7 @@ export default function AboutPage({
         />
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_72px)]">
           <div className="ssh-hero-copy relative z-10 flex flex-col justify-center">
-            <span className="ssh-highlight-badge inline-flex items-center gap-2 self-start rounded-full bg-[#dfe8ff] px-3 py-1 text-xs font-semibold text-[#315ccf]">
+            <span className="ssh-highlight-badge ssh-highlight-badge-blue inline-flex items-center gap-2 self-start rounded-full bg-[#dfe8ff] px-3 py-1 text-xs font-semibold text-[#315ccf]">
               WHY SKILL SWAP HUB
             </span>
             <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl leading-tight">
@@ -107,22 +108,24 @@ export default function AboutPage({
       <section id="story" className="ssh-section-clear bg-white scroll-mt-20">
         <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1fr_1.05fr]">
           <div className="grid grid-cols-2 gap-4">
-            {storyImages.map((image) => (
-              <div
-                key={image.src}
-                className="ssh-card ssh-card-image relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-100 shadow-sm"
-              >
-                <Image
-                  src={image.src}
-                  alt={image.alt}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 50vw, 280px"
-                />
-              </div>
+            {storyImages.map((image, index) => (
+              <ScrollReveal key={image.src} delayMs={70 + index * 55}>
+                <div
+                  className="ssh-card ssh-card-image relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-100 shadow-sm"
+                >
+                  <Image
+                    src={image.src}
+                    alt={image.alt}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 50vw, 280px"
+                  />
+                </div>
+              </ScrollReveal>
             ))}
           </div>
-          <div>
+          <ScrollReveal delayMs={110}>
+            <div>
             <h2 className="text-2xl font-semibold text-slate-900">
               The Story Behind the Skill Swap Hub
             </h2>
@@ -170,37 +173,41 @@ export default function AboutPage({
               </div>
             </div> */}
             
-          </div>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 
       {/* Community values */}
       <section className="ssh-section-clear bg-white">
         <div className="mx-auto max-w-6xl px-6 py-12">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-slate-900">
-              Our Core Values
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              The values that guide every interaction on Skill Swap Hub.
-            </p>
-          </div>
+          <ScrollReveal delayMs={30}>
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-slate-900">
+                Our Core Values
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                The values that guide every interaction on Skill Swap Hub.
+              </p>
+            </div>
+          </ScrollReveal>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {values.map((value) => (
-              <div
-                key={value.title}
-                className="ssh-card rounded-2xl border border-slate-100 bg-white p-6 shadow-sm"
-              >
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef1ff] text-[#0f4cbf]">
-                  <ValueIcon type={value.icon} className="h-5 w-5" />
+            {values.map((value, index) => (
+              <ScrollReveal key={value.title} delayMs={90 + index * 70}>
+                <div
+                  className="ssh-card rounded-2xl border border-slate-100 bg-white p-6 shadow-sm"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef1ff] text-[#0f4cbf]">
+                    <ValueIcon type={value.icon} className="h-5 w-5" />
+                  </div>
+                  <h3 className="mt-4 text-sm font-semibold text-slate-900">
+                    {value.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-600">
+                    {value.description}
+                  </p>
                 </div>
-                <h3 className="mt-4 text-sm font-semibold text-slate-900">
-                  {value.title}
-                </h3>
-                <p className="mt-2 text-sm text-slate-600">
-                  {value.description}
-                </p>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -209,7 +216,8 @@ export default function AboutPage({
       {/* Join the community call to action */}
       <section className="ssh-section-clear bg-white pb-16">
         <div className="mx-auto max-w-6xl px-6">
-          <div className="ssh-cta-panel relative overflow-hidden rounded-3xl bg-[#0f4cbf] px-8 py-10 text-center text-white shadow-lg">
+          <ScrollReveal delayMs={70}>
+            <div className="ssh-cta-panel relative overflow-hidden rounded-3xl bg-[#0f4cbf] px-8 py-10 text-center text-white shadow-lg">
             <div className="absolute -left-10 top-10 h-32 w-32 rounded-full bg-white/10" />
             <div className="absolute -right-16 -top-12 h-44 w-44 rounded-full bg-white/10" />
             <h2 className="text-2xl font-semibold sm:text-3xl">
@@ -223,18 +231,19 @@ export default function AboutPage({
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link
                 href={ctaButtonHref}
-                className="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-[#0f4cbf] shadow-sm"
+                className="ssh-about-cta-button ssh-about-cta-button-solid rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-[#0f4cbf] shadow-sm"
               >
                 {ctaButtonLabel}
               </Link>
               <Link
                 href={secondaryCtaHref}
-                className="rounded-lg border border-white/30 px-5 py-2.5 text-sm font-semibold text-white"
+                className="ssh-about-cta-button ssh-about-cta-button-outline rounded-lg border border-white/30 px-5 py-2.5 text-sm font-semibold text-white"
               >
                 Browse Skills
               </Link>
             </div>
-          </div>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
     </main>

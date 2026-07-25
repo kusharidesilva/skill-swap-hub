@@ -68,7 +68,7 @@ export const ALLOWED_STUDENT_PROOF_MIME_TYPES = [
   "image/jpeg",
 ] as const;
 
-export const MAX_STUDENT_PROOF_SIZE_BYTES = 8 * 1024 * 1024;
+export const MAX_STUDENT_PROOF_SIZE_BYTES = 2 * 1024 * 1024;
 
 export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number];
 export type AvailabilityDay = (typeof AVAILABILITY_DAYS)[number];

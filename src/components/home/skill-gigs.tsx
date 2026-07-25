@@ -2,47 +2,50 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react"; 
+import { useEffect, useState } from "react";
 import { collection, doc, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import { usePathname } from "next/navigation";
-import type { SVGProps } from "react"; 
-import { db } from "@/lib/firebase"; 
-import { formatRatingLabel } from "@/lib/ratings"; 
-import { useAuth } from "@/context/AuthContext"; 
- 
-const gigImages = [ 
-  "/img/package%201.jpg", 
-  "/img/package%202.jpg", 
-  "/img/package%203.jpg", 
-  "/img/package%204.jpg",  
-]; 
+import type { SVGProps } from "react";
+import ScrollReveal from "@/components/scroll-reveal";
+import { db } from "@/lib/firebase";
+import { formatRatingLabel } from "@/lib/ratings";
+import { useAuth } from "@/context/AuthContext";
 
-type LiveGig = { 
-  id: string; 
-  providerId: string; 
+const gigImages = [
+  "/img/package%201.jpg",
+  "/img/package%202.jpg",
+  "/img/package%203.jpg",
+  "/img/package%204.jpg",
+];
+
+type LiveGig = {
+  id: string;
+  gigId?: string;
+  providerId: string;
   title: string;
   category: string;
   rating: number;
   providerName: string;
-  university: string; 
+  university: string;
   providerImage?: string;
   summary: string;
-  availability: string; 
+  availability: string;
   image: string;
-  serviceType: string; 
+  serviceType: string;
   tags: string[];
-}; 
+};
 
 export default function SkillGigsSection() {
   const pathname = usePathname();
-  const { userProfile } = useAuth(); 
-  const [gigs, setGigs] = useState<LiveGig[]>([]); 
-  const [loading, setLoading] = useState(true); 
+  const { userProfile } = useAuth();
+  const [gigs, setGigs] = useState<LiveGig[]>([]);
+  const [loading, setLoading] = useState(true);
   const [ratingsVersion, setRatingsVersion] = useState(0);
- 
+
   const isBuyerHome = pathname === "/home/buyer";
   const isProviderHome = pathname === "/home/provider";
   const isBothHome = pathname === "/home/both";
+  const hideOwnGig = !isBothHome;
   const viewAllHref = isBuyerHome
     ? "/find-services/buyer"
     : isProviderHome
@@ -56,18 +59,20 @@ export default function SkillGigsSection() {
     const unsubscribe = onSnapshot(
       query(collection(db, "requests"), where("status", "==", "completed")),
       () => setRatingsVersion((value) => value + 1),
-      (err) => console.error("Error subscribing to live homepage ratings:", err),
+      (err) => console.error("Error subscribing to live homepage ratings:", err)
     );
 
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => { 
+  useEffect(() => {
     // Combine provider profiles with completed-request ratings into the gig cards.
-    async function fetchGigs() { 
-      try { 
-        const usersSnap = await getDocs(collection(db, "users")); 
-        const requestsSnap = await getDocs(query(collection(db, "requests"), where("status", "==", "completed"))); 
+    async function fetchGigs() {
+      try {
+        const usersSnap = await getDocs(collection(db, "users"));
+        const requestsSnap = await getDocs(
+          query(collection(db, "requests"), where("status", "==", "completed"))
+        );
         const ratingsMap: Record<string, { totalStars: number; count: number }> = {};
 
         requestsSnap.forEach((reqDoc) => {
@@ -80,46 +85,58 @@ export default function SkillGigsSection() {
           }
         });
 
-        const liveGigs: LiveGig[] = []; 
+        const liveGigs: LiveGig[] = [];
 
-        usersSnap.forEach((userDoc) => { 
-          if (userProfile && userDoc.id === userProfile.uid) return; 
- 
-          const user = userDoc.data(); 
-          const skills: string[] = user.providerProfile?.skills || []; 
-          const storedGigs = user.providerProfile?.gigs || []; 
-          const providerName: string = user.name || "Campus Student"; 
-          const university: string = user.university || "Campus"; 
-          const providerImage: string = user.profileImageUrl || ""; 
-          const availability: string = 
-            typeof user.providerProfile?.availability === "string" 
-              ? user.providerProfile.availability 
-              : Array.isArray(user.providerProfile?.availability) 
-                ? (user.providerProfile.availability[0] as string) || "Flexible" 
-                : "Flexible"; 
-          const ratingData = ratingsMap[userDoc.id]; 
+        usersSnap.forEach((userDoc) => {
+          if (hideOwnGig && userProfile && userDoc.id === userProfile.uid) return;
+
+          const user = userDoc.data();
+          const skills: string[] = user.providerProfile?.skills || [];
+          const storedGigs = (user.providerProfile?.gigs || []).filter(
+            (gig: { status?: string }) => (gig.status || "active") === "active",
+          );
+          const providerName: string = user.name || "Campus Student";
+          const university: string = user.university || "Campus";
+          const providerImage: string = user.profileImageUrl || "";
+          const availability: string =
+            typeof user.providerProfile?.availability === "string"
+              ? user.providerProfile.availability
+              : Array.isArray(user.providerProfile?.availability)
+                ? (user.providerProfile.availability[0] as string) || "Flexible"
+                : "Flexible";
+          const ratingData = ratingsMap[userDoc.id];
           const rating = ratingData
             ? Number((ratingData.totalStars / ratingData.count).toFixed(1))
-            : 0; 
+            : 0;
 
-          const gigEntries: Array<{ 
-            title: string; 
-            category: string; 
-            summary: string; 
-            image: string; 
+          const gigEntries: Array<{
+            title: string;
+            category: string;
+            summary: string;
+            image: string;
           }> =
             storedGigs.length > 0
-              ? storedGigs.map((gig: { title?: string; category?: string; summary?: string; image?: string }, skillIndex: number) => ({ 
-                  title: gig.title || skills[skillIndex] || "Student Skill", 
-                  category: gig.category || skills[skillIndex] || "Skill", 
-                  summary: 
-                    gig.summary || 
-                    `Practical support from a verified university student.`, 
-                  image: 
-                    gig.image || 
-                    user.providerProfile?.gigImages?.[skillIndex] || 
-                    gigImages[skillIndex % gigImages.length], 
-                }))
+              ? storedGigs.map(
+                  (
+                    gig: {
+                      title?: string;
+                      category?: string;
+                      summary?: string;
+                      image?: string;
+                    },
+                    skillIndex: number
+                  ) => ({
+                    title: gig.title || skills[skillIndex] || "Student Skill",
+                    category: gig.category || skills[skillIndex] || "Skill",
+                    summary:
+                      gig.summary ||
+                      "Practical support from a verified university student.",
+                    image:
+                      gig.image ||
+                      user.providerProfile?.gigImages?.[skillIndex] ||
+                      gigImages[skillIndex % gigImages.length],
+                  })
+                )
               : skills.map((skill, skillIndex) => ({
                   title: `I will do ${skill}`,
                   category: skill,
@@ -129,29 +146,35 @@ export default function SkillGigsSection() {
                     gigImages[skillIndex % gigImages.length],
                 }));
 
-          gigEntries.slice(0, 1).forEach((gigEntry: {
-            title: string;
-            category: string;
-            summary: string;
-            image: string;
-          }, skillIndex: number) => {
-            if (liveGigs.length >= 4) return;
-            liveGigs.push({
-              id: `${userDoc.id}-${skillIndex}`,
-              providerId: userDoc.id,
-              title: gigEntry.title,
-              category: gigEntry.category,
-              rating,
-              providerName,
-              university,
-              providerImage,
-              summary: gigEntry.summary,
-              availability,
-              image: gigEntry.image,
-              serviceType: "Service Gig",
-              tags: [gigEntry.category, "Service Gig", availability],
-            });
-          });
+          gigEntries.slice(0, 1).forEach(
+            (
+              gigEntry: {
+                title: string;
+                category: string;
+                summary: string;
+                image: string;
+              },
+              skillIndex: number
+            ) => {
+              if (liveGigs.length >= 4) return;
+              liveGigs.push({
+                id: `${userDoc.id}-${skillIndex}`,
+                gigId: storedGigs[skillIndex]?.id,
+                providerId: userDoc.id,
+                title: gigEntry.title,
+                category: gigEntry.category,
+                rating,
+                providerName,
+                university,
+                providerImage,
+                summary: gigEntry.summary,
+                availability,
+                image: gigEntry.image,
+                serviceType: "Service Gig",
+                tags: [gigEntry.category, "Service Gig", availability],
+              });
+            }
+          );
         });
 
         setGigs(liveGigs.slice(0, 4));
@@ -164,60 +187,65 @@ export default function SkillGigsSection() {
     }
 
     fetchGigs();
-  }, [ratingsVersion, userProfile]);
+  }, [hideOwnGig, ratingsVersion, userProfile]);
 
   return (
     <section id="explore-skills" className="ssh-section-clear bg-white scroll-mt-20">
       {/* Featured live service gigs */}
       <div className="mx-auto max-w-6xl px-6 py-14">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900 sm:text-2xl">
-              Explore Student Skill Gigs
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Find skills offered by verified university students.
-            </p>
+        <ScrollReveal delayMs={40}>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900 sm:text-2xl">
+                Explore Student Skill Gigs
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                Find skills offered by verified university students.
+              </p>
+            </div>
+            <Link
+              href={viewAllHref}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f4cbf]"
+            >
+              View All Skills
+              <span aria-hidden="true">→</span>
+            </Link>
           </div>
-          <Link
-            href={viewAllHref}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f4cbf]"
-          >
-            View All Skills
-            <span aria-hidden="true">→</span>
-          </Link>
-        </div>
+        </ScrollReveal>
 
         {loading ? (
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-              className="ssh-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-              >
-                <div className="h-40 w-full animate-pulse bg-slate-200" />
-                <div className="space-y-3 p-5">
-                  <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200" />
-                  <div className="h-3 w-1/2 animate-pulse rounded bg-slate-100" />
-                  <div className="flex gap-2">
-                    <div className="h-5 w-20 animate-pulse rounded-full bg-slate-100" />
-                    <div className="h-5 w-16 animate-pulse rounded-full bg-slate-100" />
+              <ScrollReveal key={i} delayMs={80 + i * 55}>
+                <div className="ssh-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="h-40 w-full animate-pulse bg-slate-200" />
+                  <div className="space-y-3 p-5">
+                    <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200" />
+                    <div className="h-3 w-1/2 animate-pulse rounded bg-slate-100" />
+                    <div className="flex gap-2">
+                      <div className="h-5 w-20 animate-pulse rounded-full bg-slate-100" />
+                      <div className="h-5 w-16 animate-pulse rounded-full bg-slate-100" />
+                    </div>
                   </div>
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         ) : gigs.length === 0 ? (
-          <div className="ssh-card mt-8 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
-            <p className="text-sm font-semibold text-slate-900">No live gigs yet</p>
-            <p className="mt-2 text-sm text-slate-600">
-              Providers have not published any gigs yet. Once they do, the latest gigs will appear here.
-            </p>
-          </div>
+          <ScrollReveal delayMs={100}>
+            <div className="ssh-card mt-8 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
+              <p className="text-sm font-semibold text-slate-900">No live gigs yet</p>
+              <p className="mt-2 text-sm text-slate-600">
+                Providers have not published any gigs yet. Once they do, the latest gigs will appear here.
+              </p>
+            </div>
+          </ScrollReveal>
         ) : (
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {gigs.map((gig) => (
-              <GigCard key={gig.id} gig={gig} />
+            {gigs.map((gig, index) => (
+              <ScrollReveal key={gig.id} delayMs={80 + index * 60}>
+                <GigCard gig={gig} />
+              </ScrollReveal>
             ))}
           </div>
         )}
@@ -233,15 +261,15 @@ function GigCard({ gig }: { gig: LiveGig }) {
   const isProviderHome = pathname === "/home/provider";
   const isBothHome = pathname === "/home/both";
   const requestRole = isBuyerHome ? "buyer" : isProviderHome ? "provider" : isBothHome ? "both" : "buyer";
-  const previewHref = `/gig-preview/${requestRole}?source=home&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0`;
+  const previewHref = `/gig-preview/${requestRole}?source=home&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}`;
   const isFavorited = Boolean(
     userProfile?.favorites?.some(
       (fav) =>
         (fav as { gigId?: string; providerId?: string }).gigId === gig.id ||
         ((fav as { gigId?: string; providerId?: string }).gigId
           ? false
-          : (fav as { providerId?: string }).providerId === gig.providerId),
-    ),
+          : (fav as { providerId?: string }).providerId === gig.providerId)
+    )
   );
 
   const handleToggleFavorite = async () => {
@@ -261,7 +289,7 @@ function GigCard({ gig }: { gig: LiveGig }) {
             !(
               !(fav as { gigId?: string; providerId?: string }).gigId &&
               (fav as { providerId?: string }).providerId === gig.providerId
-            ),
+            )
         );
       } else {
         const now = new Date();
@@ -276,9 +304,15 @@ function GigCard({ gig }: { gig: LiveGig }) {
             instructor: gig.providerName,
             rating: formatRatingLabel(gig.rating),
             image: gig.image,
-            avatar: gig.providerImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(gig.providerName)}&background=2f66e7&color=fff&size=400`,
+            avatar:
+              gig.providerImage ||
+              `https://ui-avatars.com/api/?name=${encodeURIComponent(gig.providerName)}&background=2f66e7&color=fff&size=400`,
             level: gig.university,
-            savedAt: `Saved ${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+            savedAt: `Saved ${now.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}`,
             description: gig.summary,
           },
         ];
@@ -333,7 +367,13 @@ function GigCard({ gig }: { gig: LiveGig }) {
         <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
           <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#2f66e7] text-[10px] font-bold text-white ring-2 ring-white">
             {gig.providerImage && gig.providerImage.startsWith("/") ? (
-              <Image src={gig.providerImage} alt={gig.providerName} width={32} height={32} className="h-full w-full object-cover" />
+              <Image
+                src={gig.providerImage}
+                alt={gig.providerName}
+                width={32}
+                height={32}
+                className="h-full w-full object-cover"
+              />
             ) : (
               gig.providerName.charAt(0).toUpperCase()
             )}
@@ -385,7 +425,14 @@ function StarIcon(props: SVGProps<SVGSVGElement>) {
 
 function HeartIcon({ className, filled = false }: { className?: string; filled?: boolean }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={filled ? 0 : 2} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth={filled ? 0 : 2}
+      aria-hidden="true"
+    >
       <path d="M12 21s-6.4-4.1-9-8.1C1 9.8 2.4 6.2 5.8 5.6c2.1-.4 3.8.6 5 2.3.2.3.3.4.4.4s.2-.1.4-.4c1.2-1.7 2.9-2.7 5-2.3 3.4.6 4.8 4.2 2.8 7.3C18.4 16.9 12 21 12 21z" />
     </svg>
   );

@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { formatRatingLabel } from "@/lib/ratings";
 import { scopedHref, type Role } from "@/lib/role-routes";
+import type { ProviderGig } from "@/lib/auth";
 
 type ProviderProfilePublicPageProps = {
   providerId: string;
@@ -19,6 +20,7 @@ type ProviderProfilePublicPageProps = {
 
 type PublicGig = {
   id: string;
+  gigId?: string;
   title: string;
   rating: string;
   reviews: number;
@@ -79,6 +81,7 @@ type FirestoreUserProfile = {
     bio?: string;
     skills?: string[];
     gigImages?: string[];
+    gigs?: ProviderGig[];
   };
   settings?: {
     profileVisibility?: boolean;
@@ -497,7 +500,7 @@ export default function ProviderProfilePublicPage({
                       </div>
                       <div className="mt-3 grid grid-cols-2 gap-2">
                         <Link
-                          href={`/gig-preview/${role}?providerId=${encodeURIComponent(providerId)}&skillIndex=${index}`}
+                          href={`/gig-preview/${role}?providerId=${encodeURIComponent(providerId)}&skillIndex=${index}${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}`}
                           className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                         >
                           View Gig
@@ -637,14 +640,30 @@ function buildProviderProfile(
 
   const skills = member.providerProfile?.skills || [];
   const customImages = member.providerProfile?.gigImages || [];
-  const gigs: PublicGig[] = skills.map((skill, index) => ({
-    id: `${providerId}-${index}`,
-    title: `I will do ${skill}`,
-    rating: avgRating.toFixed(1),
-    reviews: completedRequests.length,
-    category: skill,
-    image: customImages[index] || fallbackGigImage(index),
-  }));
+  const storedGigs = (member.providerProfile?.gigs || []).filter(
+    (gig) => (gig.status || "active") === "active",
+  );
+  const gigs: PublicGig[] = (
+    storedGigs.length > 0
+      ? storedGigs.map((gig, index) => ({
+          id: gig.id || `${providerId}-${index}`,
+          gigId: gig.id,
+          title: gig.title || `I will do ${skills[index] || "Student Support"}`,
+          rating: avgRating.toFixed(1),
+          reviews: completedRequests.length,
+          category: gig.category || skills[index] || "General",
+          image: gig.image || customImages[index] || fallbackGigImage(index),
+        }))
+      : skills.map((skill, index) => ({
+          id: `${providerId}-${index}`,
+          gigId: undefined,
+          title: `I will do ${skill}`,
+          rating: avgRating.toFixed(1),
+          reviews: completedRequests.length,
+          category: skill,
+          image: customImages[index] || fallbackGigImage(index),
+        }))
+  );
 
   const reviews: PublicReview[] = completedRequests
     .filter((request) => request.review && typeof request.review.rating === "number")

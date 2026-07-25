@@ -79,7 +79,7 @@ const registerSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["proofFile"],
-        message: "Upload a PDF, DOC, DOCX, PNG, JPG, or JPEG file under 8 MB.",
+        message: "Upload a PDF, DOC, DOCX, PNG, JPG, or JPEG file under 2 MB.",
       });
     }
   });
@@ -150,7 +150,7 @@ export default function RegisterPage() {
         setServerError("This email is already registered. Please login.");
       } else if (msg.includes("Student proof must")) {
         setServerError(
-          "Upload a PDF, DOC, DOCX, PNG, JPG, or JPEG file under 8 MB.",
+          "Upload a PDF, DOC, DOCX, PNG, JPG, or JPEG file under 2 MB.",
         );
       } else if (
         msg.includes("Student proof upload timed out") ||
@@ -165,7 +165,7 @@ export default function RegisterPage() {
         msg.includes("storage/unknown")
       ) {
         setServerError(
-          "Student proof upload failed before your account could be created. Please try again with a PDF, DOC, DOCX, PNG, JPG, or JPEG file under 8 MB.",
+          "Student proof upload failed before your account could be created. Please try again with a PDF, DOC, DOCX, PNG, JPG, or JPEG file under 2 MB.",
         );
       } else if (
         msg.includes("Account profile setup timed out") ||

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -160,6 +160,13 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
     setDidAttemptSubmit(false);
 
     try {
+      if (
+        userProfile.providerVerificationStatus !== "approved" ||
+        userProfile.canSellServices !== true
+      ) {
+        throw new Error("Your provider account must be approved before you can publish gigs.");
+      }
+
       const userRef = doc(db, "users", userProfile.uid);
       const existingSkills: string[] = [...(userProfile.providerProfile?.skills || [])];
       const existingImages: string[] = [...(userProfile.providerProfile?.gigImages || [])];
@@ -219,15 +226,17 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
         existingGigs.push(gigData);
       }
 
-      await updateDoc(userRef, {
+      const batch = writeBatch(db);
+      batch.update(userRef, {
         "providerProfile.skills": existingSkills,
         "providerProfile.gigImages": existingImages,
         "providerProfile.availability": availability,
         "providerProfile.gigs": existingGigs,
       });
 
-      await setDoc(
-        doc(db, "gigs", gigDocumentId),
+      const gigRef = doc(db, "gigs", gigDocumentId);
+      batch.set(
+        gigRef,
         {
           gigId: gigDocumentId,
           providerId: userProfile.uid,
@@ -250,10 +259,12 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
           gigStatus: "active",
           status: "active",
           updatedAt: serverTimestamp(),
-          createdAt: serverTimestamp(),
+          ...(existingGigId ? {} : { createdAt: serverTimestamp() }),
         },
         { merge: true },
       );
+
+      await batch.commit();
 
       await refreshProfile();
 

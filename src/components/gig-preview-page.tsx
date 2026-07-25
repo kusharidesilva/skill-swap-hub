@@ -187,9 +187,17 @@ export default function GigPreviewPage({
         const user = providerSnap.data() as UserProfile;
         const profile = user.providerProfile;
         const skills = profile?.skills?.length ? profile.skills : ["Student Support"];
-        const safeSkillIndex = Math.min(Math.max(skillIndex, 0), skills.length - 1);
-        const skill = skills[safeSkillIndex] || skills[0];
-        const storedGig = profile?.gigs?.[safeSkillIndex];
+        const profileGigs = profile?.gigs || [];
+        const matchedGigIndex = gigId
+          ? profileGigs.findIndex((item) => item.id === gigId)
+          : -1;
+        const resolvedSkillIndex =
+          matchedGigIndex >= 0
+            ? matchedGigIndex
+            : Math.min(Math.max(skillIndex, 0), Math.max(skills.length - 1, 0));
+        const safeSkillIndex = resolvedSkillIndex;
+        const skill = skills[safeSkillIndex] || profileGigs[safeSkillIndex]?.title || skills[0];
+        const storedGig = profileGigs[safeSkillIndex];
         const normalizedGigSnap = gigId ? await getDoc(doc(db, "gigs", gigId)) : null;
         const normalizedGig = normalizedGigSnap?.exists() ? normalizedGigSnap.data() : null;
 

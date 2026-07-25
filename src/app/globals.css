@@ -280,14 +280,7 @@ body {
 
 .ssh-hero-section::before,
 .ssh-support-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(90deg, rgb(47 102 231 / 8%) 1px, transparent 1px),
-    linear-gradient(rgb(15 138 107 / 6%) 1px, transparent 1px);
-  background-size: 58px 58px;
-  mask-image: radial-gradient(70% 70% at 50% 42%, #000 28%, transparent 78%);
+  content: none;
 }
 
 .ssh-hero-orbit {
@@ -331,6 +324,17 @@ body {
   background: var(--ssh-mint);
   box-shadow: 0 0 0 0 rgb(15 138 107 / 42%);
   animation: user-pulse-ring 2.4s ease-out infinite;
+}
+
+.ssh-highlight-badge-blue {
+  border-color: rgb(47 102 231 / 16%);
+  background: rgb(223 232 255 / 84%);
+  box-shadow: 0 12px 28px -22px rgb(47 102 231 / 42%);
+}
+
+.ssh-highlight-badge-blue::before {
+  background: var(--ssh-primary);
+  box-shadow: 0 0 0 0 rgb(47 102 231 / 42%);
 }
 
 .ssh-hero-copy {
@@ -433,15 +437,107 @@ body {
 }
 
 .ssh-secondary-action {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   border-color: rgb(47 102 231 / 20%);
-  background: rgb(255 255 255 / 68%);
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 82%), rgb(242 247 250 / 74%));
   box-shadow: 0 12px 32px -26px rgb(15 23 42 / 52%);
   backdrop-filter: blur(12px);
+}
+
+.ssh-secondary-action::after {
+  content: "";
+  position: absolute;
+  inset: -35%;
+  z-index: -1;
+  background: linear-gradient(
+    115deg,
+    transparent 24%,
+    rgb(178 255 236 / 0%) 34%,
+    rgb(185 247 223 / 56%) 47%,
+    rgb(244 247 249 / 92%) 52%,
+    rgb(163 234 214 / 72%) 58%,
+    rgb(178 255 236 / 0%) 70%,
+    transparent 78%
+  );
+  opacity: 0;
+  transform: translateX(-145%) skewX(-18deg);
+  transition:
+    transform 760ms var(--motion-ease),
+    opacity 220ms ease;
+  pointer-events: none;
+}
+
+.ssh-about-cta-button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.ssh-about-cta-button::after {
+  content: "";
+  position: absolute;
+  inset: -32%;
+  z-index: 0;
+  opacity: 0;
+  transform: translateX(-145%) skewX(-18deg);
+  transition:
+    transform 1280ms var(--motion-ease),
+    opacity 420ms ease;
+  pointer-events: none;
+}
+
+.ssh-about-cta-button > * {
+  position: relative;
+  z-index: 1;
+}
+
+.ssh-about-cta-button-solid::after {
+  background: linear-gradient(
+    115deg,
+    transparent 26%,
+    rgb(255 255 255 / 0%) 38%,
+    rgb(214 255 245 / 72%) 50%,
+    rgb(255 255 255 / 95%) 55%,
+    rgb(187 247 208 / 72%) 60%,
+    rgb(255 255 255 / 0%) 72%,
+    transparent 80%
+  );
+}
+
+.ssh-about-cta-button-outline::after {
+  background: linear-gradient(
+    115deg,
+    transparent 26%,
+    rgb(255 255 255 / 0%) 38%,
+    rgb(167 243 208 / 30%) 50%,
+    rgb(255 255 255 / 68%) 55%,
+    rgb(209 250 229 / 36%) 60%,
+    rgb(255 255 255 / 0%) 72%,
+    transparent 80%
+  );
 }
 
 .ssh-pulse-dot {
   box-shadow: 0 0 0 0 rgb(47 102 231 / 45%);
   animation: user-pulse-ring 2.4s ease-out infinite;
+}
+
+.ssh-reveal {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0) scale(0.985);
+  transition:
+    opacity 720ms var(--motion-ease),
+    transform 720ms var(--motion-ease);
+  transition-delay: var(--ssh-reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.ssh-reveal-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
 .user-motion-scope .profile-steady-cards
@@ -553,6 +649,50 @@ body {
     background: linear-gradient(135deg, #2557cf, var(--ssh-primary), #1177c4);
     transform: translateY(-1px);
     box-shadow: 0 22px 48px -24px rgb(47 102 231 / 72%);
+  }
+
+  .ssh-secondary-action:hover::after,
+  .ssh-secondary-action:focus-visible::after {
+    opacity: 1;
+    transform: translateX(145%) skewX(-18deg);
+  }
+
+  .ssh-secondary-action:hover,
+  .ssh-secondary-action:focus-visible {
+    border-color: rgb(15 138 107 / 24%);
+    background:
+      linear-gradient(135deg, rgb(255 255 255 / 96%), rgb(229 246 239 / 88%));
+    box-shadow:
+      0 18px 36px -28px rgb(15 138 107 / 42%),
+      0 10px 26px -24px rgb(148 163 184 / 55%);
+  }
+
+  .ssh-about-cta-button:hover,
+  .ssh-about-cta-button:focus-visible {
+    transform: translateY(-2px) scale(1.015);
+    transition-duration: 520ms;
+  }
+
+  .ssh-about-cta-button-solid:hover,
+  .ssh-about-cta-button-solid:focus-visible {
+    box-shadow:
+      0 18px 34px -22px rgb(255 255 255 / 36%),
+      0 22px 42px -28px rgb(134 239 172 / 42%);
+  }
+
+  .ssh-about-cta-button-outline:hover,
+  .ssh-about-cta-button-outline:focus-visible {
+    border-color: rgb(187 247 208 / 68%);
+    background: rgb(255 255 255 / 10%);
+    box-shadow:
+      0 16px 28px -22px rgb(255 255 255 / 24%),
+      0 18px 36px -28px rgb(134 239 172 / 28%);
+  }
+
+  .ssh-about-cta-button:hover::after,
+  .ssh-about-cta-button:focus-visible::after {
+    opacity: 1;
+    transform: translateX(145%) skewX(-18deg);
   }
 
   .user-motion-scope button:not(:disabled):hover svg,
@@ -693,6 +833,7 @@ body {
   .ssh-hero-image,
   .ssh-highlight-badge::before,
   .ssh-pulse-dot,
+  .ssh-reveal,
   .auth-gradient-animate {
     animation: none;
   }
@@ -708,6 +849,14 @@ body {
 
   .user-motion-scope :where(button, [role="button"], a) svg {
     transition-duration: 0.01ms;
+  }
+
+  .ssh-reveal,
+  .ssh-reveal-visible {
+    opacity: 1;
+    transform: none;
+    transition-duration: 0.01ms;
+    transition-delay: 0ms;
   }
 }
  

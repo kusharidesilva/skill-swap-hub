@@ -71,6 +71,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
   const [ratingFilter, setRatingFilter] = useState("Any Rating");
   const [availabilityFilter, setAvailabilityFilter] = useState("Any Time");
   const [currentPage, setCurrentPage] = useState(1);
+  const hideOwnGigInMarketplace = role !== "both";
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -107,14 +108,21 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
 
         usersSnapshot.forEach((docSnap) => {
           const user = docSnap.data() as UserProfile;
-          // A provider should not see their own service in the marketplace.
-          if (userProfile && user.uid === userProfile.uid) return;
+          if (
+            hideOwnGigInMarketplace &&
+            userProfile &&
+            user.uid === userProfile.uid
+          ) {
+            return;
+          }
 
           const profile = user.providerProfile;
           if (!profile) return;
 
           const skills = profile.skills?.length ? profile.skills : ["Student Support"];
-          const storedGigs = profile.gigs?.length ? profile.gigs : [];
+          const storedGigs = (profile.gigs || []).filter(
+            (gig) => (gig.status || "active") === "active",
+          );
           const ratingData = ratingsMap[user.uid];
           const rating = ratingData
             ? Number((ratingData.totalStars / ratingData.count).toFixed(1))
@@ -197,8 +205,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
   const filteredGigs = useMemo(() => {
     return gigs
       .filter((gig) => {
-        // Keep the same self-filter when applying search and category filters.
-        if (userProfile && gig.providerId === userProfile.uid) {
+        if (hideOwnGigInMarketplace && userProfile && gig.providerId === userProfile.uid) {
           return false;
         }
 
@@ -237,7 +244,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
         return true;
       })
       .sort((a, b) => b.match - a.match);
-  }, [availabilityFilter, categoryFilter, gigs, ratingFilter, searchQuery, universityFilter, userProfile]);
+  }, [availabilityFilter, categoryFilter, gigs, hideOwnGigInMarketplace, ratingFilter, searchQuery, universityFilter, userProfile]);
 
   // Pagination happens after filtering so page counts always match the results.
   const cardsPerPage = 4;

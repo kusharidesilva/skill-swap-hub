@@ -154,7 +154,7 @@ export default function AdminDashboard() {
         (error) => handleSnapshotError("providerVerifications", error),
       ),
       onSnapshot(
-        collection(db, "gigs"),
+        query(collection(db, "gigs"), where("status", "==", "active")),
         (snapshot) => {
           setGigs(snapshot.docs.map((docSnap) => docSnap.data() as GigRecord));
           markLoaded("gigs");

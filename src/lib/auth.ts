@@ -263,7 +263,7 @@ async function uploadStudentProof(
 ) {
   if (!isAllowedStudentProofFile(file)) {
     throw new Error(
-      "Student proof must be PDF, DOC, PNG, JPG, or JPEG and under 8 MB.",
+      "Student proof must be PDF, DOC, DOCX, PNG, JPG, or JPEG and under 2 MB.",
     );
   }
 
