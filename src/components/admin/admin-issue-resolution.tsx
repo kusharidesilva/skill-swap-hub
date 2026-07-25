@@ -48,7 +48,6 @@ const statusFilters = ["All Reports", "Pending", "Resolved", "Rejected"];
 
 export default function AdminIssueResolution() {
   const [reports, setReports] = useState<ReportRecord[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState(statusFilters[0]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -80,30 +79,14 @@ export default function AdminIssueResolution() {
   }, []);
 
   const filteredReports = useMemo(() => {
-    const search = searchTerm.trim().toLowerCase();
-
     return reports.filter((report) => {
-      const matchesSearch =
-        !search ||
-        [
-          report.id,
-          report.reporterName,
-          report.reporterEmail,
-          reportedUserName(report),
-          report.issueType,
-          report.category,
-          report.description,
-        ]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(search));
-
       const matchesStatus =
         statusFilter === "All Reports" ||
         normalizeStatus(report.status || "Pending") === normalizeStatus(statusFilter);
 
-      return matchesSearch && matchesStatus;
+      return matchesStatus;
     });
-  }, [reports, searchTerm, statusFilter]);
+  }, [reports, statusFilter]);
 
   const pendingReports = reports.filter(
     (report) => normalizeStatus(report.status || "Pending") === "pending",
@@ -262,10 +245,7 @@ export default function AdminIssueResolution() {
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,260px)_220px_auto] xl:items-end">
-          <div className="min-w-0">
-            <SearchBox value={searchTerm} onChange={setSearchTerm} />
-          </div>
+        <div className="grid gap-3 sm:grid-cols-[220px_auto] xl:items-end">
           <div className="min-w-0">
             <SelectField
               label="Report Status"
@@ -281,7 +261,6 @@ export default function AdminIssueResolution() {
           <button
             type="button"
             onClick={() => {
-              setSearchTerm("");
               setStatusFilter(statusFilters[0]);
             }}
             className="inline-flex h-12 w-12 items-center justify-center self-end rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
@@ -486,30 +465,6 @@ function StatusPill({ status }: { status: string }) {
     <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${styles}`}>
       {status}
     </span>
-  );
-}
-
-function SearchBox({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="grid gap-2">
-      <span className="text-sm font-medium text-slate-600">Search Reports</span>
-      <div className="flex h-12 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-slate-500 shadow-sm">
-        <SearchIcon />
-        <input
-          type="search"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="Search reports"
-          className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
-        />
-      </div>
-    </label>
   );
 }
 

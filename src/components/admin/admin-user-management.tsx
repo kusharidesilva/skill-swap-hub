@@ -312,7 +312,7 @@ export default function AdminUserManagement() {
       <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <div className="min-w-[1080px]">
-            <div className="grid grid-cols-[1.55fr_1.2fr_0.7fr_0.85fr_0.95fr_0.8fr_1fr] border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+            <div className="grid grid-cols-[1.55fr_1.2fr_0.7fr_0.85fr_0.95fr_0.8fr_0.9fr] border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
               <span>Name &amp; Email</span>
               <span>Academic Details</span>
               <span className="justify-self-center">Role</span>
@@ -335,7 +335,7 @@ export default function AdminUserManagement() {
                 return (
                   <div
                     key={user.id}
-                    className="grid grid-cols-[1.55fr_1.2fr_0.7fr_0.85fr_0.95fr_0.8fr_1fr] items-center border-b border-slate-200 px-6 py-5 text-sm last:border-b-0"
+                    className="grid grid-cols-[1.55fr_1.2fr_0.7fr_0.85fr_0.95fr_0.8fr_0.9fr] items-center border-b border-slate-200 px-6 py-5 text-sm last:border-b-0"
                   >
                     <div className="flex min-w-0 items-center gap-4">
                       <Avatar name={user.name || user.email || "User"} />
@@ -374,13 +374,7 @@ export default function AdminUserManagement() {
                       {ratingLabel(user)}
                     </p>
 
-                    <div className="flex min-w-[96px] max-w-[96px] justify-self-center flex-col items-stretch gap-2">
-                      <a
-                        href={profileHref(user)}
-                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                      >
-                        Profile
-                      </a>
+                    <div className="flex min-w-[120px] max-w-[120px] justify-self-center flex-col items-stretch gap-3">
                       <a
                         href={`/admin/issue-resolution?user=${targetUserId}`}
                         className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
@@ -547,13 +541,6 @@ function roleTone(role?: string): "blue" | "indigo" | "teal" | "slate" {
   if (role === "provider" || role === "both") return "teal";
   if (role === "buyer") return "blue";
   return "slate";
-}
-
-function profileHref(user: ManagedUser) {
-  const userId = user.uid || user.id;
-  return user.role === "provider" || user.role === "both"
-    ? `/provider-profile/${userId}`
-    : `/buyer-profile/${userId}`;
 }
 
 function ratingLabel(user: ManagedUser) {

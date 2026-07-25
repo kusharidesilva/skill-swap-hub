@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { checkBuyerHistory } from "@/lib/auth";
 import { homeHref } from "@/lib/role-routes";
+import ModalPortal from "@/components/ui/modal-portal";
 
 export default function BecomeSellerModal() {
   const router = useRouter();
@@ -46,29 +47,30 @@ export default function BecomeSellerModal() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[92vh] overflow-y-auto shadow-2xl relative">
-        <button
-          onClick={() => router.push("/home/buyer")}
-          title="Close"
-          className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 z-10"
-        >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+    <ModalPortal>
+      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-md">
+        <div className="relative max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
+          <button
+            onClick={() => router.push("/home/buyer")}
+            title="Close"
+            className="absolute top-6 right-6 z-10 text-slate-400 hover:text-slate-600"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
 
-        <div className="grid grid-cols-1 gap-10 p-8 md:grid-cols-[1.2fr_0.8fr] md:p-12">
+          <div className="grid grid-cols-1 gap-10 p-8 md:grid-cols-[1.2fr_0.8fr] md:p-12">
           {/* Provider benefits */}
           <div className="space-y-8">
             <span className="inline-flex w-fit items-center rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
@@ -200,9 +202,10 @@ export default function BecomeSellerModal() {
               </p>
             </div>
           </div>
+          </div>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 

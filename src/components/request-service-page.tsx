@@ -22,6 +22,7 @@ import { type UserProfile } from "@/lib/auth";
 import { createNotification } from "@/lib/notifications";
 import SelectField from "@/components/ui/select-field";
 import { useLookupOptions } from "@/lib/lookups";
+import ModalPortal from "@/components/ui/modal-portal";
 
 const requestServiceSchema = z.object({
   category: z.string().trim().min(1, "Service category is required."),
@@ -434,46 +435,48 @@ function FormActionModal({
       : "bg-[#2f66e7] text-white hover:bg-[#2557cf]";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-[3px]">
-      <div className="w-full max-w-[560px] rounded-2xl border border-slate-200 bg-white p-7 shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
-        <div className="flex items-start justify-between gap-5">
-          <div className="max-w-[380px]">
-            <h3 className="text-[18px] font-bold leading-tight text-slate-900">{title}</h3>
-            <p className="mt-3 text-[15px] leading-7 text-slate-600">
-              {description}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
-            aria-label="Close popup"
-          >
-            <CloseIcon />
-          </button>
-        </div>
-
-        <div className="mt-8 flex items-center justify-end gap-3">
-          {secondaryLabel ? (
+    <ModalPortal>
+      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md">
+        <div className="w-full max-w-[560px] rounded-2xl border border-slate-200 bg-white p-7 shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
+          <div className="flex items-start justify-between gap-5">
+            <div className="max-w-[380px]">
+              <h3 className="text-[18px] font-bold leading-tight text-slate-900">{title}</h3>
+              <p className="mt-3 text-[15px] leading-7 text-slate-600">
+                {description}
+              </p>
+            </div>
             <button
               type="button"
-              onClick={onSecondaryClick}
-              className="inline-flex h-11 min-w-[112px] items-center justify-center rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              onClick={onClose}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+              aria-label="Close popup"
             >
-              {secondaryLabel}
+              <CloseIcon />
             </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={onPrimaryClick}
-            disabled={primaryDisabled}
-            className={`inline-flex h-11 min-w-[112px] items-center justify-center rounded-lg px-5 text-sm font-semibold transition disabled:opacity-60 ${primaryClassName}`}
-          >
-            {primaryLabel}
-          </button>
+          </div>
+
+          <div className="mt-8 flex items-center justify-end gap-3">
+            {secondaryLabel ? (
+              <button
+                type="button"
+                onClick={onSecondaryClick}
+                className="inline-flex h-11 min-w-[112px] items-center justify-center rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                {secondaryLabel}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onPrimaryClick}
+              disabled={primaryDisabled}
+              className={`inline-flex h-11 min-w-[112px] items-center justify-center rounded-lg px-5 text-sm font-semibold transition disabled:opacity-60 ${primaryClassName}`}
+            >
+              {primaryLabel}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 

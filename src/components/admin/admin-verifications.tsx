@@ -252,14 +252,14 @@ export default function AdminVerifications() {
       ) : null}
 
       <section className="mt-8 overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.05)]">
-        <div className="grid grid-cols-[1.2fr_1.4fr_1.2fr_0.85fr_0.85fr_1.25fr_1.1fr] gap-4 border-b border-slate-300 bg-[#f0f1ff] px-6 py-5 text-[12px] font-medium text-slate-700">
-          <span>Student</span>
-          <span>University</span>
-          <span>Programme</span>
-          <span>Proof Type</span>
-          <span>Status</span>
-          <span>Admin Note</span>
-          <span>Actions</span>
+        <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1.15fr)_minmax(0,1.05fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(210px,1.1fr)_minmax(170px,0.95fr)] gap-6 border-b border-slate-300 bg-[#f0f1ff] px-6 py-5 text-[12px] font-medium text-slate-700">
+          <span className="min-w-0">Student</span>
+          <span className="min-w-0">University</span>
+          <span className="min-w-0">Programme</span>
+          <span className="min-w-0">Proof Type</span>
+          <span className="min-w-0">Status</span>
+          <span className="min-w-0">Admin Note</span>
+          <span className="min-w-0">Actions</span>
         </div>
 
         {loading ? (
@@ -270,9 +270,9 @@ export default function AdminVerifications() {
           rows.map((row, index) => (
             <div
               key={row.id}
-              className="grid grid-cols-[1.2fr_1.4fr_1.2fr_0.85fr_0.85fr_1.25fr_1.1fr] items-center gap-4 border-b border-slate-300 px-6 py-4 last:border-b-0"
+              className="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1.15fr)_minmax(0,1.05fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(210px,1.1fr)_minmax(170px,0.95fr)] items-start gap-6 border-b border-slate-300 px-6 py-4 last:border-b-0"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <Avatar name={row.studentName} index={index} />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-800">{row.studentName}</p>
@@ -280,12 +280,14 @@ export default function AdminVerifications() {
                   <p className="mt-0.5 text-[11px] text-slate-400">{formatDate(row.submittedAt)}</p>
                 </div>
               </div>
-              <span className="text-sm text-slate-700">{row.university}</span>
-              <span className="text-sm text-slate-700">
+              <div className="min-w-0 pt-1 text-sm text-slate-700">
+                <span className="block truncate">{row.university}</span>
+              </div>
+              <div className="min-w-0 pt-1 text-sm text-slate-700">
                 {row.degree}
                 <span className="mt-1 block text-xs text-slate-400">{row.yearOfStudy}</span>
-              </span>
-              <span className="text-sm text-slate-700">
+              </div>
+              <div className="min-w-0 pt-1 text-sm text-slate-700">
                 {row.proof?.fileType || "Student ID"}
                 {(row.proof?.downloadUrl || downloadUrls[row.id]) ? (
                   <a
@@ -297,20 +299,22 @@ export default function AdminVerifications() {
                     View File
                   </a>
                 ) : null}
-              </span>
-              <StatusPill status={row.status} />
+              </div>
+              <div className="pt-1">
+                <StatusPill status={row.status} />
+              </div>
               <textarea
                 value={notes[row.id] || ""}
                 onChange={(event) => setNotes((current) => ({ ...current, [row.id]: event.target.value }))}
                 placeholder="Add note"
-                className="min-h-[58px] resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 outline-none transition focus:border-[#2b62e6] focus:ring-2 focus:ring-blue-100"
+                className="min-h-[58px] w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 outline-none transition focus:border-[#2b62e6] focus:ring-2 focus:ring-blue-100"
               />
-              <div className="flex flex-col gap-2">
+              <div className="flex min-w-0 flex-col gap-2">
                 <button
                   type="button"
                   onClick={() => handleReview(row, "approved")}
                   disabled={busyId === row.id || row.status === "approved"}
-                  className="inline-flex h-9 items-center justify-center rounded-lg bg-[#2f66e7] px-3 text-xs font-semibold text-white transition hover:bg-[#2457cc] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-[#2f66e7] px-3 text-xs font-semibold text-white transition hover:bg-[#2457cc] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Approve
                 </button>
@@ -318,7 +322,7 @@ export default function AdminVerifications() {
                   type="button"
                   onClick={() => handleReview(row, "rejected")}
                   disabled={busyId === row.id || row.status === "rejected"}
-                  className="inline-flex h-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Reject
                 </button>

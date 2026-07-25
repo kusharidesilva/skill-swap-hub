@@ -11,6 +11,7 @@ import { db } from "@/lib/firebase";
 import { formatRatingLabel } from "@/lib/ratings";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import type { ProviderGig } from "@/lib/auth";
+import { getRoleBadge, getVerificationBadge } from "@/lib/identity-badges";
 
 type ProviderProfilePublicPageProps = {
   providerId: string;
@@ -75,6 +76,7 @@ type FirestoreUserProfile = {
   university?: string;
   yearOfStudy?: string;
   emailVerified?: boolean;
+  verifiedStudentProvider?: boolean;
   role?: string;
   profileImageUrl?: string;
   providerProfile?: {
@@ -338,6 +340,9 @@ export default function ProviderProfilePublicPage({
     );
   }
 
+  const roleBadge = getRoleBadge("provider");
+  const verificationBadge = getVerificationBadge("provider", profile.verified);
+
   return (
     <div className="flex w-full flex-col gap-4 pb-6">
       {/* Provider identity and quick actions */}
@@ -350,12 +355,16 @@ export default function ProviderProfilePublicPage({
               <h1 className="break-words text-xl font-bold leading-tight text-[#1453c4] sm:text-2xl">
                 {profile.name}
               </h1>
-              <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-[#1453c4]">
-                {profile.verified ? "Verified Student" : "Student Member"}
-              </span>
-              <span className="rounded-full bg-teal-100 px-2.5 py-1 text-[11px] font-semibold text-teal-700">
-                Provider Profile
-              </span>
+              {verificationBadge ? (
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${verificationBadge.className}`}>
+                  <VerifiedBadgeIcon className={`h-3.5 w-3.5 ${verificationBadge.iconClassName}`} />
+                  {verificationBadge.label}
+                </span>
+              ) : (
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${roleBadge.className}`}>
+                  {roleBadge.label}
+                </span>
+              )}
               {profile.topRated ? (
                 <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
                   Top Rated
@@ -686,7 +695,7 @@ function buildProviderProfile(
     university: member.university || "Sri Lankan University",
     yearOfStudy: member.yearOfStudy || "",
     image: member.profileImageUrl || "",
-    verified: member.emailVerified !== false,
+    verified: member.verifiedStudentProvider === true,
     topRated: avgRating >= 4.8 && completedRequests.length >= 2,
     trustScore,
     totalSwaps: String(completedRequests.length),
@@ -730,6 +739,15 @@ function formatDateLabel(value: FirebaseRequestDoc["createdAt"]) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function VerifiedBadgeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M12 2.8 14.1 5l3-.5.9 2.9 2.8 1.3-1.4 2.7 1.4 2.7-2.8 1.3-.9 2.9-3-.5L12 20l-2.1-2.2-3 .5-.9-2.9-2.8-1.3 1.4-2.7-1.4-2.7L6 7.4l.9-2.9 3 .5z" />
+      <path d="m9.6 12.1 1.6 1.6 3.4-3.5" fill="none" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+    </svg>
+  );
 }
 
 function buildStars(value: string) {

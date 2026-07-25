@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getRoleBadge, getVerificationBadge } from "@/lib/identity-badges";
 
 export type Role = "buyer" | "provider" | "both";
 
@@ -129,11 +130,11 @@ export default function Profile({ role: propRole }: { role: Role }) {
         ? `Hey there! I'm a student at ${university} studying ${degree}. I joined Skill Swap Hub to collaborate with other students, exchange knowledge, and learn new skills.`
         : `Hey there! I'm a ${degree} student passionate about sharing knowledge. I believe the best way to learn is to teach someone else.`);
 
-  const profileTag = userProfile.verifiedStudentProvider
-    ? "Verified Student Provider"
-    : isNonStudentBuyer
-      ? "Verified Non-student Buyer"
-      : "Buyer";
+  const roleBadge = getRoleBadge(displayRole);
+  const verificationBadge = getVerificationBadge(
+    displayRole,
+    Boolean(userProfile.verifiedStudentProvider),
+  );
 
   const academicLine = isNonStudentBuyer
     ? userProfile.email || "Buyer account"
@@ -180,9 +181,16 @@ export default function Profile({ role: propRole }: { role: Role }) {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-xl font-semibold text-slate-900">{name}</h1>
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  {profileTag}
-                </span>
+                {verificationBadge ? (
+                  <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${verificationBadge.className}`}>
+                    <VerifiedIcon className={`h-3.5 w-3.5 ${verificationBadge.iconClassName}`} />
+                    {verificationBadge.label}
+                  </span>
+                ) : (
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${roleBadge.className}`}>
+                    {roleBadge.label}
+                  </span>
+                )}
               </div>
 
               <p className="mt-1 text-sm text-slate-500">
@@ -371,6 +379,27 @@ function StarIcon() {
       aria-hidden="true"
     >
       <path d="m12 3.8 2.5 5.08 5.6.82-4.05 3.95.96 5.58L12 16.6l-5.01 2.63.96-5.58L3.9 9.7l5.6-.82L12 3.8Z" />
+    </svg>
+  );
+}
+
+function VerifiedIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M12 2.8 14.1 5l3-.5.9 2.9 2.8 1.3-1.4 2.7 1.4 2.7-2.8 1.3-.9 2.9-3-.5L12 20l-2.1-2.2-3 .5-.9-2.9-2.8-1.3 1.4-2.7-1.4-2.7L6 7.4l.9-2.9 3 .5z" />
+      <path
+        d="m9.6 12.1 1.6 1.6 3.4-3.5"
+        fill="none"
+        stroke="white"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
     </svg>
   );
 }

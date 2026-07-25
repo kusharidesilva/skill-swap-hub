@@ -15,6 +15,7 @@ import { AVAILABILITY_TIME_SLOTS, inferServiceCategory } from "@/lib/platform";
 import { useLookupOptions } from "@/lib/lookups";
 import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
+import ModalPortal from "@/components/ui/modal-portal";
 
 type GigCardData = {
   id: string;
@@ -496,51 +497,53 @@ function GigDetailsModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-[2px]">
-      <article className="relative grid max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl md:grid-cols-[0.95fr_1.05fr]">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close gig details"
-          className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-500 shadow-sm transition hover:text-slate-900"
-        >
-          <CloseIcon className="h-4 w-4" />
-        </button>
-        <div className="relative min-h-64 bg-slate-100">
-          <Image src={gig.image} alt={gig.title} fill className="object-cover" sizes="(min-width: 768px) 360px, 100vw" />
-        </div>
-        <div className="min-w-0 overflow-y-auto p-6">
-          <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#1453c4]">
-            {gig.category}
-          </span>
-          <h2 className="mt-3 text-xl font-bold leading-7 text-slate-900">{gig.title}</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">{gig.description || gig.summary}</p>
-
-          <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
-            <InfoItem label="Price" value={formatPrice(gig.price)} />
-            <InfoItem label="Availability" value={availability || "Flexible"} />
-            <InfoItem label="Provider" value={gig.providerName} />
-            <InfoItem label="Rating" value={`${formatRatingLabel(gig.rating)} (${gig.reviews} reviews)`} />
-          </dl>
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href={previewHref}
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#2f66e7] px-5 text-sm font-semibold text-white transition hover:bg-[#2557cf]"
-            >
-              View Full Details
-            </Link>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Close
-            </button>
+    <ModalPortal>
+      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md">
+        <article className="relative grid max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl md:grid-cols-[0.95fr_1.05fr]">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close gig details"
+            className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-500 shadow-sm transition hover:text-slate-900"
+          >
+            <CloseIcon className="h-4 w-4" />
+          </button>
+          <div className="relative min-h-64 bg-slate-100">
+            <Image src={gig.image} alt={gig.title} fill className="object-cover" sizes="(min-width: 768px) 360px, 100vw" />
           </div>
-        </div>
-      </article>
-    </div>
+          <div className="min-w-0 overflow-y-auto p-6">
+            <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#1453c4]">
+              {gig.category}
+            </span>
+            <h2 className="mt-3 text-xl font-bold leading-7 text-slate-900">{gig.title}</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">{gig.description || gig.summary}</p>
+
+            <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+              <InfoItem label="Price" value={formatPrice(gig.price)} />
+              <InfoItem label="Availability" value={availability || "Flexible"} />
+              <InfoItem label="Provider" value={gig.providerName} />
+              <InfoItem label="Rating" value={`${formatRatingLabel(gig.rating)} (${gig.reviews} reviews)`} />
+            </dl>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href={previewHref}
+                className="inline-flex h-10 items-center justify-center rounded-lg bg-[#2f66e7] px-5 text-sm font-semibold text-white transition hover:bg-[#2557cf]"
+              >
+                View Full Details
+              </Link>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </ModalPortal>
   );
 }
 

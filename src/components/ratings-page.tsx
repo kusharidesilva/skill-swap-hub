@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
+import { getRoleBadge, getVerificationBadge, type IdentityRole } from "@/lib/identity-badges";
 
 type Role = "buyer" | "provider" | "both";
 type ReviewsTab = "received" | "given";
@@ -18,6 +19,7 @@ interface ReviewItem {
   rating: number;
   comment: string;
   isFromProvider?: boolean; // true if a provider left this review for the user (buyer)
+  partnerRole: IdentityRole;
 }
 
 export default function RatingsPageContent({ role }: RatingsPageContentProps) {
@@ -57,6 +59,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
               skill: r.title || "Skill Swap",
               rating: r.review.rating,
               comment: r.review.comment || "",
+              partnerRole: "buyer",
             });
           }
           // The provider's review belongs in this user's given list.
@@ -68,6 +71,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
               skill: r.title || "Skill Swap",
               rating: r.providerReview.rating,
               comment: r.providerReview.comment || "",
+              partnerRole: "buyer",
             });
           }
         });
@@ -91,6 +95,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
               rating: r.providerReview.rating,
               comment: r.providerReview.comment || "",
               isFromProvider: true,
+              partnerRole: "provider",
             });
           }
           // The buyer's review belongs in this user's given list.
@@ -102,6 +107,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
               skill: r.title || "Skill Swap",
               rating: r.review.rating,
               comment: r.review.comment || "",
+              partnerRole: "provider",
             });
           }
         });
@@ -256,11 +262,15 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-bold text-slate-900">{review.partnerName}</p>
-                      {review.isFromProvider && (
-                        <span className="rounded-full bg-blue-50 border border-blue-100 px-2 py-0.25 text-[9px] font-extrabold text-blue-700">
-                          Provider Feedback
+                      <span className={`rounded-full px-2 py-0.25 text-[9px] font-extrabold ${getRoleBadge(review.partnerRole).className}`}>
+                        {getRoleBadge(review.partnerRole).label}
+                      </span>
+                      {getVerificationBadge(review.partnerRole, review.partnerRole !== "buyer") ? (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.25 text-[9px] font-extrabold ${getVerificationBadge(review.partnerRole, review.partnerRole !== "buyer")?.className}`}>
+                          <VerifiedBadgeIcon className={`h-3 w-3 ${getVerificationBadge(review.partnerRole, review.partnerRole !== "buyer")?.iconClassName}`} />
+                          {getVerificationBadge(review.partnerRole, review.partnerRole !== "buyer")?.label}
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     {review.partnerUniversity && (
                       <p className="text-[11px] text-slate-400">{review.partnerUniversity}</p>
@@ -278,5 +288,14 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
         )}
       </div>
     </section>
+  );
+}
+
+function VerifiedBadgeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M12 2.8 14.1 5l3-.5.9 2.9 2.8 1.3-1.4 2.7 1.4 2.7-2.8 1.3-.9 2.9-3-.5L12 20l-2.1-2.2-3 .5-.9-2.9-2.8-1.3 1.4-2.7-1.4-2.7L6 7.4l.9-2.9 3 .5z" />
+      <path d="m9.6 12.1 1.6 1.6 3.4-3.5" fill="none" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+    </svg>
   );
 }

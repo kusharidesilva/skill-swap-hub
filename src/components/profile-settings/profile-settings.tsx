@@ -12,6 +12,7 @@ import {
 import { changeSignedInEmail, type UserProfile } from "@/lib/auth";
 import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
 import { useLookupOptions } from "@/lib/lookups";
+import { getRoleBadge, getVerificationBadge } from "@/lib/identity-badges";
 
 export type Role = "buyer" | "provider" | "both";
 
@@ -192,11 +193,11 @@ function ProfileSettingsForm({
   const [emailNotice, setEmailNotice] = useState<"success" | "error" | "">("");
   const [emailNoticeMessage, setEmailNoticeMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const profileBadgeLabel = userProfile.verifiedStudentProvider
-    ? "Verified Student"
-    : isNonStudentBuyer
-      ? "Buyer Account"
-      : "Student Buyer";
+  const roleBadge = getRoleBadge(role);
+  const verificationBadge = getVerificationBadge(
+    role,
+    Boolean(userProfile.verifiedStudentProvider),
+  );
   const profileSubline = isNonStudentBuyer
     ? userProfile.email || "Non-student buyer"
     : [degree, university].filter(Boolean).join(" - ");
@@ -426,10 +427,15 @@ function ProfileSettingsForm({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900">{name}</h2>
-                <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-[#62ead8] px-2 py-0.5 text-[10px] font-bold text-teal-800">
-                  <BadgeCheckIcon className="h-3.5 w-3.5" />
-                  {profileBadgeLabel}
+                <span className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${roleBadge.className}`}>
+                  {roleBadge.label}
                 </span>
+                {verificationBadge ? (
+                  <span className={`inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${verificationBadge.className}`}>
+                    <BadgeCheckIcon className={`h-3.5 w-3.5 ${verificationBadge.iconClassName}`} />
+                    {verificationBadge.label}
+                  </span>
+                ) : null}
               </div>
               <p className="mt-1 text-xs font-semibold text-slate-500">
                 {profileSubline || "Profile details not added yet"}

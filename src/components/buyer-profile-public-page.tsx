@@ -7,6 +7,7 @@ import { collection, doc, getDoc, getDocs, query, where } from "firebase/firesto
 import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import { useAuth } from "@/context/AuthContext";
+import { getRoleBadge, getVerificationBadge } from "@/lib/identity-badges";
 
 type BuyerProfilePublicPageProps = {
   buyerId: string;
@@ -217,6 +218,9 @@ export default function BuyerProfilePublicPage({
     );
   }
 
+  const roleBadge = getRoleBadge("buyer");
+  const verificationBadge = getVerificationBadge("buyer", false);
+
   return (
     <div className="flex w-full flex-col gap-4 pb-6">
       {/* Identity, study details, and contact actions */}
@@ -229,18 +233,16 @@ export default function BuyerProfilePublicPage({
               <h1 className="break-words text-xl font-bold leading-tight text-[#1453c4] sm:text-2xl">
                 {profile.name}
               </h1>
-              <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-[#1453c4]">
-                {profile.accountType === "student"
-                  ? profile.verified
-                    ? "Verified Student"
-                    : "Student Member"
-                  : profile.verified
-                    ? "Verified Buyer"
-                    : "Buyer Member"}
-              </span>
-              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
-                Buyer Profile
-              </span>
+              {verificationBadge ? (
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${verificationBadge.className}`}>
+                  <VerifiedBadgeIcon className={`h-3.5 w-3.5 ${verificationBadge.iconClassName}`} />
+                  {verificationBadge.label}
+                </span>
+              ) : (
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${roleBadge.className}`}>
+                  {roleBadge.label}
+                </span>
+              )}
             </div>
 
             <p className="mt-1 break-words text-sm font-semibold text-slate-700 sm:text-base">
@@ -562,6 +564,15 @@ function LockIcon({ className }: { className?: string }) {
         strokeWidth={2}
         d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2Zm10-10V7a4 4 0 0 0-8 0v4h8Z"
       />
+    </svg>
+  );
+}
+
+function VerifiedBadgeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M12 2.8 14.1 5l3-.5.9 2.9 2.8 1.3-1.4 2.7 1.4 2.7-2.8 1.3-.9 2.9-3-.5L12 20l-2.1-2.2-3 .5-.9-2.9-2.8-1.3 1.4-2.7-1.4-2.7L6 7.4l.9-2.9 3 .5z" />
+      <path d="m9.6 12.1 1.6 1.6 3.4-3.5" fill="none" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
     </svg>
   );
 }

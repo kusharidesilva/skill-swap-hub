@@ -8,6 +8,7 @@ import { db } from "@/lib/firebase";
 import { formatRatingLabel } from "@/lib/ratings";
 import { useAuth } from "@/context/AuthContext";
 import type { ProviderGig, UserProfile } from "@/lib/auth";
+import ModalPortal from "@/components/ui/modal-portal";
 
 type MyGigsPageContentProps = {
   activeTab?: "offered" | "manage";
@@ -476,40 +477,42 @@ export default function MyGigsPageContent({
       </section>
 
       {deleteTarget ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 py-6 backdrop-blur-[2px]">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.55)]">
-            <div className="flex items-start gap-3">
-              <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500">
-                <DeleteIcon className="h-4 w-4" />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-red-500">Delete Gig</p>
-                <h2 className="text-base font-semibold text-slate-900">
-                  Delete this gig from your profile?
-                </h2>
+        <ModalPortal>
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md">
+            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.55)]">
+              <div className="flex items-start gap-3">
+                <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500">
+                  <DeleteIcon className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-red-500">Delete Gig</p>
+                  <h2 className="text-base font-semibold text-slate-900">
+                    Delete this gig from your profile?
+                  </h2>
+                </div>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-500">
+                This will remove <span className="font-semibold text-slate-700">{deleteTarget.shortTitle}</span> from your public gigs list.
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteGig(deleteTarget.rawIndex)}
+                  className="rounded-xl bg-red-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-600"
+                >
+                  Delete
+                </button>
               </div>
             </div>
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              This will remove <span className="font-semibold text-slate-700">{deleteTarget.shortTitle}</span> from your public gigs list.
-            </p>
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setDeleteTarget(null)}
-                className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeleteGig(deleteTarget.rawIndex)}
-                className="rounded-xl bg-red-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-600"
-              >
-                Delete
-              </button>
-            </div>
           </div>
-        </div>
+        </ModalPortal>
       ) : null}
     </section>
   );
