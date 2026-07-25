@@ -135,13 +135,6 @@ export default function Profile({ role: propRole }: { role: Role }) {
       ? "Verified Non-student Buyer"
       : "Buyer";
 
-  const identityTitle = isNonStudentBuyer
-    ? "Buyer Verification"
-    : "Identity Verified";
-  const identityMessage = isNonStudentBuyer
-    ? "Verified and ready for service requests."
-    : "Student provider proof is reviewed by admin. Buyers use normal Firebase email verification.";
-
   const academicLine = isNonStudentBuyer
     ? userProfile.email || "Buyer account"
     : [
@@ -216,22 +209,6 @@ export default function Profile({ role: propRole }: { role: Role }) {
                 </span>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-            <VerifiedShieldIcon />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-emerald-800">
-              {identityTitle}
-            </h2>
-            <p className="mt-1 text-xs leading-5 text-emerald-700">
-              {identityMessage}
-            </p>
           </div>
         </div>
       </section>
@@ -394,24 +371,6 @@ function StarIcon() {
       aria-hidden="true"
     >
       <path d="m12 3.8 2.5 5.08 5.6.82-4.05 3.95.96 5.58L12 16.6l-5.01 2.63.96-5.58L3.9 9.7l5.6-.82L12 3.8Z" />
-    </svg>
-  );
-}
-
-function VerifiedShieldIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4.5 w-4.5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m9 12 2 2 4-4" />
-      <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4Z" />
     </svg>
   );
 }
