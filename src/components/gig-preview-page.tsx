@@ -306,7 +306,7 @@ export default function GigPreviewPage({
 
   const isOwnGig = userProfile && userProfile.uid === gig.providerId;
   const editHref = `/edit-gig/${role}/gig-${skillIndex}`;
-  const chatHref = `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(gig.providerId)}&subject=${encodeURIComponent(gig.title)}`;
+  const chatHref = `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(gig.providerId)}&subject=${encodeURIComponent(gig.title)}&gigId=${encodeURIComponent(gig.gigId)}&category=${encodeURIComponent(gig.category)}&price=${encodeURIComponent(String(gig.price || ""))}&providerName=${encodeURIComponent(gig.providerName)}`;
 
   const handleRequestNow = async () => {
     if (!userProfile) {
@@ -396,7 +396,7 @@ export default function GigPreviewPage({
         senderId: buyerId,
         senderName: userProfile.name || "Buyer",
         senderRole: "buyer",
-        text: `Gig: ${gig.title}\nCategory: ${gig.category}\nPrice: ${formatPrice(gig.price)}\nProvider: ${gig.providerName}`,
+        text: `Hi ${gig.providerName}, I am interested in your "${gig.title}" gig. Can you share more details about how this service works, what you need from me, and the next steps to get started?`,
         serviceContext,
         attachments: [],
         createdAt: serverTimestamp(),

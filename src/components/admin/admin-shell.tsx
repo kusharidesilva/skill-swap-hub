@@ -4,6 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+const VERIFICATION_SEEN_KEY = "admin-verifications-seen-at";
+const REPORTS_SEEN_KEY = "admin-reports-seen-at";
 
 type NavItem = {
   label: string;
@@ -36,6 +41,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
+  const [pendingReportCount, setPendingReportCount] = useState(0);
+  const [verificationSeenAt, setVerificationSeenAt] = useState(0);
+  const [reportsSeenAt, setReportsSeenAt] = useState(0);
   const title = pageTitles[pathname] ?? "Dashboard";
   const isAdmin = userProfile?.role === "admin";
   const isStandaloneAdminAuthPage =
@@ -57,6 +66,15 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   }, [isStandaloneAdminAuthPage, loading, router, userProfile]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    setVerificationSeenAt(readSeenAt(VERIFICATION_SEEN_KEY));
+    setReportsSeenAt(readSeenAt(REPORTS_SEEN_KEY));
+  }, []);
+
+  useEffect(() => {
     // Close the account menu when the admin clicks anywhere outside it.
     function handleClickOutside(event: MouseEvent) {
       if (!menuRef.current?.contains(event.target as Node)) {
@@ -67,6 +85,67 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (pathname.startsWith("/admin/verifications")) {
+      const seenAt = Date.now();
+      setVerificationSeenAt(seenAt);
+      writeSeenAt(VERIFICATION_SEEN_KEY, seenAt);
+    }
+
+    if (pathname.startsWith("/admin/issue-resolution")) {
+      const seenAt = Date.now();
+      setReportsSeenAt(seenAt);
+      writeSeenAt(REPORTS_SEEN_KEY, seenAt);
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    const unsubscribeVerifications = onSnapshot(
+      collection(db, "providerVerifications"),
+      (snapshot) => {
+        setPendingVerificationCount(
+          snapshot.docs.filter((docSnap) => {
+            const data = docSnap.data();
+            return (
+              data.status === "pending" &&
+              toMillis(data.submittedAt) > verificationSeenAt
+            );
+          }).length,
+        );
+      },
+      (error) => {
+        console.error("Error loading admin verification badge count:", error);
+      },
+    );
+
+    const unsubscribeReports = onSnapshot(
+      collection(db, "reports"),
+      (snapshot) => {
+        setPendingReportCount(
+          snapshot.docs.filter((docSnap) => {
+            const data = docSnap.data();
+            return (
+              normalizeAdminStatus(data.status || "Pending") === "pending" &&
+              toMillis(data.createdAt) > reportsSeenAt
+            );
+          }).length,
+        );
+      },
+      (error) => {
+        console.error("Error loading admin report badge count:", error);
+      },
+    );
+
+    return () => {
+      unsubscribeVerifications();
+      unsubscribeReports();
+    };
+  }, [isAdmin, reportsSeenAt, verificationSeenAt]);
 
   if (isStandaloneAdminAuthPage) {
     return <>{children}</>;
@@ -129,7 +208,25 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                 <span className={`flex h-8 w-8 items-center justify-center ${active ? "text-white" : "text-slate-500"}`}>
                   {item.icon}
                 </span>
-                {item.label}
+                <span className="truncate">{item.label}</span>
+                {item.label === "Verification" && pendingVerificationCount > 0 ? (
+                  <span
+                    className={`ml-auto inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                      active ? "bg-white/20 text-white" : "bg-blue-100 text-blue-700"
+                    }`}
+                  >
+                    {pendingVerificationCount}
+                  </span>
+                ) : null}
+                {item.label === "Report Handling" && pendingReportCount > 0 ? (
+                  <span
+                    className={`ml-auto inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                      active ? "bg-white/20 text-white" : "bg-red-100 text-red-600"
+                    }`}
+                  >
+                    {pendingReportCount}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
@@ -257,6 +354,42 @@ function TriangleIcon() {
 
 function CollectionIcon() {
   return <LayersIcon />;
+}
+
+function normalizeAdminStatus(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "_");
+}
+
+function toMillis(value: unknown) {
+  if (!value) return 0;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const parsed = new Date(value).getTime();
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  if (typeof value === "object") {
+    const timestampLike = value as { toMillis?: () => number; toDate?: () => Date };
+    if (typeof timestampLike.toMillis === "function") {
+      return timestampLike.toMillis();
+    }
+    if (typeof timestampLike.toDate === "function") {
+      return timestampLike.toDate().getTime();
+    }
+  }
+  return 0;
+}
+
+function readSeenAt(key: string) {
+  if (typeof window === "undefined") return 0;
+  const raw = window.localStorage.getItem(key);
+  const value = raw ? Number(raw) : 0;
+  return Number.isFinite(value) ? value : 0;
+}
+
+function writeSeenAt(key: string, value: number) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(key, String(value));
 }
 
 function SettingsIcon() {

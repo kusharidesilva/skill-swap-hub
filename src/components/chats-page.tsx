@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useMemo, useRef, type ChangeEvent } from "react";
 import { 
   collection, 
@@ -38,6 +38,23 @@ type Conversation = {
   peerId: string;
   peerRole: Role;
   serviceContext?: ServiceContext;
+  updatedAtMs: number;
+};
+
+type PeerInboxSummary = {
+  peerId: string;
+  name: string;
+  university: string;
+  avatar: string;
+  verificationLabel: string;
+  lastMessage: string;
+  time: string;
+  latestSkill: string;
+  latestConversationId: string;
+  threadCount: number;
+  updatedAtMs: number;
+  online?: boolean;
+  peerRole: Role;
 };
 
 type ChatMessage = {
@@ -83,10 +100,16 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
 
 export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   const { userProfile } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const chatIdParam = searchParams.get("chatId");
   const peerIdParam = searchParams.get("peerId");
   const subjectParam = searchParams.get("subject");
+  const gigIdParam = searchParams.get("gigId");
+  const categoryParam = searchParams.get("category");
+  const priceParam = searchParams.get("price");
+  const providerNameParam = searchParams.get("providerName");
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -98,7 +121,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   const [composerError, setComposerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const currentChatId = chatIdParam || activeId;
+  const currentChatId = activeId || chatIdParam;
 
   // Opening chat from a profile creates the conversation only if it does not exist.
   useEffect(() => {
@@ -110,6 +133,14 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
       const currentName = String(userProfile?.name || "Student");
       const currentUniv = String(userProfile?.university || "");
       const currentRole = resolveChatRole(userProfile?.role);
+      const threadKey = gigIdParam || (subjectParam ? `subject-${slugSegment(subjectParam)}` : null);
+      const requestedServiceContext: ServiceContext = {
+        gigId: gigIdParam || undefined,
+        title: subjectParam || "Service Chat",
+        category: categoryParam || "",
+        price: priceParam || "",
+        providerName: providerNameParam || undefined,
+      };
 
       try {
         const q = query(
@@ -121,7 +152,13 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
 
         snap.forEach((d) => {
           const data = d.data();
-          if (data.participants?.includes(peerId)) {
+          const matchesPeer = data.participants?.includes(peerId);
+          const matchesThread = threadKey
+            ? data.threadKey === threadKey ||
+              data.gigId === gigIdParam ||
+              data.serviceContext?.gigId === gigIdParam
+            : true;
+          if (matchesPeer && matchesThread) {
             existingChatId = d.id;
           }
         });
@@ -143,7 +180,9 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
             peerRole = resolveChatRole(peerData.role);
           }
 
-          const newChatId = `${currentUid}_${peerId}`;
+          const newChatId = threadKey
+            ? `${currentUid}_${peerId}_${slugSegment(threadKey)}`
+            : `${currentUid}_${peerId}`;
           const chatDocRef = doc(db, "chats", newChatId);
 
           await setDoc(chatDocRef, {
@@ -164,11 +203,11 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
               [currentUid]: "Skills Help",
               [peerId]: peerSkill,
             },
-            serviceContext: {
-              title: peerSkill,
-              category: "",
-            },
+            gigId: gigIdParam || null,
+            threadKey,
+            serviceContext: requestedServiceContext,
             lastMessage: "Chat started",
+            createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
 
@@ -180,7 +219,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
     }
 
     initializeConversation();
-  }, [chatIdParam, userProfile, peerIdParam, subjectParam]);
+  }, [categoryParam, chatIdParam, gigIdParam, peerIdParam, priceParam, providerNameParam, subjectParam, userProfile]);
 
   // Listen to every conversation that includes the current user.
   useEffect(() => {
@@ -196,14 +235,15 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
         snapshot.docs.map(async (chatDoc) => {
           const data = chatDoc.data();
           const peerId = data.participants?.find((p: string) => p !== userProfile.uid) || "";
-          const skill = data.participantSkills?.[peerId] || "Service Chat";
+          const rawServiceContext = isServiceContext(data.serviceContext)
+            ? data.serviceContext
+            : { title: data.participantSkills?.[peerId] || "Service Chat", category: "" };
+          const skill = rawServiceContext.title || data.participantSkills?.[peerId] || "Service Chat";
           let name = data.participantNames?.[peerId] || "Student Partner";
           let university = data.participantUniversities?.[peerId] || "Sri Lankan University";
           let avatar = "";
           let verificationLabel = "";
-          const serviceContext = isServiceContext(data.serviceContext)
-            ? data.serviceContext
-            : { title: skill, category: "" };
+          const serviceContext = rawServiceContext;
 
           let peerRole = resolveChatRole(data.participantRoles?.[peerId]);
           if (peerId) {
@@ -271,11 +311,24 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           peerId: conversation.peerId,
           peerRole: conversation.peerRole,
           serviceContext: conversation.serviceContext,
+          updatedAtMs: conversation.updatedAtMs,
         }))
       );
       setLoading(false);
 
-      if (list.length > 0 && !activeId && !chatIdParam) {
+      if (list.length === 0) {
+        return;
+      }
+
+      if (chatIdParam) {
+        const requestedConversation = list.find((conversation) => conversation.id === chatIdParam);
+        if (requestedConversation) {
+          setActiveId(requestedConversation.id);
+          return;
+        }
+      }
+
+      if (!activeId) {
         setActiveId(list[0].id);
       }
     });
@@ -285,6 +338,67 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
 
   const activeConversation =
     conversations.find((conversation) => conversation.id === currentChatId) || null;
+
+  const peerSummaries = useMemo(() => {
+    const grouped = new Map<string, PeerInboxSummary>();
+
+    conversations.forEach((conversation) => {
+      const existing = grouped.get(conversation.peerId);
+
+      if (!existing) {
+        grouped.set(conversation.peerId, {
+          peerId: conversation.peerId,
+          name: conversation.name,
+          university: conversation.university,
+          avatar: conversation.avatar,
+          verificationLabel: conversation.verificationLabel,
+          lastMessage: conversation.lastMessage,
+          time: conversation.time,
+          latestSkill: conversation.skill,
+          latestConversationId: conversation.id,
+          threadCount: 1,
+          updatedAtMs: conversation.updatedAtMs,
+          online: conversation.online,
+          peerRole: conversation.peerRole,
+        });
+        return;
+      }
+
+      existing.threadCount += 1;
+
+      if (conversation.updatedAtMs > existing.updatedAtMs) {
+        grouped.set(conversation.peerId, {
+          ...existing,
+          name: conversation.name,
+          university: conversation.university,
+          avatar: conversation.avatar,
+          verificationLabel: conversation.verificationLabel,
+          lastMessage: conversation.lastMessage,
+          time: conversation.time,
+          latestSkill: conversation.skill,
+          latestConversationId: conversation.id,
+          updatedAtMs: conversation.updatedAtMs,
+          online: conversation.online,
+          peerRole: conversation.peerRole,
+          threadCount: existing.threadCount,
+        });
+      }
+    });
+
+    return Array.from(grouped.values()).sort((left, right) => right.updatedAtMs - left.updatedAtMs);
+  }, [conversations]);
+
+  const activePeerId = activeConversation?.peerId || peerSummaries[0]?.peerId || null;
+
+  const peerThreads = useMemo(() => {
+    if (!activePeerId) {
+      return [];
+    }
+
+    return conversations
+      .filter((conversation) => conversation.peerId === activePeerId)
+      .sort((left, right) => right.updatedAtMs - left.updatedAtMs);
+  }, [activePeerId, conversations]);
 
   // Switching conversations also switches this message listener.
   useEffect(() => {
@@ -395,16 +509,36 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
     }
   };
 
-  const filteredConversations = useMemo(() => {
+  const filteredPeers = useMemo(() => {
     const queryTerm = searchTerm.trim().toLowerCase();
-    if (!queryTerm) return conversations;
+    if (!queryTerm) return peerSummaries;
 
-    return conversations.filter((conversation) =>
-      [conversation.name, conversation.skill, conversation.lastMessage, formatRoleLabel(conversation.peerRole)].some(
+    return peerSummaries.filter((peer) =>
+      [peer.name, peer.latestSkill, peer.lastMessage, formatRoleLabel(peer.peerRole)].some(
         (val) => val.toLowerCase().includes(queryTerm)
       )
     );
-  }, [searchTerm, conversations]);
+  }, [searchTerm, peerSummaries]);
+
+  const selectConversation = (conversationId: string) => {
+    setActiveId(conversationId);
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.set("chatId", conversationId);
+    router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
+  };
+
+  const selectPeer = (peer: PeerInboxSummary) => {
+    const existingActiveThread = conversations.find(
+      (conversation) => conversation.peerId === peer.peerId && conversation.id === currentChatId,
+    );
+    const nextThread = existingActiveThread || conversations.find(
+      (conversation) => conversation.id === peer.latestConversationId,
+    );
+
+    if (nextThread) {
+      selectConversation(nextThread.id);
+    }
+  };
 
   const handleFileSelection = (event: ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
@@ -451,7 +585,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="grid min-h-[720px] lg:grid-cols-[320px_minmax(0,1fr)_260px]">
-        {/* Conversation search and inbox */}
+        {/* Peer search and inbox */}
         <aside className="border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
           <div className="border-b border-slate-100 p-5">
             <div className="flex items-center justify-between gap-3">
@@ -462,7 +596,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
                 </p>
               </div>
               <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#0f4cbf]">
-                {conversations.length} {conversations.length === 1 ? "chat" : "chats"}
+                {peerSummaries.length} {peerSummaries.length === 1 ? "person" : "people"}
               </span>
             </div>
 
@@ -479,18 +613,18 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           </div>
 
           <div className="divide-y divide-slate-100 overflow-y-auto max-h-[580px]">
-            {filteredConversations.length > 0 ? (
-              filteredConversations.map((conversation) => (
-                <ConversationButton
-                  key={conversation.id}
-                  conversation={conversation}
-                  active={conversation.id === currentChatId}
-                  onClick={() => setActiveId(conversation.id)}
+            {filteredPeers.length > 0 ? (
+              filteredPeers.map((peer) => (
+                <PeerConversationButton
+                  key={peer.peerId}
+                  peer={peer}
+                  active={peer.peerId === activePeerId}
+                  onClick={() => selectPeer(peer)}
                 />
               ))
             ) : (
               <div className="p-8 text-center text-sm text-slate-400">
-                No conversations found.
+                No people found.
               </div>
             )}
           </div>
@@ -543,44 +677,77 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           </div>
         )}
 
-        {activeConversation ? <ServiceContextPanel conversation={activeConversation} /> : null}
+        {activeConversation ? (
+          <ServiceThreadsPanel
+            activeConversationId={currentChatId}
+            peerName={activeConversation.name}
+            threads={peerThreads}
+            onSelectConversation={selectConversation}
+          />
+        ) : null}
       </div>
     </section>
   );
 }
 
-function ServiceContextPanel({ conversation }: { conversation: Conversation }) {
-  const service = conversation.serviceContext;
-
+function ServiceThreadsPanel({
+  activeConversationId,
+  peerName,
+  threads,
+  onSelectConversation,
+}: {
+  activeConversationId: string | null;
+  peerName: string;
+  threads: Conversation[];
+  onSelectConversation: (conversationId: string) => void;
+}) {
   return (
     <aside className="border-t border-slate-200 bg-white p-5 lg:border-l lg:border-t-0 lg:max-h-[720px] lg:overflow-y-auto">
-      <h2 className="text-sm font-bold text-slate-900">Service</h2>
-      <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Gig Title</p>
-        <p className="mt-1 break-words text-sm font-semibold leading-5 text-slate-800">
-          {service?.title || conversation.skill || "Service chat"}
-        </p>
-        <div className="mt-4 border-t border-slate-200 pt-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Category</p>
-          <p className="mt-1 text-sm font-semibold text-[#0f4cbf]">
-            {service?.category || "General"}
-          </p>
-        </div>
+      <h2 className="text-sm font-bold text-slate-900">Requested Gigs</h2>
+
+      <div className="mt-4 space-y-3">
+        {threads.map((thread) => (
+          <button
+            key={thread.id}
+            type="button"
+            onClick={() => onSelectConversation(thread.id)}
+            className={`w-full rounded-xl border p-4 text-left transition ${
+              thread.id === activeConversationId
+                ? "border-blue-200 bg-blue-50"
+                : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white"
+            }`}
+          >
+            <p className="truncate text-sm font-bold text-slate-900">
+              {thread.serviceContext?.title || thread.skill || "General chat"}
+            </p>
+            <p className="mt-1 truncate text-xs font-medium text-[#1453c4]">
+              {formatThreadTypeLabel(thread)}
+            </p>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <p className="truncate text-xs text-slate-500">
+                {thread.lastMessage || "Open this thread"}
+              </p>
+              <span className="shrink-0 text-[11px] font-medium text-slate-400">
+                {thread.time}
+              </span>
+            </div>
+          </button>
+        ))}
       </div>
     </aside>
   );
 }
 
-function ConversationButton({
-  conversation,
+function PeerConversationButton({
+  peer,
   active,
   onClick,
 }: {
-  conversation: Conversation;
+  peer: PeerInboxSummary;
   active: boolean;
   onClick: () => void;
 }) {
-  const initials = conversation.name
+  const initials = peer.name
     .split(" ")
     .map((n) => n[0])
     .join("")
@@ -596,10 +763,10 @@ function ConversationButton({
       }`}
     >
       <div className="relative shrink-0">
-        {conversation.avatar ? (
+        {peer.avatar ? (
           <img
-            src={conversation.avatar}
-            alt={conversation.name}
+            src={peer.avatar}
+            alt={peer.name}
             className="h-11 w-11 rounded-full object-cover shadow-sm"
           />
         ) : (
@@ -607,28 +774,33 @@ function ConversationButton({
             {initials}
           </div>
         )}
-        {conversation.online ? (
+        {peer.online ? (
           <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
         ) : null}
       </div>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
-          <p className="min-w-0 truncate text-sm font-bold text-slate-900">
-            {conversation.name}
-          </p>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-slate-900">
+              {peer.name}
+            </p>
+            <p className="mt-1 truncate text-xs font-medium text-[#2f66e7]">
+              {peer.latestSkill}
+            </p>
+          </div>
           <span className="shrink-0 text-xs font-medium text-slate-400">
-            {conversation.time}
+            {peer.time}
           </span>
         </div>
 
         <div className="mt-2 flex items-center justify-between gap-3">
           <p className="truncate text-sm text-slate-500">
-            {conversation.lastMessage}
+            {peer.lastMessage}
           </p>
-          {conversation.unread ? (
+          {peer.threadCount > 1 ? (
             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#2f66e7] px-1.5 text-xs font-bold text-white">
-              {conversation.unread}
+              {peer.threadCount}
             </span>
           ) : null}
         </div>
@@ -699,7 +871,7 @@ function ChatHeader({
               })()}
             </div>
             <p className="mt-1 truncate text-sm font-medium text-slate-500">
-              {conversation.university} | {conversation.skill}
+              {conversation.university} | {conversation.serviceContext?.title || conversation.skill}
             </p>
           </div>
         </div>
@@ -763,6 +935,7 @@ function MessageBubble({
   message: ChatMessage;
 }) {
   const isMine = message.sender === "me";
+  const normalizedMessageText = normalizeServiceMessageText(message);
 
   return (
     <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
@@ -773,10 +946,9 @@ function MessageBubble({
             : "rounded-bl-[6px] bg-white text-slate-900"
         }`}
       >
-        <p className="whitespace-pre-line text-[15px] leading-6">{message.text}</p>
         {message.serviceContext ? (
           <div
-            className={`mt-2.5 rounded-xl border px-3 py-2 text-xs ${
+            className={`rounded-xl border px-3 py-2 text-xs ${
               isMine
                 ? "border-white/20 bg-white/10 text-white"
                 : "border-blue-100 bg-blue-50 text-slate-700"
@@ -786,10 +958,18 @@ function MessageBubble({
             <p className={isMine ? "text-blue-100" : "text-slate-500"}>
               {message.serviceContext.category || "General"}
             </p>
+            <p className={isMine ? "mt-1 text-blue-100" : "mt-1 text-slate-500"}>
+              {formatChatPrice(message.serviceContext.price)}
+            </p>
           </div>
         ) : null}
+        {normalizedMessageText ? (
+          <p className={`${message.serviceContext ? "mt-2.5" : ""} whitespace-pre-line text-[15px] leading-6`}>
+            {normalizedMessageText}
+          </p>
+        ) : null}
         {message.attachments.length > 0 ? (
-          <div className={`${message.text ? "mt-2.5" : ""} space-y-2`}>
+          <div className={`${normalizedMessageText || message.serviceContext ? "mt-2.5" : ""} space-y-2`}>
             {message.attachments.map((attachment) => (
               <a
                 key={attachment.url}
@@ -1091,4 +1271,59 @@ function formatFileKind(type: string) {
   if (type.includes("word")) return "DOC";
   if (type === "text/plain") return "TXT";
   return "File";
+}
+
+function normalizeServiceMessageText(message: ChatMessage) {
+  const trimmed = message.text.trim();
+  if (!trimmed) return "";
+
+  if (
+    message.serviceContext &&
+    /^Gig:\s/i.test(trimmed) &&
+    /Category:\s/i.test(trimmed)
+  ) {
+    return "Can you tell me more about this gig?";
+  }
+
+  return trimmed;
+}
+
+function formatThreadTypeLabel(thread: Conversation) {
+  if (!thread.serviceContext?.gigId) {
+    return "General Request";
+  }
+
+  const category = thread.serviceContext.category?.trim();
+  if (category && category.toLowerCase() !== "general") {
+    return `Direct Request • ${category}`;
+  }
+
+  return "Gig Chat";
+}
+
+function formatChatPrice(price?: number | string) {
+  if (typeof price === "number") {
+    return price > 0 ? `LKR ${price.toLocaleString()}` : "Price on chat";
+  }
+
+  if (typeof price === "string") {
+    const trimmed = price.trim();
+    if (!trimmed) return "Price on chat";
+    const numeric = Number(trimmed.replace(/[^\d.]/g, ""));
+    return Number.isFinite(numeric) && numeric > 0
+      ? `LKR ${numeric.toLocaleString()}`
+      : trimmed;
+  }
+
+  return "Price on chat";
+}
+
+function slugSegment(value: string) {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48) || "service"
+  );
 }

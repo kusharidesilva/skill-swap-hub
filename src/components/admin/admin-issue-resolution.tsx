@@ -5,6 +5,7 @@ import { collection, doc, onSnapshot, serverTimestamp, updateDoc } from "firebas
 import { db } from "@/lib/firebase";
 import { createNotification } from "@/lib/notifications";
 import SelectField from "@/components/ui/select-field";
+import ModalPortal from "@/components/ui/modal-portal";
 
 type TimestampLike =
   | { toDate?: () => Date; toMillis?: () => number }
@@ -53,6 +54,7 @@ export default function AdminIssueResolution() {
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState("");
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [selectedReport, setSelectedReport] = useState<ReportRecord | null>(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -291,8 +293,8 @@ export default function AdminIssueResolution() {
 
       <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <div className="min-w-[1180px]">
-            <div className="grid grid-cols-[0.8fr_1fr_1fr_0.9fr_1.35fr_0.9fr_0.75fr_1.3fr] border-b border-slate-200 bg-[#f6f7ff] px-4 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+          <div className="min-w-[1120px]">
+            <div className="grid grid-cols-[0.8fr_1fr_1fr_0.9fr_1.5fr_0.8fr_0.7fr_0.5fr] border-b border-slate-200 bg-[#f6f7ff] px-4 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
               <span>Report ID</span>
               <span>Reporter</span>
               <span>Reported User</span>
@@ -315,12 +317,12 @@ export default function AdminIssueResolution() {
                 return (
                   <div
                     key={report.id}
-                    className="grid grid-cols-[0.8fr_1fr_1fr_0.9fr_1.35fr_0.9fr_0.75fr_1.3fr] items-start gap-3 border-b border-slate-200 px-4 py-4 text-sm last:border-b-0"
+                    className="grid grid-cols-[0.8fr_1fr_1fr_0.9fr_1.5fr_0.8fr_0.7fr_0.5fr] items-start gap-3 border-b border-slate-200 px-4 py-4 text-sm last:border-b-0"
                   >
-                    <span className="font-medium text-slate-600">{formatReportId(report.id)}</span>
+                    <span className="pt-2 font-medium text-slate-600">{formatReportId(report.id)}</span>
                     <ReportedUser name={report.reporterName || "Reporter"} detail={report.reporterEmail} />
                     <ReportedUser name={reportedUserName(report)} detail={reportedUserId(report)} />
-                    <span className="inline-flex w-fit rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500">
+                    <span className="inline-flex w-fit self-start rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500">
                       {report.issueType || report.category || "Other"}
                     </span>
                     <div className="min-w-0">
@@ -346,49 +348,21 @@ export default function AdminIssueResolution() {
                       ) : (
                         <p className="mt-2 text-xs text-slate-400">No evidence attached</p>
                       )}
-                      <textarea
-                        value={notes[report.id] ?? report.adminNote ?? ""}
-                        onChange={(event) =>
-                          setNotes((current) => ({ ...current, [report.id]: event.target.value }))
-                        }
-                        placeholder="Admin note"
-                        className="mt-3 h-20 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 outline-none focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
-                      />
                     </div>
-                    <span className="whitespace-pre-line text-slate-600">{formatDate(report.createdAt)}</span>
-                    <StatusPill status={status} />
-                    <div className="flex flex-wrap gap-2">
-                      <ActionButton
-                        busy={busyKey === `${report.id}-warn`}
-                        disabled={busyKey !== ""}
-                        onClick={() => warnUser(report)}
+                    <span className="pt-2 whitespace-pre-line text-slate-600">{formatDate(report.createdAt)}</span>
+                    <div className="pt-1">
+                      <StatusPill status={status} />
+                    </div>
+                    <div className="flex justify-center pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedReport(report)}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900"
+                        aria-label={`Manage report ${formatReportId(report.id)}`}
+                        title="Manage report"
                       >
-                        Warn
-                      </ActionButton>
-                      <ActionButton
-                        tone="danger"
-                        busy={busyKey === `${report.id}-suspend`}
-                        disabled={busyKey !== ""}
-                        onClick={() => suspendUser(report)}
-                      >
-                        Suspend
-                      </ActionButton>
-                      <ActionButton
-                        tone="success"
-                        busy={busyKey === `${report.id}-Resolved`}
-                        disabled={busyKey !== ""}
-                        onClick={() => updateReportStatus(report, "Resolved")}
-                      >
-                        Resolve
-                      </ActionButton>
-                      <ActionButton
-                        tone="muted"
-                        busy={busyKey === `${report.id}-Rejected`}
-                        disabled={busyKey !== ""}
-                        onClick={() => updateReportStatus(report, "Rejected")}
-                      >
-                        Reject
-                      </ActionButton>
+                        <MoreActionsIcon />
+                      </button>
                     </div>
                   </div>
                 );
@@ -403,6 +377,34 @@ export default function AdminIssueResolution() {
           </p>
         </div>
       </section>
+
+      {selectedReport ? (
+        <ReportActionModal
+          report={selectedReport}
+          note={notes[selectedReport.id] ?? selectedReport.adminNote ?? ""}
+          onNoteChange={(value) =>
+            setNotes((current) => ({ ...current, [selectedReport.id]: value }))
+          }
+          busyKey={busyKey}
+          onClose={() => setSelectedReport(null)}
+          onWarn={async () => {
+            await warnUser(selectedReport);
+            setSelectedReport(null);
+          }}
+          onSuspend={async () => {
+            await suspendUser(selectedReport);
+            setSelectedReport(null);
+          }}
+          onResolve={async () => {
+            await updateReportStatus(selectedReport, "Resolved");
+            setSelectedReport(null);
+          }}
+          onReject={async () => {
+            await updateReportStatus(selectedReport, "Rejected");
+            setSelectedReport(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -502,6 +504,108 @@ function ActionButton({
   );
 }
 
+function ReportActionModal({
+  report,
+  note,
+  onNoteChange,
+  busyKey,
+  onClose,
+  onWarn,
+  onSuspend,
+  onResolve,
+  onReject,
+}: {
+  report: ReportRecord;
+  note: string;
+  onNoteChange: (value: string) => void;
+  busyKey: string;
+  onClose: () => void;
+  onWarn: () => Promise<void>;
+  onSuspend: () => Promise<void>;
+  onResolve: () => Promise<void>;
+  onReject: () => Promise<void>;
+}) {
+  return (
+    <ModalPortal>
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md">
+        <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Report Actions
+              </p>
+              <h3 className="mt-2 text-xl font-bold text-slate-900">
+                {formatReportId(report.id)} - {report.issueType || report.category || "Issue"}
+              </h3>
+              <p className="mt-2 text-sm text-slate-500">
+                Reporter: {report.reporterName || "Reporter"} | Reported user: {reportedUserName(report)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+              aria-label="Close actions popup"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+
+          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm leading-6 text-slate-700">
+              {report.description || "No description provided."}
+            </p>
+          </div>
+
+          <div className="mt-5">
+            <label className="mb-2 block text-sm font-semibold text-slate-700">Admin Note</label>
+            <textarea
+              value={note}
+              onChange={(event) => onNoteChange(event.target.value)}
+              placeholder="Add the action summary or review note here..."
+              className="h-28 w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+            />
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <ActionButton
+              busy={busyKey === `${report.id}-warn`}
+              disabled={busyKey !== ""}
+              onClick={() => void onWarn()}
+            >
+              Warn User
+            </ActionButton>
+            <ActionButton
+              tone="danger"
+              busy={busyKey === `${report.id}-suspend`}
+              disabled={busyKey !== ""}
+              onClick={() => void onSuspend()}
+            >
+              Suspend Account
+            </ActionButton>
+            <ActionButton
+              tone="success"
+              busy={busyKey === `${report.id}-Resolved`}
+              disabled={busyKey !== ""}
+              onClick={() => void onResolve()}
+            >
+              Resolve Report
+            </ActionButton>
+            <ActionButton
+              tone="muted"
+              busy={busyKey === `${report.id}-Rejected`}
+              disabled={busyKey !== ""}
+              onClick={() => void onReject()}
+            >
+              Reject Report
+            </ActionButton>
+          </div>
+        </div>
+      </div>
+    </ModalPortal>
+  );
+}
+
 function reportedUserId(report: ReportRecord) {
   return report.targetUserId || report.reportedUserId || report.reportedUser || "";
 }
@@ -579,6 +683,25 @@ function FilterResetIcon() {
       <path d="M7 12h10" />
       <path d="M10 17h4" />
       <path d="m5 5 14 14" />
+    </svg>
+  );
+}
+
+function MoreActionsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="19" cy="12" r="1" />
+      <circle cx="5" cy="12" r="1" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
     </svg>
   );
 }

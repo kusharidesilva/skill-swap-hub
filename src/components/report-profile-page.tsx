@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db, storage } from "@/lib/firebase";
+import { createNotification } from "@/lib/notifications";
 import { ISSUE_TYPES } from "@/lib/platform";
 import SelectField from "@/components/ui/select-field";
 import {
@@ -492,7 +493,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
         })
       );
 
-      await addDoc(collection(db, "reports"), {
+      const reportRef = await addDoc(collection(db, "reports"), {
         type: "profile",
         reportSource: providerId ? "report-issue-targeted" : "report-issue-general",
         reporterId: userProfile.uid,
@@ -507,6 +508,30 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
         status: "Pending",
         createdAt: serverTimestamp(),
       });
+
+      await createNotification({
+        userId: userProfile.uid,
+        title: "Report submitted",
+        description: `Your report about ${targetName || "this user"} has been sent for admin review.`,
+        type: "system",
+        icon: "flag",
+        tone: "blue",
+        href: "/notifications",
+        destination: "/notifications",
+      });
+
+      if (targetUserId && targetUserId !== userProfile.uid) {
+        await createNotification({
+          userId: targetUserId,
+          title: "New report received",
+          description: `A report related to your account was submitted and is now under admin review. Reference: ${reportRef.id.slice(-5).toUpperCase()}.`,
+          type: "system",
+          icon: "alert-triangle",
+          tone: "red",
+          href: "/notifications",
+          destination: "/notifications",
+        });
+      }
 
       setFeedback({
         type: "success",
@@ -690,12 +715,21 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
 
             <Field label="Supporting Evidence">
               <div
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
                 onDragOver={(event) => {
                   event.preventDefault();
                   setIsDraggingFiles(true);
                 }}
                 onDragLeave={() => setIsDraggingFiles(false)}
                 onDrop={handleDrop}
+                role="button"
+                tabIndex={0}
                 className={`rounded-[14px] border border-dashed px-6 py-10 text-center transition ${
                   isDraggingFiles
                     ? "border-[#7aa8ff] bg-[#f4f8ff]"
@@ -717,7 +751,10 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
                   Drag &amp; drop files or{" "}
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
                     className="font-semibold text-[#2563eb] underline"
                   >
                     click to browse
