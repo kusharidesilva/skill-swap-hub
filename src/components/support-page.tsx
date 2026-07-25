@@ -86,7 +86,7 @@ export default function SupportPage() {
       {/* Help page introduction */}
       <section className="ssh-support-hero bg-[#eef1ff]">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-6 py-14 text-center lg:py-20">
-          <span className="ssh-highlight-badge inline-flex items-center gap-2 rounded-full bg-[#e3e9ff] px-3 py-1 text-xs font-semibold text-[#2b54d6]">
+          <span className="ssh-highlight-badge inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold text-[#0f8a6b]">
             Support Center
           </span>
           <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl">

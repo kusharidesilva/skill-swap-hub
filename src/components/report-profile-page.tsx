@@ -34,6 +34,16 @@ type UserOption = {
   name: string;
 };
 
+type CompletedExchangeDoc = {
+  buyerId?: string;
+  buyerUserId?: string;
+  buyerName?: string;
+  providerId?: string;
+  providerName?: string;
+  status?: string;
+  orderStatus?: string;
+};
+
 type ReportHistoryItem = {
   id: string;
   targetName: string;
@@ -87,7 +97,12 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
       }
 
       try {
-        const [buyerSnapshot, providerSnapshot] = await Promise.all([
+        const [
+          buyerSnapshot,
+          providerSnapshot,
+          buyerOrdersSnapshot,
+          providerOrdersSnapshot,
+        ] = await Promise.all([
           getDocs(
             query(
               collection(db, "requests"),
@@ -102,6 +117,18 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
               where("status", "==", "completed")
             )
           ),
+          getDocs(
+            query(
+              collection(db, "serviceOrders"),
+              where("buyerUserId", "==", userProfile.uid),
+            )
+          ),
+          getDocs(
+            query(
+              collection(db, "serviceOrders"),
+              where("providerId", "==", userProfile.uid),
+            )
+          ),
         ]);
 
         if (!active) {
@@ -111,15 +138,42 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
         // A map removes duplicates when the same person appears in both request roles.
         const reportableUsers = new Map<string, UserOption>();
 
-        buyerSnapshot.forEach((entry) => {
-          const data = entry.data();
-          const partnerId = typeof data.providerId === "string" ? data.providerId : "";
-          const partnerName =
-            typeof data.providerName === "string" && data.providerName.trim()
-              ? data.providerName
-              : "Community Member";
+        const addCompletedPartner = (
+          data: CompletedExchangeDoc,
+          perspective: "buyer" | "provider",
+        ) => {
+          if ("orderStatus" in data || "status" in data) {
+            const normalizedStatus = normalizeStatus(data.orderStatus || data.status || "");
+            if (normalizedStatus !== "completed") {
+              return;
+            }
+          }
 
-          if (!partnerId || partnerId === "general") {
+          const partnerId =
+            perspective === "buyer"
+              ? typeof data.providerId === "string"
+                ? data.providerId
+                : ""
+              : typeof data.buyerId === "string"
+                ? data.buyerId
+                : typeof data.buyerUserId === "string"
+                  ? data.buyerUserId
+                  : "";
+          const partnerName =
+            perspective === "buyer"
+              ? typeof data.providerName === "string" && data.providerName.trim()
+                ? data.providerName
+                : "Community Member"
+              : typeof data.buyerName === "string" && data.buyerName.trim()
+                ? data.buyerName
+                : "Community Member";
+
+          if (
+            !partnerId ||
+            partnerId === "general" ||
+            partnerId === userProfile.uid ||
+            reportableUsers.has(partnerId)
+          ) {
             return;
           }
 
@@ -127,24 +181,22 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
             id: partnerId,
             name: partnerName,
           });
+        };
+
+        buyerSnapshot.forEach((entry) => {
+          addCompletedPartner(entry.data() as CompletedExchangeDoc, "buyer");
         });
 
         providerSnapshot.forEach((entry) => {
-          const data = entry.data();
-          const partnerId = typeof data.buyerId === "string" ? data.buyerId : "";
-          const partnerName =
-            typeof data.buyerName === "string" && data.buyerName.trim()
-              ? data.buyerName
-              : "Community Member";
+          addCompletedPartner(entry.data() as CompletedExchangeDoc, "provider");
+        });
 
-          if (!partnerId || partnerId === userProfile.uid || reportableUsers.has(partnerId)) {
-            return;
-          }
+        buyerOrdersSnapshot.forEach((entry) => {
+          addCompletedPartner(entry.data() as CompletedExchangeDoc, "buyer");
+        });
 
-          reportableUsers.set(partnerId, {
-            id: partnerId,
-            name: partnerName,
-          });
+        providerOrdersSnapshot.forEach((entry) => {
+          addCompletedPartner(entry.data() as CompletedExchangeDoc, "provider");
         });
 
         const nextUsers = Array.from(reportableUsers.values()).sort((left, right) =>
@@ -502,7 +554,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
 
       {/* Report form and guidance */}
       <div className="grid gap-8 xl:grid-cols-[minmax(0,620px)_minmax(0,438px)]">
-        <section className="overflow-hidden rounded-[18px] border border-[#dbe2ef] bg-white shadow-[0_6px_18px_rgba(33,42,62,0.06)]">
+        <section className="overflow-hidden rounded-[18px] border border-[#dbe2ef] bg-white shadow-[0_2px_8px_rgba(33,42,62,0.04)]">
           <div className="flex items-center gap-3 border-b border-[#dbe2ef] bg-[#f8fbff] px-6 py-4">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ffe4ea] text-[#ef295a]">
               <AlertIcon className="h-4.5 w-4.5" />
@@ -733,7 +785,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
         </section>
 
         <aside className="space-y-8">
-          <section className="overflow-hidden rounded-[18px] border border-[#dbe2ef] bg-white shadow-[0_6px_18px_rgba(33,42,62,0.06)]">
+          <section className="overflow-hidden rounded-[18px] border border-[#dbe2ef] bg-white">
             <div className="border-b border-[#dbe2ef] px-6 py-5">
               <h3 className="text-[15px] font-semibold text-[#24324b]">
                 Your Reporting History
@@ -778,7 +830,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
             </div>
           </section>
 
-          <section className="rounded-[18px] border border-[#dce3ff] bg-[#f5f7ff] px-6 py-6 shadow-[0_6px_18px_rgba(33,42,62,0.05)]">
+          <section className="rounded-[18px] border border-[#dce3ff] bg-[#f5f7ff] px-6 py-6">
             <div className="flex items-center gap-3 text-[#4a4bb0]">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e6e9ff]">
                 <InfoIcon className="h-4.5 w-4.5" />
@@ -861,6 +913,10 @@ function formatBytes(bytes: number) {
 
 const inputClassName =
   "h-10 w-full rounded-[10px] border border-[#d7dfec] bg-white px-4 text-[14px] text-[#36465f] outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-[#dbe7ff]";
+
+function normalizeStatus(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+}
 
 function ShieldIcon({ className }: { className?: string }) {
   return (

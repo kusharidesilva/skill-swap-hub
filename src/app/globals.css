@@ -598,10 +598,15 @@ body {
 
 .user-motion-scope .dashboard-stat-card {
   transition:
-    transform var(--motion-base) var(--motion-ease),
-    box-shadow var(--motion-base) var(--motion-ease),
     border-color var(--motion-base) ease,
     background-color var(--motion-base) ease;
+}
+
+.user-motion-scope .dashboard-stat-card:hover,
+.user-motion-scope .dashboard-stat-card:focus-within {
+  transform: none !important;
+  box-shadow: none !important;
+  border-color: rgb(226 232 240) !important;
 }
 
 /* Menus, dialogs, and notices appear from the point users expect. */
@@ -631,8 +636,7 @@ body {
 
   .ssh-card:hover,
   .user-motion-scope .app-route-stage
-    :where(article, section)[class*="rounded-"][class*="shadow"]:not(:has(form, table, canvas, input, select, textarea)):hover,
-  .user-motion-scope .dashboard-stat-card:hover {
+    :where(article, section)[class*="rounded-"][class*="shadow"]:not(:has(form, table, canvas, input, select, textarea)):hover {
     border-color: rgb(47 102 231 / 28%);
     transform: translateY(-4px);
     box-shadow: 0 26px 56px -34px rgb(47 102 231 / 48%);

@@ -388,7 +388,7 @@ function ProfileSettingsForm({
       </header>
 
       {/* Profile photo and save action */}
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative h-14 w-14 shrink-0">
@@ -453,7 +453,7 @@ function ProfileSettingsForm({
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.28fr)_minmax(320px,0.92fr)]">
         {/* Basic details, availability, and security */}
         <div className="grid min-w-0 gap-5">
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="rounded-xl border border-slate-200 bg-white p-5">
             <SectionTitle
               icon={<UserIcon className="h-4 w-4" />}
               title="Basic Information"
@@ -532,7 +532,7 @@ function ProfileSettingsForm({
           </section>
 
           {showAvailability && (
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="rounded-xl border border-slate-200 bg-white p-5">
               <SectionTitle
                 icon={<CalendarIcon className="h-4 w-4" />}
                 title="Weekly Availability"
@@ -587,7 +587,7 @@ function ProfileSettingsForm({
         {/* Skills, notifications, privacy, and account removal */}
         <div className="grid min-w-0 gap-5 self-start">
           {showOffered && (
-            <section className="min-w-0 rounded-xl border border-slate-200 border-l-4 border-l-emerald-600 bg-white p-5 shadow-sm">
+            <section className="min-w-0 rounded-xl border border-slate-200 border-l-4 border-l-emerald-600 bg-white p-5">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-xs font-semibold text-slate-800">
                   Skills I Can Offer
@@ -663,7 +663,7 @@ function ProfileSettingsForm({
 
           {/* Keep the buyer "Skills I Need" editor hidden for now.
           {showNeeded && (
-            <section className="min-w-0 rounded-xl border border-slate-200 border-l-4 border-l-[#0758d8] bg-white p-5 shadow-sm">
+            <section className="min-w-0 rounded-xl border border-slate-200 border-l-4 border-l-[#0758d8] bg-white p-5">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-xs font-semibold text-slate-800">
                   Skills I Need
@@ -835,7 +835,7 @@ function LoginSecurity({
   };
 
   return (
-    <section className="rounded-xl border border-slate-200 border-t-4 border-t-[#0758d8] bg-white p-5 shadow-sm">
+    <section className="rounded-xl border border-slate-200 border-t-4 border-t-[#0758d8] bg-white p-5">
       <SectionTitle
         icon={<LockIcon className="h-4 w-4" />}
         title="Login & Security"
@@ -1014,7 +1014,7 @@ function NotificationSettings({
   onPushNotificationsChange: (checked: boolean) => void;
 }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-xl border border-slate-200 bg-white p-5">
       <SectionTitle
         icon={<BellIcon className="h-4 w-4" />}
         title="Notifications"
@@ -1046,7 +1046,7 @@ function PrivacySettings({
   onProfileVisibilityChange: (checked: boolean) => void;
 }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-xl border border-slate-200 bg-white p-5">
       <SectionTitle icon={<EyeIcon className="h-4 w-4" />} title="Privacy" />
 
       <div className="mt-4">

@@ -167,7 +167,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
 
   return (
     <div className="profile-steady-cards flex flex-col gap-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 md:p-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-5 sm:items-center">
             <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 shadow-inner">
@@ -220,7 +220,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+      <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
         <div className="flex items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
             <VerifiedShieldIcon />
@@ -241,7 +241,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
           showProfileSidebar ? "xl:grid-cols-[2fr_1fr]" : "xl:grid-cols-1"
         }`}
       >
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-600">
               i
@@ -255,7 +255,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
 
         <div className={`flex flex-col gap-4 ${showProfileSidebar ? "" : "hidden"}`}>
           {showOffered && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
                   <CheckIcon />
@@ -283,7 +283,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
 
           {/* Keep the buyer "Skills I Need" card hidden for now.
           {showNeeded && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600">
                   <CheckIcon />
@@ -310,7 +310,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-600">
@@ -352,7 +352,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
       </section>
 
       {showOffered && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border border-slate-200 bg-white p-6">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
               <DotIcon />
