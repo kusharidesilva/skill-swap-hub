@@ -68,7 +68,7 @@ type ServiceContext = {
   providerName?: string;
 };
 
-const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_TYPES = new Set([
   "image/png",
   "image/jpeg",
@@ -395,7 +395,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
     );
 
     if (invalidFile) {
-      setComposerError("Only images, PDF, TXT, DOC, or DOCX files up to 10MB are allowed.");
+      setComposerError("Only images, PDF, TXT, DOC, or DOCX files up to 2MB are allowed.");
       event.target.value = "";
       return;
     }

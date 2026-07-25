@@ -53,7 +53,7 @@ type ReportHistoryItem = {
 };
 
 const REPORT_TYPES = new Set(["profile", "issue", "safety"]);
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set([
   "image/png",
   "image/jpeg",
@@ -346,10 +346,19 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
   const isLockedTarget = Boolean(providerId);
   const hasEligibleTargets = usersList.length > 0;
   const targetIsEligible = usersList.some((user) => user.id === targetUserId);
+  const canChooseIssueType = isLockedTarget ? targetIsEligible : hasEligibleTargets;
   const isTargetInvalid = didAttemptSubmit && (!targetUserId || !targetIsEligible);
   const isCategoryInvalid = didAttemptSubmit && !category;
   const isDescriptionInvalid = didAttemptSubmit && description.trim().length < 10;
   const isAgreementInvalid = didAttemptSubmit && !isAgreed;
+
+  useEffect(() => {
+    if (canChooseIssueType) {
+      return;
+    }
+
+    setCategory("");
+  }, [canChooseIssueType]);
 
   const handleFiles = (incomingFiles: FileList | File[]) => {
     const nextFiles = Array.from(incomingFiles);
@@ -366,7 +375,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
     if (invalidFile) {
       setFeedback({
         type: "error",
-        msg: "Only PNG, JPG, WEBP, or PDF files up to 10MB are allowed.",
+        msg: "Only PNG, JPG, WEBP, or PDF files up to 2MB are allowed.",
       });
       return;
     }
@@ -646,9 +655,15 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
                 }}
                 placeholder="Choose an issue type"
                 options={issueTypeOptions}
+                disabled={!canChooseIssueType}
                 error={isCategoryInvalid ? "Please choose a report category." : undefined}
                 className={inputClassName}
                 labelClassName="hidden"
+                helperText={
+                  canChooseIssueType
+                    ? undefined
+                    : "Complete a swap with the user first to choose an issue type."
+                }
               />
             </div>
 
@@ -709,7 +724,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
                   </button>
                 </p>
                 <p className="mt-1 text-[12px] text-slate-400">
-                  Screenshots, PDFs, or relevant chat logs (Max 10MB)
+                  Screenshots, PDFs, or relevant chat logs (Max 2MB)
                 </p>
               </div>
 

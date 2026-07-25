@@ -15,7 +15,7 @@ import { useLookupOptions } from "@/lib/lookups";
 
 export type Role = "buyer" | "provider" | "both";
 
-const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_PROFILE_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 const PROFILE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 function compressImageToBase64(
@@ -275,7 +275,7 @@ function ProfileSettingsForm({
 
     if (file.size > MAX_PROFILE_IMAGE_SIZE_BYTES) {
       setSaveStatus("error");
-      setErrorMessage("Profile image must be 5MB or smaller.");
+      setErrorMessage("Profile image must be 2MB or smaller.");
       return;
     }
 

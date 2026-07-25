@@ -303,11 +303,13 @@ function DashboardIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M4 4h7v7H4z" />
-      <path d="M13 4h7v7h-7z" />
-      <path d="M4 13h7v7H4z" />
-      <path d="M13 13h7v7h-7z" />
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="3.5" width="7" height="4.5" rx="1.5" />
+      <rect x="13.5" y="11.5" width="7" height="9" rx="1.5" />
+      <rect x="3.5" y="13" width="7" height="7.5" rx="1.5" />
     </svg>
   );
 }
@@ -320,9 +322,11 @@ function UserCircleIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4z" />
-      <path d="M4 20c1.7-3 5-4.5 8-4.5s6.3 1.5 8 4.5" />
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 19c1.8-3 4.4-4.5 7-4.5s5.2 1.5 7 4.5" />
     </svg>
   );
 }
@@ -335,9 +339,11 @@ function SettingsIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M12 8a4 4 0 1 0 4 4 4 4 0 0 0-4-4z" />
-      <path d="M4.9 12a7.1 7.1 0 0 1 .1-1l-2-1.3 2-3.4 2.2.6a7.4 7.4 0 0 1 1.7-1l.3-2.3h4l.3 2.3a7.4 7.4 0 0 1 1.7 1l2.2-.6 2 3.4-2 1.3a7.1 7.1 0 0 1 0 2l2 1.3-2 3.4-2.2-.6a7.4 7.4 0 0 1-1.7 1l-.3 2.3h-4l-.3-2.3a7.4 7.4 0 0 1-1.7-1l-2.2.6-2-3.4 2-1.3a7.1 7.1 0 0 1-.1-1z" />
+      <circle cx="12" cy="12" r="2.75" />
+      <path d="M19 12a1.1 1.1 0 0 0 .24.68l1.2 1.46-1.62 2.8-1.85-.44a1.16 1.16 0 0 0-.96.2l-.23.16a1.2 1.2 0 0 0-.5.84L15 20h-3l-.28-1.98a1.2 1.2 0 0 0-.5-.84l-.23-.16a1.16 1.16 0 0 0-.96-.2l-1.85.44-1.62-2.8 1.2-1.46A1.1 1.1 0 0 0 8 12a1.1 1.1 0 0 0-.24-.68l-1.2-1.46 1.62-2.8 1.85.44a1.16 1.16 0 0 0 .96-.2l.23-.16a1.2 1.2 0 0 0 .5-.84L12 4h3l.28 1.98a1.2 1.2 0 0 0 .5.84l.23.16a1.16 1.16 0 0 0 .96.2l1.85-.44 1.62 2.8-1.2 1.46A1.1 1.1 0 0 0 19 12z" />
     </svg>
   );
 }
@@ -350,10 +356,13 @@ function PlusCircleIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 8v8" />
-      <path d="M8 12h8" />
+      <path d="M8 5.5h6l3 3V18a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7.5a2 2 0 0 1 2-2z" />
+      <path d="M14 5.5V9h3" />
+      <path d="M12 11v5" />
+      <path d="M9.5 13.5h5" />
     </svg>
   );
 }
@@ -366,11 +375,13 @@ function SearchUserIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M9.5 10a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 9.5 10z" />
-      <path d="M3.5 16.5c1.4-2.2 3.4-3.5 6-3.5s4.6 1.3 6 3.5" />
-      <path d="M15 14l5 5" />
-      <circle cx="19.5" cy="18.5" r="3.5" />
+      <circle cx="10" cy="8.5" r="3" />
+      <path d="M4.5 17c1.4-2.3 3.4-3.5 5.5-3.5 1.3 0 2.5.36 3.6 1.08" />
+      <circle cx="17.5" cy="17.5" r="3" />
+      <path d="M19.75 19.75 21 21" />
     </svg>
   );
 }
@@ -383,8 +394,12 @@ function ChatIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M4 5h16v11H7l-3 3z" />
+      <path d="M6 6.5h12A2.5 2.5 0 0 1 20.5 9v6A2.5 2.5 0 0 1 18 17.5H11l-4.5 3v-3H6A2.5 2.5 0 0 1 3.5 15V9A2.5 2.5 0 0 1 6 6.5z" />
+      <path d="M8.5 11.5h7" />
+      <path d="M8.5 14h4.5" />
     </svg>
   );
 }
@@ -397,9 +412,11 @@ function StarBadgeIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M12 3l2.6 5.4 5.9.9-4.3 4.1 1 5.9L12 16.8 6.8 19.3l1-5.9L3.5 9.3l5.9-.9z" />
-      <path d="M4 20h16" />
+      <path d="M12 4.5 14.2 9l5 .72-3.6 3.5.86 4.93L12 15.85 7.54 18.15l.86-4.93-3.6-3.5 5-.72z" />
+      <path d="M8 19.5h8" />
     </svg>
   );
 }
@@ -412,10 +429,12 @@ function AlertTriangleIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M12 3l9 16H3z" />
-      <path d="M12 9v4" />
-      <path d="M12 17h.01" />
+      <path d="M12 3.5 5 6.2v5.35c0 4.02 2.4 7.72 6.13 9.42a2.2 2.2 0 0 0 1.74 0C16.6 19.27 19 15.57 19 11.55V6.2z" />
+      <path d="M12 8.75v4.1" />
+      <path d="M12 16h.01" />
     </svg>
   );
 }
@@ -428,11 +447,12 @@ function SignOutIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M9 3h7a2 2 0 0 1 2 2v4" />
-      <path d="M16 21H9a2 2 0 0 1-2-2V5" />
-      <path d="M13 12h7" />
-      <path d="M17 9l3 3-3 3" />
+      <path d="M10 4.5H7.5A2.5 2.5 0 0 0 5 7v10a2.5 2.5 0 0 0 2.5 2.5H10" />
+      <path d="M13 8.5 17.5 12 13 15.5" />
+      <path d="M9.5 12h8" />
     </svg>
   );
 }
@@ -445,10 +465,13 @@ function BriefcaseIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M9 6V4h6v2" />
-      <path d="M4 9h16v10H4z" />
-      <path d="M4 12h16" />
+      <path d="M8.5 7V6a1.5 1.5 0 0 1 1.5-1.5h4A1.5 1.5 0 0 1 15.5 6v1" />
+      <rect x="4" y="7" width="16" height="11.5" rx="2" />
+      <path d="M4 11.5h16" />
+      <path d="M10.5 11.5v1.5h3v-1.5" />
     </svg>
   );
 }
@@ -461,9 +484,11 @@ function InboxIcon({ className }: { className?: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M4 5h16v12H4z" />
-      <path d="M4 13h4l2 3h4l2-3h4" />
+      <path d="M5 7.5h14l1.5 5v5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-5z" />
+      <path d="M4.5 12.5H9l1.75 2h2.5l1.75-2h4.5" />
     </svg>
   );
 }

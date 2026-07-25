@@ -13,7 +13,7 @@ import { db } from "@/lib/firebase";
 
 const strongPasswordMessage =
   "Use at least 6 characters with uppercase, lowercase, a number, and a symbol.";
-const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_PROFILE_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 const PROFILE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 function isStrongPassword(value: string) {
@@ -215,7 +215,7 @@ export default function AdminSettings() {
     }
 
     if (file.size > MAX_PROFILE_IMAGE_SIZE_BYTES) {
-      setProfileNotice({ type: "error", text: "Profile image must be 5MB or smaller." });
+      setProfileNotice({ type: "error", text: "Profile image must be 2MB or smaller." });
       return;
     }
 
