@@ -163,7 +163,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="grid h-screen overflow-hidden lg:grid-cols-[255px_minmax(0,1fr)]">
+    <div className="admin-interaction-scope grid h-screen overflow-hidden lg:grid-cols-[255px_minmax(0,1fr)]">
       {sidebarOpen ? (
         <button
           type="button"
@@ -297,7 +297,11 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <UserCircleIcon />
+                <img
+                  src="/img/Skill Swap Hub Logo icon.png"
+                  alt="Skill Swap Hub logo"
+                  className="h-full w-full p-1 object-contain"
+                />
               )}
             </button>
 
@@ -398,10 +402,6 @@ function SettingsIcon() {
 
 function LogoutIcon() {
   return <LogoutDoorIcon />;
-}
-
-function UserCircleIcon() {
-  return <UserCircleOutlineIcon />;
 }
 
 function MenuIcon() {

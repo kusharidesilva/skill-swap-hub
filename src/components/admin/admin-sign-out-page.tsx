@@ -40,7 +40,7 @@ export default function AdminSignOutPage() {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[linear-gradient(135deg,#d7f0ff_0%,#eafcf5_42%,#f6fbff_100%)] px-6 py-10">
+    <main className="admin-interaction-scope relative flex min-h-screen items-center justify-center overflow-hidden bg-[linear-gradient(135deg,#d7f0ff_0%,#eafcf5_42%,#f6fbff_100%)] px-6 py-10">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.2),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(20,184,166,0.18),transparent_30%)]"
@@ -56,8 +56,12 @@ export default function AdminSignOutPage() {
           </p>
 
           <div className="mt-5 flex items-center gap-3 rounded-2xl border border-[#d9ebe7] bg-[linear-gradient(135deg,#eef6ff_0%,#eefcf8_100%)] px-4 py-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#dbeafe,#ccfbf1)] text-sm font-bold text-[#1f5fcf]">
-              {displayName.charAt(0).toUpperCase()}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/80 bg-white p-1 shadow-sm">
+              <img
+                src="/img/Skill Swap Hub Logo icon.png"
+                alt="Skill Swap Hub logo"
+                className="h-full w-full object-contain"
+              />
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-[#303542]">{displayName}</p>
@@ -99,8 +103,12 @@ export default function AdminSignOutPage() {
           >
             x
           </Link>
-          <div className="flex h-[68px] w-[68px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#2563eb,#14b8a6)] text-white shadow-[0_18px_38px_rgba(37,99,235,0.24)]">
-            <CheckIcon className="h-10 w-10" />
+          <div className="flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-full border border-white/80 bg-white p-2 shadow-[0_18px_38px_rgba(37,99,235,0.16)]">
+            <img
+              src="/img/Skill Swap Hub Logo icon.png"
+              alt="Skill Swap Hub logo"
+              className="h-full w-full object-contain"
+            />
           </div>
           <h2 className="mt-6 text-[22px] font-bold leading-8 text-[#272b35]">
             Sign Out
@@ -125,15 +133,6 @@ function SignOutIcon({ className }: { className?: string }) {
       <path d="M10 17 15 12 10 7" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M15 12H3" strokeLinecap="round" />
       <path d="M21 4v16" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="8" />
-      <path d="m8.8 12.2 2.2 2.2 4.4-4.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

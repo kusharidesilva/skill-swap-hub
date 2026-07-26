@@ -56,15 +56,19 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[linear-gradient(135deg,#d9f4ff_0%,#e9fbf5_38%,#f4f8ff_100%)] px-6 py-10">
+    <main className="admin-interaction-scope relative flex min-h-screen items-center justify-center overflow-hidden bg-[linear-gradient(135deg,#d9f4ff_0%,#e9fbf5_38%,#f4f8ff_100%)] px-6 py-10">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(47,102,231,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.18),transparent_30%)]"
       />
       <section className="relative w-full max-w-[430px] rounded-[28px] border border-white/70 bg-white/88 px-10 py-10 shadow-[0_24px_70px_rgba(15,23,42,0.16)] backdrop-blur-md">
         <div className="flex flex-col items-center text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2563eb,#0ea5a6)] text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)]">
-            <AdminBadgeIcon className="h-7 w-7" />
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-white/70 bg-white p-1.5 shadow-[0_14px_30px_rgba(37,99,235,0.18)]">
+            <img
+              src="/img/Skill Swap Hub Logo icon.png"
+              alt="Skill Swap Hub logo"
+              className="h-full w-full object-contain"
+            />
           </div>
           <h1 className="mt-5 text-[26px] font-bold leading-none text-[#242936]">Admin Panel</h1>
           <p className="mt-2 text-sm font-medium text-[#5c7380]">Skill Swap Hub</p>
@@ -139,16 +143,6 @@ export default function AdminLoginPage() {
         </div>
       </section>
     </main>
-  );
-}
-
-function AdminBadgeIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 3 5 6v5.5c0 4.4 2.8 7.4 7 9.5 4.2-2.1 7-5.1 7-9.5V6z" />
-      <path d="M12 12.5a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6Z" />
-      <path d="M8.2 17a4.2 4.2 0 0 1 7.6 0" />
-    </svg>
   );
 }
 

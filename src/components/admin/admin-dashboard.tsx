@@ -1,17 +1,28 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { SERVICE_CATEGORIES } from "@/lib/platform";
 
-type TimestampLike = { toDate?: () => Date } | Date | string | number | null | undefined;
+type TimestampLike =
+  | { toDate?: () => Date; seconds?: number; nanoseconds?: number; _seconds?: number; _nanoseconds?: number }
+  | Date
+  | string
+  | number
+  | null
+  | undefined;
 
 type UserRecord = {
   role?: string;
   accountStatus?: string;
   providerVerificationStatus?: string;
   createdAt?: TimestampLike;
+  providerApprovedAt?: TimestampLike;
+  updatedAt?: TimestampLike;
+  providerProfile?: {
+    gigs?: GigRecord[];
+  };
 };
 
 type VerificationRecord = {
@@ -22,10 +33,14 @@ type VerificationRecord = {
 };
 
 type GigRecord = {
+  id?: string;
+  gigId?: string;
   title?: string;
   category?: string;
   status?: string;
+  gigStatus?: string;
   createdAt?: TimestampLike;
+  updatedAt?: TimestampLike;
 };
 
 type ReportRecord = {
@@ -50,6 +65,7 @@ type ActionRow = {
   date: string;
   status: string;
   action: string;
+  href: string;
   icon: ReactNode;
   statusTone: "critical" | "pending";
 };
@@ -86,9 +102,33 @@ type ActivitySeries = {
   key: ActivitySeriesKey;
   label: string;
   accent: string;
-  counts: number[];
+  counts: Array<number | null>;
+  periodCounts: number[];
   total: number;
 };
+
+type ActivityTooltip = {
+  x: number;
+  y: number;
+  color: string;
+  title: string;
+  detail: string;
+};
+
+type ActivityChartPoint = {
+  x: number;
+  y: number;
+  index: number;
+  value: number;
+  periodValue: number;
+};
+
+const YEARLY_ACTIVITY_START_YEAR = 2025;
+const YEARLY_ACTIVITY_END_YEAR = 2030;
+const MONTHLY_ACTIVITY_START = new Date(2026, 5, 1);
+const MONTHLY_ACTIVITY_END = new Date(2026, 11, 1);
+const ACTIVITY_CHART_WIDTH = 1000;
+const ACTIVITY_CHART_HEIGHT = 270;
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -100,12 +140,14 @@ export default function AdminDashboard() {
   const [loadError, setLoadError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   const [activityRange, setActivityRange] = useState<ActivityRange>("months");
+  const [activityNow, setActivityNow] = useState(() => new Date());
 
   useEffect(() => {
     const requiredSources = new Set(["users", "providerVerifications"]);
     const loadedSources = new Set<string>();
 
     function markLoaded(source: string) {
+      setActivityNow(new Date());
       loadedSources.add(source);
       if ([...requiredSources].every((item) => loadedSources.has(item))) {
         setLoading(false);
@@ -156,7 +198,12 @@ export default function AdminDashboard() {
       onSnapshot(
         query(collection(db, "gigs"), where("status", "==", "active")),
         (snapshot) => {
-          setGigs(snapshot.docs.map((docSnap) => docSnap.data() as GigRecord));
+          setGigs(
+            snapshot.docs.map((docSnap) => ({
+              id: docSnap.id,
+              ...(docSnap.data() as GigRecord),
+            })),
+          );
           markLoaded("gigs");
         },
         (error) => handleSnapshotError("gigs", error),
@@ -187,7 +234,17 @@ export default function AdminDashboard() {
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, []);
 
-  const pendingVerifications = verifications.filter((item) => item.status === "pending");
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setActivityNow(new Date());
+    }, 60000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const pendingVerifications = verifications.filter(
+    (item) => normalizeStatus(item.status || "pending") === "pending",
+  );
   const approvedProviders = users.filter(
     (user) => user.role === "provider" || user.role === "both",
   );
@@ -201,7 +258,10 @@ export default function AdminDashboard() {
       normalizeStatus(user.accountStatus || "active") === "active" &&
       (user.role === "provider" || user.role === "both"),
   );
-  const activeGigs = gigs.filter((gig) => (gig.status || "active") === "active");
+  const dashboardGigs = useMemo(() => mergeDashboardGigs(gigs, users), [gigs, users]);
+  const activeGigs = dashboardGigs.filter(
+    (gig) => normalizeStatus(gig.status || gig.gigStatus || "active") === "active",
+  );
   const completedOrders = orders.filter(
     (order) => normalizeStatus(order.orderStatus || order.status || "") === "completed",
   );
@@ -224,8 +284,8 @@ export default function AdminDashboard() {
   ];
   const allStats = [...topStats, ...secondaryStats];
   const activityBuckets = useMemo(
-    () => buildActivityBuckets(activityRange, new Date()),
-    [activityRange],
+    () => buildActivityBuckets(activityRange, activityNow),
+    [activityRange, activityNow],
   );
 
   const activitySeries = useMemo<ActivitySeries[]>(() => {
@@ -236,42 +296,13 @@ export default function AdminDashboard() {
       (user) => user.role === "buyer" || user.role === "both",
     );
 
-    const nextSeries: ActivitySeries[] = [
-      {
-        key: "users",
-        label: "Joined Users",
-        accent: "#2563eb",
-        counts: countRecordsByBuckets(users, activityBuckets),
-        total: 0,
-      },
-      {
-        key: "providers",
-        label: "Joined Providers",
-        accent: "#0f766e",
-        counts: countRecordsByBuckets(providerUsers, activityBuckets),
-        total: 0,
-      },
-      {
-        key: "buyers",
-        label: "Joined Buyers",
-        accent: "#7c3aed",
-        counts: countRecordsByBuckets(buyerUsers, activityBuckets),
-        total: 0,
-      },
-      {
-        key: "gigs",
-        label: "Created Gigs",
-        accent: "#d97706",
-        counts: countRecordsByBuckets(gigs, activityBuckets),
-        total: 0,
-      },
+    return [
+      buildActivitySeries("users", "Joined Users", "#2563eb", users, activityBuckets, activityNow, ["createdAt", "updatedAt"]),
+      buildActivitySeries("providers", "Joined Providers", "#0f766e", providerUsers, activityBuckets, activityNow, ["providerApprovedAt", "createdAt", "updatedAt"]),
+      buildActivitySeries("buyers", "Joined Buyers", "#7c3aed", buyerUsers, activityBuckets, activityNow, ["createdAt", "updatedAt"]),
+      buildActivitySeries("gigs", "Created Gigs", "#d97706", dashboardGigs, activityBuckets, activityNow, ["createdAt", "updatedAt"]),
     ];
-
-    return nextSeries.map((series) => ({
-      ...series,
-      total: series.counts.reduce((sum, value) => sum + value, 0),
-    }));
-  }, [activityBuckets, gigs, users]);
+  }, [activityBuckets, activityNow, dashboardGigs, users]);
 
   const topCategories = useMemo<CategoryRow[]>(() => {
     const counts = new Map<string, number>();
@@ -302,6 +333,7 @@ export default function AdminDashboard() {
       date: formatDate(item.submittedAt),
       status: "Pending",
       action: "Review",
+      href: "/admin/verifications",
       icon: <ShieldIcon />,
       statusTone: "pending" as const,
     })),
@@ -312,10 +344,22 @@ export default function AdminDashboard() {
       date: formatDate(item.createdAt),
       status: "Critical",
       action: "Review",
+      href: "/admin/issue-resolution",
       icon: <FlagIcon />,
       statusTone: "critical" as const,
     })),
-  ].slice(0, 4);
+  ]
+    .sort((left, right) => {
+      const leftDate = left.type === "Student Verification"
+        ? pendingVerifications.find((item) => `verification-${item.id}` === left.id)?.submittedAt
+        : pendingReports.find((item) => `report-${item.id}` === left.id)?.createdAt;
+      const rightDate = right.type === "Student Verification"
+        ? pendingVerifications.find((item) => `verification-${item.id}` === right.id)?.submittedAt
+        : pendingReports.find((item) => `report-${item.id}` === right.id)?.createdAt;
+
+      return toMillis(rightDate) - toMillis(leftDate);
+    })
+    .slice(0, 4);
 
   return (
     <div className="mx-auto w-full max-w-[1480px] px-6 py-10">
@@ -343,13 +387,11 @@ export default function AdminDashboard() {
             <h3 className="text-xl font-semibold text-slate-900">Platform Activity</h3>
             <RangeSelector value={activityRange} onChange={setActivityRange} />
           </div>
-          <div className="mt-5 rounded-xl border border-slate-200 bg-[#f3f4ff] p-6">
-            <ActivityPanel
-              range={activityRange}
-              buckets={activityBuckets}
-              series={activitySeries}
-            />
-          </div>
+          <ActivityPanel
+            range={activityRange}
+            buckets={activityBuckets}
+            series={activitySeries}
+          />
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -403,7 +445,12 @@ export default function AdminDashboard() {
                   >
                     {row.status}
                   </span>
-                  <span className="font-semibold text-[#1d4ed8]">{row.action}</span>
+                  <a
+                    href={row.href}
+                    className="font-semibold text-[#1d4ed8] transition hover:text-[#123fa3]"
+                  >
+                    {row.action}
+                  </a>
                 </div>
               ))
             ) : (
@@ -467,16 +514,64 @@ function ActivityPanel({
   buckets: ActivityBucket[];
   series: ActivitySeries[];
 }) {
+  const [tooltip, setTooltip] = useState<ActivityTooltip | null>(null);
   const maxValue = Math.max(
-    1,
-    ...series.flatMap((item) => item.counts),
+    3,
+    ...series.flatMap((item) => item.counts.filter((value): value is number => value !== null)),
   );
   const yAxisSteps = buildYAxisSteps(maxValue);
+  const chartSeries = series.map((item, seriesIndex) => {
+    const points = buildLineChartPoints(item.counts, maxValue)
+      .map((point, index) => ({
+        ...point,
+        index,
+        value: item.counts[index] || 0,
+        periodValue: item.periodCounts[index] || 0,
+      }))
+      .filter((point) => item.counts[point.index] !== null && point.value > 0);
+
+    return {
+      ...item,
+      segments: buildLineChartSegments(points),
+      points,
+      seriesIndex,
+    };
+  });
+  const activeBucketIndexes = new Set<number>();
+  series.forEach((item) => {
+    item.counts.forEach((value, index) => {
+      if (value !== null && value > 0) {
+        activeBucketIndexes.add(index);
+      }
+    });
+  });
+  const showNearestPointTooltip = (
+    item: ActivitySeries,
+    points: ActivityChartPoint[],
+    event: MouseEvent<SVGPathElement>,
+  ) => {
+    const rect = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
+    if (!rect) return;
+
+    const chartX = ((event.clientX - rect.left) / rect.width) * ACTIVITY_CHART_WIDTH;
+    const nearestPoint = points.reduce((nearest, point) =>
+      Math.abs(point.x - chartX) < Math.abs(nearest.x - chartX) ? point : nearest,
+    );
+    const bucket = buckets[nearestPoint.index];
+
+    setTooltip({
+      x: nearestPoint.x,
+      y: nearestPoint.y,
+      color: item.accent,
+      title: formatBucketTitle(bucket),
+      detail: formatActivityDetail(item.key, nearestPoint.value, nearestPoint.periodValue),
+    });
+  };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-[#f3f4ff] p-5">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="mt-5 overflow-visible rounded-xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+      <div className="p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-sm font-semibold text-slate-900">
               {range === "years"
@@ -486,10 +581,10 @@ function ActivityPanel({
                   : "Weekly growth"}
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Users, providers, buyers, and gigs created in the selected period.
+              Live totals include previous activity; future periods stay blank.
             </p>
           </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold text-slate-500">
+          <div className="grid w-full grid-cols-2 gap-x-6 gap-y-2 text-xs font-semibold text-slate-500 lg:w-[430px]">
             {series.map((item) => (
               <div key={item.key} className="flex items-center gap-2">
                 <span
@@ -503,56 +598,158 @@ function ActivityPanel({
           </div>
         </div>
 
-        <div className="mt-6 grid min-h-[320px] grid-cols-[40px_minmax(0,1fr)] gap-4">
-          <div className="flex flex-col justify-between pb-8 text-[11px] font-semibold text-slate-400">
-            {yAxisSteps.map((value, index) => (
-              <span key={`${value}-${index}`}>{value}</span>
-            ))}
-          </div>
-
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-0 flex flex-col justify-between pb-8">
+        <div className="mt-5 border-t border-slate-200 pt-5">
+          <div className="grid min-h-[320px] grid-cols-[40px_minmax(0,1fr)] gap-4">
+            <div className="flex h-[270px] flex-col justify-between text-[11px] font-semibold text-slate-400">
               {yAxisSteps.map((value, index) => (
-                <div key={`${value}-${index}`} className="border-t border-dashed border-slate-200" />
+                <span key={`${value}-${index}`}>{value}</span>
               ))}
             </div>
 
-            <div
-              className="relative grid h-full gap-3"
-              style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))` }}
-            >
-              {buckets.map((bucket, bucketIndex) => (
-                <div key={bucket.key} className="flex min-w-0 flex-col justify-end">
-                  <div className="flex h-[270px] items-end justify-center gap-1.5 rounded-xl px-1 pb-2">
-                    {series.map((item) => {
-                      const value = item.counts[bucketIndex] || 0;
-                      const height = `${Math.max((value / maxValue) * 100, value > 0 ? 8 : 0)}%`;
+            <div className="min-w-0">
+              <div className="relative h-[270px]">
+                <div
+                  className="pointer-events-none absolute inset-0 grid"
+                  style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))` }}
+                >
+                  {buckets.map((bucket, index) => (
+                    <div key={`active-${bucket.key}`} className="px-1">
+                      {activeBucketIndexes.has(index) ? (
+                        <div className="h-full rounded-xl bg-white/70 shadow-[0_16px_34px_-30px_rgba(37,99,235,0.55)] ring-1 ring-slate-200/70" />
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
+                  {yAxisSteps.map((value, index) => (
+                    <div key={`${value}-${index}`} className="border-t border-dashed border-slate-200/80" />
+                  ))}
+                </div>
+                <div
+                  className="pointer-events-none absolute inset-0 grid"
+                  style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))` }}
+                >
+                  {buckets.map((bucket, index) => (
+                    <div
+                      key={`guide-${bucket.key}`}
+                      className={index === 0 ? "" : "border-l border-slate-100/80"}
+                    />
+                  ))}
+                </div>
 
-                      return (
-                        <div
-                          key={`${item.key}-${bucket.key}`}
-                          className="flex flex-1 items-end"
-                        >
-                          <div
-                            className="w-full rounded-t-md transition-opacity hover:opacity-90"
-                            style={{
-                              height,
-                              backgroundColor: item.accent,
-                            }}
-                            title={`${item.label}: ${value}`}
+                <svg
+                  viewBox={`0 0 ${ACTIVITY_CHART_WIDTH} ${ACTIVITY_CHART_HEIGHT}`}
+                  preserveAspectRatio="none"
+                  className="relative h-full w-full overflow-visible"
+                  role="img"
+                  aria-label="Platform activity growth line chart"
+                >
+                  <defs>
+                    <filter id="activity-line-shadow" x="-8%" y="-18%" width="116%" height="136%">
+                      <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#64748b" floodOpacity="0.14" />
+                    </filter>
+                  </defs>
+                  {chartSeries.map((item) => (
+                    <g key={item.key}>
+                      {item.segments.map((segment, segmentIndex) => (
+                        <g key={`${item.key}-${segmentIndex}`}>
+                          <path
+                            d={buildSmoothLinePath(segment)}
+                            fill="none"
+                            stroke={item.accent}
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            vectorEffect="non-scaling-stroke"
+                            filter="url(#activity-line-shadow)"
                           />
-                        </div>
-                      );
-                    })}
+                          <path
+                            d={buildSmoothLinePath(segment)}
+                            fill="none"
+                            stroke="transparent"
+                            strokeWidth="18"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            vectorEffect="non-scaling-stroke"
+                            pointerEvents="stroke"
+                            onMouseMove={(event) => showNearestPointTooltip(item, segment, event)}
+                            onMouseLeave={() => setTooltip(null)}
+                          />
+                        </g>
+                      ))}
+                    </g>
+                  ))}
+                </svg>
+
+                {chartSeries.map((item) =>
+                  item.points.map((point) => {
+                    const bucket = buckets[point.index];
+                    const markerOffset = (item.seriesIndex - 1.5) * 8;
+                    const left = `calc(${(point.x / ACTIVITY_CHART_WIDTH) * 100}% + ${markerOffset}px)`;
+                    const top = `${(point.y / ACTIVITY_CHART_HEIGHT) * 100}%`;
+                    const nextTooltip = {
+                      x: point.x + markerOffset,
+                      y: point.y,
+                      color: item.accent,
+                      title: formatBucketTitle(bucket),
+                      detail: formatActivityDetail(item.key, point.value, point.periodValue),
+                    };
+
+                    return (
+                      <button
+                        type="button"
+                        key={`marker-${item.key}-${bucket?.key ?? point.index}`}
+                        className="absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none transition hover:scale-110 focus-visible:ring-4 focus-visible:ring-blue-100"
+                        style={{
+                          left,
+                          top,
+                        }}
+                        aria-label={`${nextTooltip.title}: ${nextTooltip.detail}`}
+                        onMouseEnter={() => setTooltip(nextTooltip)}
+                        onMouseLeave={() => setTooltip(null)}
+                        onFocus={() => setTooltip(nextTooltip)}
+                        onBlur={() => setTooltip(null)}
+                      >
+                        <span
+                          className="h-3.5 w-3.5 rounded-full border-[3px] border-white shadow-[0_8px_18px_rgba(15,23,42,0.18)]"
+                          style={{ backgroundColor: item.accent }}
+                        />
+                      </button>
+                    );
+                  }),
+                )}
+
+                {tooltip ? (
+                  <div
+                    className="pointer-events-none absolute z-30 w-[210px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-left shadow-[0_18px_42px_-24px_rgba(15,23,42,0.5)]"
+                    style={{
+                      left: getTooltipLeft(tooltip.x),
+                      top: getTooltipTop(tooltip.y),
+                      transform: getTooltipTransform(tooltip.y),
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: tooltip.color }} />
+                      <p className="text-[11px] font-bold text-slate-900">{tooltip.title}</p>
+                    </div>
+                    <p className="mt-1 text-[11px] font-medium text-slate-600">{tooltip.detail}</p>
                   </div>
-                  <div className="pt-3 text-center">
-                    <p className="text-xs font-semibold text-slate-600">{bucket.label}</p>
+                ) : null}
+              </div>
+
+              <div
+                className="mt-3 grid gap-3"
+                style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))` }}
+              >
+                {buckets.map((bucket) => (
+                  <div key={bucket.key} className="min-w-0 text-center">
+                    <p className="truncate text-xs font-semibold text-slate-600">{bucket.label}</p>
                     {bucket.shortLabel ? (
-                      <p className="mt-0.5 text-[11px] text-slate-400">{bucket.shortLabel}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-slate-400">{bucket.shortLabel}</p>
                     ) : null}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -621,10 +818,10 @@ function CategoryItem({ category }: { category: CategoryRow }) {
 function buildActivityBuckets(range: ActivityRange, now: Date) {
   if (range === "weeks") {
     const buckets: ActivityBucket[] = [];
-    const today = startOfDay(now);
+    const weekStart = startOfWeek(now);
 
-    for (let index = 6; index >= 0; index -= 1) {
-      const start = addDays(today, -index);
+    for (let index = 0; index < 7; index += 1) {
+      const start = addDays(weekStart, index);
       const end = addDays(start, 1);
       buckets.push({
         key: start.toISOString(),
@@ -641,9 +838,13 @@ function buildActivityBuckets(range: ActivityRange, now: Date) {
   if (range === "months") {
     const buckets: ActivityBucket[] = [];
 
-    for (let index = 5; index >= 0; index -= 1) {
-      const start = new Date(now.getFullYear(), now.getMonth() - index, 1);
-      const end = new Date(now.getFullYear(), now.getMonth() - index + 1, 1);
+    for (
+      let cursor = new Date(MONTHLY_ACTIVITY_START);
+      cursor <= MONTHLY_ACTIVITY_END;
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)
+    ) {
+      const start = new Date(cursor);
+      const end = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
       buckets.push({
         key: `${start.getFullYear()}-${start.getMonth()}`,
         label: start.toLocaleDateString("en-US", { month: "short" }),
@@ -656,8 +857,8 @@ function buildActivityBuckets(range: ActivityRange, now: Date) {
     return buckets;
   }
 
-  return Array.from({ length: 5 }, (_, arrayIndex) => {
-    const year = now.getFullYear() - (4 - arrayIndex);
+  return Array.from({ length: YEARLY_ACTIVITY_END_YEAR - YEARLY_ACTIVITY_START_YEAR + 1 }, (_, arrayIndex) => {
+    const year = YEARLY_ACTIVITY_START_YEAR + arrayIndex;
     const start = new Date(year, 0, 1);
     const end = new Date(year + 1, 0, 1);
 
@@ -670,22 +871,161 @@ function buildActivityBuckets(range: ActivityRange, now: Date) {
   });
 }
 
-function countRecordsByBuckets(
-  records: Array<{ createdAt?: TimestampLike }>,
+function buildLineChartPoints(counts: Array<number | null>, maxValue: number) {
+  const chartSidePadding = 28;
+  const chartTopPadding = 12;
+  const chartBottomPadding = 18;
+  const plotWidth = ACTIVITY_CHART_WIDTH - chartSidePadding * 2;
+  const plotHeight = ACTIVITY_CHART_HEIGHT - chartTopPadding - chartBottomPadding;
+  const lastIndex = Math.max(counts.length - 1, 1);
+
+  return counts.map((value, index) => {
+    const safeValue = value || 0;
+
+    return {
+      x: counts.length === 1 ? ACTIVITY_CHART_WIDTH / 2 : chartSidePadding + (index / lastIndex) * plotWidth,
+      y: chartTopPadding + (1 - safeValue / maxValue) * plotHeight,
+    };
+  });
+}
+
+function buildSmoothLinePath(points: Array<{ x: number; y: number }>) {
+  if (!points.length) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+  return points.slice(1).reduce((path, point, index) => {
+    const previous = points[index];
+    const controlX = (previous.x + point.x) / 2;
+    return `${path} C ${controlX} ${previous.y}, ${controlX} ${point.y}, ${point.x} ${point.y}`;
+  }, `M ${points[0].x} ${points[0].y}`);
+}
+
+function buildLineChartSegments(points: ActivityChartPoint[]) {
+  const segments: Array<typeof points> = [];
+
+  points.forEach((point) => {
+    const currentSegment = segments.at(-1);
+    const previousPoint = currentSegment?.at(-1);
+
+    if (!currentSegment || !previousPoint || point.index !== previousPoint.index + 1) {
+      segments.push([point]);
+      return;
+    }
+
+    currentSegment.push(point);
+  });
+
+  return segments.filter((segment) => segment.length > 1);
+}
+
+function formatBucketTitle(bucket?: ActivityBucket) {
+  if (!bucket) return "Selected period";
+  return [bucket.label, bucket.shortLabel].filter(Boolean).join(" ");
+}
+
+function getTooltipLeft(x: number) {
+  return `clamp(105px, ${(x / ACTIVITY_CHART_WIDTH) * 100}%, calc(100% - 105px))`;
+}
+
+function getTooltipTop(y: number) {
+  const percent = (y / ACTIVITY_CHART_HEIGHT) * 100;
+  return y < 82 ? `calc(${percent}% + 16px)` : `${percent}%`;
+}
+
+function getTooltipTransform(y: number) {
+  return y < 82 ? "translate(-50%, 0)" : "translate(-50%, calc(-100% - 16px))";
+}
+
+function formatActivityDetail(key: ActivitySeriesKey, total: number, periodValue: number) {
+  const labels: Record<ActivitySeriesKey, { singular: string; plural: string; action: string }> = {
+    users: { singular: "user", plural: "users", action: "joined" },
+    providers: { singular: "provider", plural: "providers", action: "joined" },
+    buyers: { singular: "buyer", plural: "buyers", action: "joined" },
+    gigs: { singular: "gig", plural: "gigs", action: "created" },
+  };
+  const label = labels[key];
+  const periodNoun = periodValue === 1 ? label.singular : label.plural;
+  const totalNoun = total === 1 ? label.singular : label.plural;
+
+  if (periodValue > 0) {
+    return `${periodValue} ${periodNoun} ${label.action} · ${total} total ${totalNoun}`;
+  }
+
+  return `${total} total ${totalNoun} · no new this period`;
+}
+
+function mergeDashboardGigs(firestoreGigs: GigRecord[], users: UserRecord[]) {
+  const merged = new Map<string, GigRecord>();
+
+  firestoreGigs.forEach((gig, index) => {
+    const key = gig.id || gig.gigId || `${gig.title || "gig"}-${index}`;
+    merged.set(key, gig);
+  });
+
+  users.forEach((user) => {
+    if (user.role !== "provider" && user.role !== "both") return;
+
+    user.providerProfile?.gigs?.forEach((gig, index) => {
+      const key = gig.id || gig.gigId || `${user.createdAt || user.updatedAt || "profile"}-${gig.title || "gig"}-${index}`;
+      if (merged.has(key)) return;
+
+      merged.set(key, {
+        ...gig,
+        id: key,
+        status: gig.status || gig.gigStatus || "active",
+        createdAt: gig.createdAt || user.providerApprovedAt || user.createdAt || user.updatedAt,
+        updatedAt: gig.updatedAt || user.updatedAt,
+      });
+    });
+  });
+
+  return [...merged.values()];
+}
+
+function buildActivitySeries(
+  key: ActivitySeriesKey,
+  label: string,
+  accent: string,
+  records: object[],
   buckets: ActivityBucket[],
-) {
-  return buckets.map((bucket) =>
-    records.reduce((count, record) => {
-      const recordDate = toDateValue(record.createdAt);
+  now: Date,
+  dateFields: string[],
+): ActivitySeries {
+  const datedRecords = records
+    .map((record) => getFirstDateValue(record, dateFields))
+    .filter((date): date is Date => Boolean(date));
+  const counts = buckets.map((bucket) => {
+    if (bucket.start > now) return null;
+    const bucketEnd = bucket.end > now ? now : bucket.end;
 
-      if (!recordDate) return count;
-      if (recordDate >= bucket.start && recordDate < bucket.end) {
-        return count + 1;
-      }
+    return datedRecords.filter((recordDate) => recordDate < bucketEnd).length;
+  });
+  const periodCounts = buckets.map((bucket) => {
+    if (bucket.start > now) return 0;
+    const bucketEnd = bucket.end > now ? now : bucket.end;
 
-      return count;
-    }, 0),
-  );
+    return datedRecords.filter((recordDate) => recordDate >= bucket.start && recordDate < bucketEnd).length;
+  });
+
+  return {
+    key,
+    label,
+    accent,
+    counts,
+    periodCounts,
+    total: datedRecords.filter((recordDate) => recordDate <= now).length,
+  };
+}
+
+function getFirstDateValue(record: object, dateFields: string[]) {
+  const values = record as Record<string, TimestampLike>;
+
+  for (const field of dateFields) {
+    const date = toDateValue(values[field]);
+    if (date) return date;
+  }
+
+  return null;
 }
 
 function toDateValue(value: TimestampLike) {
@@ -701,6 +1041,14 @@ function toDateValue(value: TimestampLike) {
       return Number.isNaN(nextDate.getTime()) ? null : nextDate;
     }
 
+    const seconds = typeof value.seconds === "number" ? value.seconds : value._seconds;
+    const nanoseconds = typeof value.nanoseconds === "number" ? value.nanoseconds : value._nanoseconds;
+    if (typeof seconds === "number") {
+      const millis = seconds * 1000 + Math.floor((nanoseconds || 0) / 1000000);
+      const nextDate = new Date(millis);
+      return Number.isNaN(nextDate.getTime()) ? null : nextDate;
+    }
+
     return null;
   }
 
@@ -709,8 +1057,20 @@ function toDateValue(value: TimestampLike) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function toMillis(value: TimestampLike) {
+  const date = toDateValue(value);
+  return date ? date.getTime() : 0;
+}
+
 function startOfDay(value: Date) {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+}
+
+function startOfWeek(value: Date) {
+  const date = startOfDay(value);
+  const day = date.getDay();
+  const daysFromMonday = day === 0 ? 6 : day - 1;
+  return addDays(date, -daysFromMonday);
 }
 
 function addDays(value: Date, days: number) {

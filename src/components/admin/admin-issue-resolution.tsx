@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase";
 import { createNotification } from "@/lib/notifications";
 import SelectField from "@/components/ui/select-field";
 import ModalPortal from "@/components/ui/modal-portal";
+import AdminFilePreviewModal from "@/components/admin/admin-file-preview-modal";
 
 type TimestampLike =
   | { toDate?: () => Date; toMillis?: () => number }
@@ -45,7 +46,10 @@ type ReportRecord = {
   resolvedAt?: TimestampLike;
 };
 
+type UserAvatarMap = Record<string, string>;
+
 const statusFilters = ["All Reports", "Pending", "Resolved", "Rejected"];
+const REPORTS_PER_PAGE = 6;
 
 export default function AdminIssueResolution() {
   const [reports, setReports] = useState<ReportRecord[]>([]);
@@ -55,6 +59,30 @@ export default function AdminIssueResolution() {
   const [busyKey, setBusyKey] = useState("");
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [selectedReport, setSelectedReport] = useState<ReportRecord | null>(null);
+  const [userAvatars, setUserAvatars] = useState<UserAvatarMap>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [previewFile, setPreviewFile] = useState<{
+    title: string;
+    url: string;
+    contentType?: string;
+    fileName?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+      const nextAvatars = snapshot.docs.reduce<UserAvatarMap>((acc, docSnap) => {
+        const data = docSnap.data() as { profileImageUrl?: string };
+        if (typeof data.profileImageUrl === "string" && data.profileImageUrl.trim()) {
+          acc[docSnap.id] = data.profileImageUrl;
+        }
+        return acc;
+      }, {});
+
+      setUserAvatars(nextAvatars);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -89,6 +117,21 @@ export default function AdminIssueResolution() {
       return matchesStatus;
     });
   }, [reports, statusFilter]);
+  const totalPages = Math.max(1, Math.ceil(filteredReports.length / REPORTS_PER_PAGE));
+  const paginatedReports = filteredReports.slice(
+    (currentPage - 1) * REPORTS_PER_PAGE,
+    currentPage * REPORTS_PER_PAGE,
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const pendingReports = reports.filter(
     (report) => normalizeStatus(report.status || "Pending") === "pending",
@@ -310,7 +353,7 @@ export default function AdminIssueResolution() {
             ) : filteredReports.length === 0 ? (
               <EmptyRow>No reports found.</EmptyRow>
             ) : (
-              filteredReports.map((report) => {
+              paginatedReports.map((report) => {
                 const status = report.status || "Pending";
                 const evidence = Array.isArray(report.evidenceFiles) ? report.evidenceFiles : [];
 
@@ -320,8 +363,19 @@ export default function AdminIssueResolution() {
                     className="grid grid-cols-[0.8fr_1fr_1fr_0.9fr_1.5fr_0.8fr_0.7fr_0.5fr] items-start gap-3 border-b border-slate-200 px-4 py-4 text-sm last:border-b-0"
                   >
                     <span className="pt-2 font-medium text-slate-600">{formatReportId(report.id)}</span>
-                    <ReportedUser name={report.reporterName || "Reporter"} detail={report.reporterEmail} />
-                    <ReportedUser name={reportedUserName(report)} detail={reportedUserId(report)} />
+                    <ReportedUser
+                      name={report.reporterName || "Reporter"}
+                      detail={report.reporterEmail}
+                      profileImageUrl={report.reporterId ? userAvatars[report.reporterId] : undefined}
+                    />
+                    <ReportedUser
+                      name={reportedUserName(report)}
+                      detail={reportedUserId(report)}
+                      profileImageUrl={(() => {
+                        const targetId = reportedUserId(report);
+                        return targetId ? userAvatars[targetId] : undefined;
+                      })()}
+                    />
                     <span className="inline-flex w-fit self-start rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500">
                       {report.issueType || report.category || "Other"}
                     </span>
@@ -331,19 +385,29 @@ export default function AdminIssueResolution() {
                       </p>
                       {evidence.length ? (
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {evidence.map((file, index) =>
-                            file.url ? (
-                              <a
+                          {evidence.map((file, index) => {
+                            if (!file.url) {
+                              return null;
+                            }
+
+                            return (
+                              <button
+                                type="button"
                                 key={`${file.url}-${index}`}
-                                href={file.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-[#2563eb] hover:bg-blue-50"
+                                onClick={() =>
+                                  setPreviewFile({
+                                    title: `${formatReportId(report.id)} Evidence ${index + 1}`,
+                                    url: file.url as string,
+                                    contentType: file.type,
+                                    fileName: file.name,
+                                  })
+                                }
+                                  className="inline-flex cursor-pointer items-center rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-[#2563eb] hover:bg-blue-50"
                               >
                                 Evidence {index + 1}
-                              </a>
-                            ) : null,
-                          )}
+                              </button>
+                            );
+                          })}
                         </div>
                       ) : (
                         <p className="mt-2 text-xs text-slate-400">No evidence attached</p>
@@ -373,8 +437,28 @@ export default function AdminIssueResolution() {
 
         <div className="flex items-center justify-between gap-4 px-4 py-4 text-sm text-slate-500">
           <p>
-            Showing {filteredReports.length} of {reports.length} reports
+            Showing {paginatedReports.length} of {filteredReports.length} reports
           </p>
+          <div className="flex items-center gap-2">
+            <PagerButton
+              label="Previous"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            />
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+              <PagerButton
+                key={page}
+                label={String(page)}
+                active={currentPage === page}
+                onClick={() => setCurrentPage(page)}
+              />
+            ))}
+            <PagerButton
+              label="Next"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            />
+          </div>
         </div>
       </section>
 
@@ -405,6 +489,8 @@ export default function AdminIssueResolution() {
           }}
         />
       ) : null}
+
+      <AdminFilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
     </div>
   );
 }
@@ -439,12 +525,24 @@ function EmptyRow({ children }: { children: ReactNode }) {
   return <div className="px-6 py-12 text-center text-sm font-medium text-slate-500">{children}</div>;
 }
 
-function ReportedUser({ name, detail }: { name: string; detail?: string }) {
+function ReportedUser({
+  name,
+  detail,
+  profileImageUrl,
+}: {
+  name: string;
+  detail?: string;
+  profileImageUrl?: string;
+}) {
   const letter = name[0]?.toUpperCase() ?? "?";
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
-        {letter}
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-600 text-[11px] font-bold text-white">
+        {profileImageUrl ? (
+          <img src={profileImageUrl} alt={name} className="h-full w-full object-cover" />
+        ) : (
+          letter
+        )}
       </span>
       <span className="min-w-0">
         <span className="block truncate font-medium text-slate-700">{name}</span>
@@ -497,9 +595,36 @@ function ActionButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${styles}`}
+      className={`inline-flex h-9 cursor-pointer items-center justify-center rounded-lg px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${styles}`}
     >
       {busy ? "Saving..." : children}
+    </button>
+  );
+}
+
+function PagerButton({
+  label,
+  active = false,
+  disabled = false,
+  onClick,
+}: {
+  label: string;
+  active?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex h-10 min-w-[42px] cursor-pointer items-center justify-center rounded-xl border px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 ${
+        active
+          ? "border-[#2f66e7] bg-[#2f66e7] text-white shadow-sm"
+          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+      }`}
+    >
+      {label}
     </button>
   );
 }
@@ -544,7 +669,7 @@ function ReportActionModal({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
               aria-label="Close actions popup"
             >
               <CloseIcon />

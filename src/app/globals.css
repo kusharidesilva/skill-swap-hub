@@ -897,6 +897,14 @@ body {
 }
 
 /* Thin system-colour scrollbar for the admin content area. */
+.admin-interaction-scope :where(button:not(:disabled), a[href], select, summary, [role="button"]) {
+  cursor: pointer;
+}
+
+.admin-interaction-scope :where(button:disabled, select:disabled) {
+  cursor: not-allowed;
+}
+
 .admin-content-scroll {
   scrollbar-color: #2f66e7 transparent;
   scrollbar-width: thin;
