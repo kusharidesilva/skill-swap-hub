@@ -2,11 +2,26 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { accountNeedsEmailVerification, loginUser } from "@/lib/auth";
+import {
+  accountNeedsEmailVerification,
+  loginUser,
+  RejectedVerificationError, 
+  resubmitStudentVerificationProof,
+  signOut,
+  type UserProfile,
+} from "@/lib/auth";
+import {
+  isAllowedStudentProofFile,
+  STUDENT_PROOF_ACCEPT,
+  STUDENT_PROOF_TYPES,
+  type StudentProofType,
+} from "@/lib/platform";
+import SelectField from "@/components/ui/select-field";
+import { useAuth } from "@/context/AuthContext";
 
 type Badge = {
   label: string;
@@ -30,24 +45,22 @@ const loginSchema = z
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-interface LoginPageProps {
-  searchParams?: { reason?: string };
-}
-
-export default function LoginPage({ searchParams }: LoginPageProps) {
+export default function LoginPage() {
   const router = useRouter();
+  const { refreshProfile } = useAuth();
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  useEffect(() => {
-    if (searchParams?.reason === "verification-rejected") {
-      setServerError(
-        "Your account verification was rejected. Please contact support before logging in again.",
-      );
-    }
-  }, [searchParams?.reason]);
+  const [rejectedProfile, setRejectedProfile] = useState<UserProfile | null>(null);
+  const [rejectedUserId, setRejectedUserId] = useState("");
+  const [proofType, setProofType] = useState<StudentProofType>(STUDENT_PROOF_TYPES[0]);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [requestMessage, setRequestMessage] = useState(
+    "Please review my student proof again and approve my account if everything is correct.",
+  );
+  const [resubmitError, setResubmitError] = useState("");
+  const [resubmitting, setResubmitting] = useState(false);
 
   const {
     register,
@@ -76,6 +89,20 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
         router.push(redirectPath);
       }, 1000);
     } catch (err: unknown) {
+      if (err instanceof RejectedVerificationError) {
+        setRejectedProfile(err.profile);
+        setRejectedUserId(err.user.uid);
+        setProofType(err.profile.studentProof?.fileType || STUDENT_PROOF_TYPES[0]);
+        setProofFile(null);
+        setRequestMessage(
+          err.profile.resubmissionMessage ||
+            "Please review my student proof again and approve my account if everything is correct.",
+        );
+        setResubmitError("");
+        setServerError("");
+        return;
+      }
+
       const msg = err instanceof Error ? err.message : "Login failed.";
       if (
         msg.includes("user-not-found") ||
@@ -90,9 +117,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
       } else if (msg.includes("User profile not found")) {
         setServerError("Account setup incomplete. Please contact support.");
       } else if (msg.includes("account verification was rejected")) {
-        setServerError(
-          "Your account verification was rejected. Please contact support before logging in again.",
-        );
+        setServerError("Your account verification was rejected. Please log in again to send a new proof.");
       } else {
         setServerError(msg);
       }
@@ -101,10 +126,78 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
     }
   };
 
+  const handleRejectedModalClose = () => {
+    void signOut().finally(() => {
+      setRejectedProfile(null);
+      setRejectedUserId("");
+      setProofFile(null);
+      setResubmitError("");
+      router.replace("/login");
+    });
+  };
+
+  const handleProofChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setProofFile(null);
+      return;
+    }
+
+    if (!isAllowedStudentProofFile(file)) {
+      setProofFile(null);
+      setResubmitError("Upload a PDF, DOC, DOCX, PNG, JPG, or JPEG proof under 2 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setProofFile(file);
+    setResubmitError("");
+  };
+
+  const handleResubmitProof = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!rejectedUserId) {
+      setResubmitError("Please log in again before sending a new proof.");
+      return;
+    }
+
+    if (!proofFile) {
+      setResubmitError("Please upload your corrected student proof.");
+      return;
+    }
+
+    setResubmitting(true);
+    setResubmitError("");
+
+    try {
+      await resubmitStudentVerificationProof({
+        userId: rejectedUserId,
+        proofType,
+        proofFile,
+        requestMessage,
+      });
+      await refreshProfile();
+      router.replace("/pending-verification?registered=true");
+    } catch (err: unknown) {
+      setResubmitError(
+        err instanceof Error ? err.message : "Could not send your new proof. Please try again.",
+      );
+    } finally {
+      setResubmitting(false);
+    }
+  };
+
   return (
     <main className="auth-gradient-animate relative min-h-screen bg-[linear-gradient(140deg,#f0fdfa_0%,#e0f2fe_44%,#f8fbff_100%)]">
       <div className="auth-gradient-animate fixed inset-0 bg-[linear-gradient(120deg,rgba(15,118,110,0.16),rgba(37,99,235,0.12),rgba(255,255,255,0.22))]" aria-hidden="true" />
-      <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
+      <div
+        className={`relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10 transition duration-300 ${
+          rejectedProfile ? "pointer-events-none select-none blur-sm" : ""
+        }`}
+        aria-hidden={Boolean(rejectedProfile)}
+      >
         <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
           {/* Brand message and platform benefits */}
           <section className="auth-gradient-animate relative flex flex-col justify-between bg-linear-to-br from-[#2f66e7] via-[#1d7fe7] to-[#173b8f] px-10 py-12 text-white">
@@ -290,7 +383,163 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
           </section>
         </div>
       </div>
+      {rejectedProfile ? (
+        <RejectedVerificationModal
+          profile={rejectedProfile}
+          proofType={proofType}
+          proofFile={proofFile}
+          requestMessage={requestMessage}
+          resubmitError={resubmitError}
+          resubmitting={resubmitting}
+          onClose={handleRejectedModalClose}
+          onProofTypeChange={setProofType}
+          onProofChange={handleProofChange}
+          onRequestMessageChange={setRequestMessage}
+          onSubmit={handleResubmitProof}
+        />
+      ) : null}
     </main>
+  );
+}
+
+function RejectedVerificationModal({
+  profile,
+  proofType,
+  proofFile,
+  requestMessage,
+  resubmitError,
+  resubmitting,
+  onClose,
+  onProofTypeChange,
+  onProofChange,
+  onRequestMessageChange,
+  onSubmit,
+}: {
+  profile: UserProfile;
+  proofType: StudentProofType;
+  proofFile: File | null;
+  requestMessage: string;
+  resubmitError: string;
+  resubmitting: boolean;
+  onClose: () => void;
+  onProofTypeChange: (value: StudentProofType) => void;
+  onProofChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onRequestMessageChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const adminNote = profile.adminNote?.trim();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/35 px-4 py-8 backdrop-blur-md">
+      <form
+        onSubmit={onSubmit}
+        className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-white/70 bg-white/90 p-6 text-slate-900 shadow-[0_24px_80px_rgba(15,23,42,0.24)]"
+      >
+        <div className="absolute -right-16 -top-20 h-44 w-44 rounded-full bg-red-100/80 blur-2xl" aria-hidden="true" />
+        <div className="absolute -bottom-20 -left-16 h-44 w-44 rounded-full bg-sky-100/80 blur-2xl" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-5 top-5 z-10 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+          aria-label="Close rejected verification popup"
+        >
+          <CloseIcon className="h-4 w-4" />
+        </button>
+
+        <div className="relative">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600 ring-8 ring-red-50/60">
+            <WarningIcon className="h-6 w-6" />
+          </span>
+          <p className="mt-5 text-xs font-bold uppercase tracking-[0.28em] text-red-600">
+            Verification rejected
+          </p>
+          <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+            Send a new proof for review
+          </h3>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Your account cannot be used until the admin reviews your student proof again.
+            Upload a corrected proof and send a short request to reopen the approval.
+          </p>
+
+          <div className="mt-5 rounded-2xl border border-red-100 bg-red-50/80 p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-600">
+              Admin note
+            </p>
+            <p className="mt-2 text-sm leading-6 text-red-900">
+              {adminNote ||
+                "No admin note was added. Please upload a clear student ID or university confirmation letter and ask the admin to review again."}
+            </p>
+          </div>
+
+          {profile.studentProof?.fileName ? (
+            <p className="mt-3 text-xs text-slate-500">
+              Last uploaded proof: <span className="font-semibold text-slate-700">{profile.studentProof.fileName}</span>
+            </p>
+          ) : null}
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Proof Type"
+              value={proofType}
+              onChange={(value) => onProofTypeChange(value as StudentProofType)}
+              options={[...STUDENT_PROOF_TYPES]}
+              title="Select corrected proof type"
+              className="h-12 rounded-xl text-sm"
+            />
+            <div>
+              <label className="text-sm font-semibold text-slate-700">
+                Corrected Proof
+              </label>
+              <label className="mt-2 flex h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-600 transition hover:border-[#2b62e6]">
+                <span className="min-w-0 truncate">
+                  {proofFile?.name || "Upload proof"}
+                </span>
+                <span className="shrink-0 font-semibold text-[#1454cc]">Choose</span>
+                <input
+                  type="file"
+                  accept={STUDENT_PROOF_ACCEPT}
+                  onChange={onProofChange}
+                  className="sr-only"
+                />
+              </label>
+            </div>
+          </div>
+
+          <label className="mt-4 block text-sm font-semibold text-slate-700">
+            Message to admin
+            <textarea
+              value={requestMessage}
+              onChange={(event) => onRequestMessageChange(event.target.value)}
+              className="mt-2 min-h-24 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-normal text-slate-700 outline-none transition focus:border-[#2b62e6] focus:ring-2 focus:ring-blue-100"
+              placeholder="Please check my proof again and approve my account if everything is correct."
+            />
+          </label>
+
+          {resubmitError ? (
+            <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              {resubmitError}
+            </p>
+          ) : null}
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="submit"
+              disabled={resubmitting}
+              className="inline-flex h-12 flex-1 cursor-pointer items-center justify-center rounded-xl bg-[#2b62e6] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {resubmitting ? "Sending request..." : "Send Request Again"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-12 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
   );
 }
 
@@ -375,6 +624,24 @@ function CloseIcon({ className }: { className?: string }) {
     >
       <path d="M6 6l12 12" strokeLinecap="round" />
       <path d="M18 6L6 18" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function WarningIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+      <path d="M10.3 4.3 2.8 17.2A2 2 0 0 0 4.5 20h15a2 2 0 0 0 1.7-2.8L13.7 4.3a2 2 0 0 0-3.4 0Z" />
     </svg>
   );
 }

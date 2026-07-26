@@ -51,6 +51,48 @@ service cloud.firestore {
         ]);
     }
 
+    function canSelfResubmitVerificationUser(userId) {
+      return isOwner(userId) &&
+        resource.data.providerVerificationStatus == 'rejected' &&
+        request.resource.data.role == 'provider' &&
+        request.resource.data.accountStatus in [
+          'pending_admin_verification',
+          'pending_verification'
+        ] &&
+        request.resource.data.providerVerificationStatus == 'pending' &&
+        request.resource.data.canBuyServices == false &&
+        request.resource.data.canSellServices == false &&
+        request.resource.data.verifiedStudentProvider == false &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'role',
+          'accountStatus',
+          'providerVerificationStatus',
+          'canBuyServices',
+          'canSellServices',
+          'verifiedStudentProvider',
+          'studentProof',
+          'resubmissionMessage',
+          'updatedAt'
+        ]);
+    }
+
+    function canSelfResubmitProviderVerification() {
+      return isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        resource.data.status == 'rejected' &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'proof',
+          'studentMessage',
+          'resubmissionMessage',
+          'resubmittedAt',
+          'submittedAt',
+          'updatedAt'
+        ]);
+    }
+
     function protectedUserFields() {
       return [
         'role',
@@ -101,7 +143,7 @@ service cloud.firestore {
           ) ||
           canBootstrapAuthorizedAdmin(userId)
         );
-      allow update: if isAdmin() || canBootstrapAuthorizedAdmin(userId) || canSelfBecomeBuyer(userId) || canSelfConfirmEmail(userId) || (
+      allow update: if isAdmin() || canBootstrapAuthorizedAdmin(userId) || canSelfBecomeBuyer(userId) || canSelfConfirmEmail(userId) || canSelfResubmitVerificationUser(userId) || (
         isOwner(userId) &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedUserFields())
       );
@@ -139,7 +181,7 @@ service cloud.firestore {
       allow create: if isOwner(request.resource.data.userId) &&
         request.resource.data.status == 'pending';
       allow read: if isAdmin() || isOwner(resource.data.userId);
-      allow update: if isAdmin();
+      allow update: if isAdmin() || canSelfResubmitProviderVerification();
       allow delete: if false;
     }
 

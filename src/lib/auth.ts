@@ -15,13 +15,14 @@ import {
   setDoc,
   getDoc,
   updateDoc,
+  writeBatch,
   collection,
   query,
   where,
   getDocs,
   serverTimestamp,
 } from "firebase/firestore";
-import { ref, uploadBytes } from "firebase/storage";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { auth, db, storage } from "./firebase";
 import {
   dashboardHref,
@@ -84,6 +85,7 @@ export interface UserProfile {
   verifiedStudentProvider?: boolean;
   studentProof?: StudentProofDocument;
   adminNote?: string;
+  resubmissionMessage?: string;
   emailVerified: boolean;
   createdAt: Date | null;
   updatedAt?: Date | null;
@@ -159,6 +161,19 @@ export function isAuthorizedAdminEmail(email?: string | null) {
       (authorizedEmail) => authorizedEmail.toLowerCase() === normalizedEmail,
     ),
   );
+}
+
+export class RejectedVerificationError extends Error {
+  readonly user: User;
+  readonly profile: UserProfile;
+
+  constructor(user: User, profile: UserProfile) {
+    super("Your account verification was rejected.");
+    this.name = "RejectedVerificationError";
+    this.user = user;
+    this.profile = profile;
+    Object.setPrototypeOf(this, RejectedVerificationError.prototype);
+  }
 }
 
 async function ensureAuthorizedAdminProfile(
@@ -278,6 +293,7 @@ async function uploadStudentProof(
       userId,
     },
   });
+  const downloadUrl = await getDownloadURL(proofRef);
 
   return {
     fileName: file.name,
@@ -285,6 +301,7 @@ async function uploadStudentProof(
     contentType,
     size: file.size,
     storagePath,
+    downloadUrl,
     uploadedAt: serverTimestamp(),
   };
 }
@@ -436,6 +453,57 @@ export async function registerBuyer(data: {
   });
 }
 
+export async function resubmitStudentVerificationProof(data: {
+  userId: string;
+  proofType: StudentProofType;
+  proofFile: File;
+  requestMessage?: string;
+}): Promise<void> {
+  if (auth.currentUser?.uid !== data.userId) {
+    throw new Error("Please log in again before sending a new proof.");
+  }
+
+  const studentProof = await uploadStudentProof(
+    data.userId,
+    data.proofFile,
+    data.proofType,
+  );
+  const requestMessage =
+    data.requestMessage?.trim() ||
+    "Please review my student proof again and approve my account if everything is correct.";
+  const batch = writeBatch(db);
+  const userRef = doc(db, "users", data.userId);
+  const verificationRef = doc(db, "providerVerifications", data.userId);
+
+  batch.update(userRef, {
+    role: "provider",
+    accountStatus: "pending_admin_verification",
+    providerVerificationStatus: "pending",
+    canBuyServices: false,
+    canSellServices: false,
+    verifiedStudentProvider: false,
+    studentProof,
+    resubmissionMessage: requestMessage,
+    updatedAt: serverTimestamp(),
+  });
+
+  batch.update(verificationRef, {
+    status: "pending",
+    proof: studentProof,
+    studentMessage: requestMessage,
+    resubmissionMessage: requestMessage,
+    resubmittedAt: serverTimestamp(),
+    submittedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  await runWithTimeout(
+    batch.commit(),
+    10000,
+    "Verification resubmission",
+  );
+}
+
 // A request made as a buyer is what turns a provider account into a dual-role account.
 export async function checkBuyerHistory(uid: string): Promise<boolean> {
   const requestsQuery = query(
@@ -467,10 +535,7 @@ export async function loginUser(
   let profile = userDoc.data() as UserProfile;
 
   if (profile.providerVerificationStatus === "rejected") {
-    await firebaseSignOut(auth);
-    throw new Error(
-      "Your account verification was rejected. Please log in again after contacting support.",
-    );
+    throw new RejectedVerificationError(user, profile);
   }
 
   if (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import ModalPortal from "@/components/ui/modal-portal";
 
 type PreviewFile = {
@@ -16,6 +17,12 @@ export default function AdminFilePreviewModal({
   file: PreviewFile | null;
   onClose: () => void;
 }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [file?.url]);
+
   if (!file) {
     return null;
   }
@@ -25,7 +32,7 @@ export default function AdminFilePreviewModal({
   return (
     <ModalPortal>
       <div
-        className="fixed inset-0 z-[90] overflow-y-auto bg-slate-950/40 px-4 py-6 backdrop-blur-md"
+        className="fixed inset-0 z-[90] overflow-hidden bg-slate-950/40 px-4 py-6 backdrop-blur-md"
         onClick={onClose}
       >
         <div
@@ -54,18 +61,19 @@ export default function AdminFilePreviewModal({
             </button>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto bg-slate-50 p-4">
-            {previewKind === "image" ? (
-              <div className="flex h-full items-start justify-center overflow-auto rounded-2xl bg-white p-4">
+          <div className="min-h-0 flex-1 overflow-hidden bg-slate-50 p-4">
+            {previewKind === "image" && !imageFailed ? (
+              <div className="flex h-full items-center justify-center overflow-hidden rounded-2xl bg-white p-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={file.url}
                   alt={file.fileName || file.title}
+                  onError={() => setImageFailed(true)}
                   className="h-auto max-h-full w-auto max-w-[min(100%,720px)] rounded-xl object-contain"
                 />
               </div>
             ) : previewKind === "pdf" ? (
-              <div className="h-full overflow-auto rounded-2xl border border-slate-200 bg-white">
+              <div className="h-full overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <iframe
                   src={file.url}
                   title={file.title}

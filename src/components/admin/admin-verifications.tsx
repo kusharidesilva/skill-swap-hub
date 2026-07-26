@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   collection,
   addDoc,
@@ -13,7 +13,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { getDownloadURL, ref } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
 import { createNotification } from "@/lib/notifications";
 import type { ProviderVerificationStatus, StudentProofType } from "@/lib/platform";
 import AdminFilePreviewModal from "@/components/admin/admin-file-preview-modal";
@@ -38,7 +38,10 @@ type VerificationRow = {
   };
   status: VerificationStatus;
   adminNote?: string;
+  studentMessage?: string;
+  resubmissionMessage?: string;
   submittedAt?: { toDate?: () => Date } | Date | string | number | null;
+  resubmittedAt?: { toDate?: () => Date } | Date | string | number | null;
 };
 
 type UserAvatarMap = Record<string, string>;
@@ -61,6 +64,7 @@ export default function AdminVerifications() {
   const [userAvatars, setUserAvatars] = useState<UserAvatarMap>({});
   const [statusFilter, setStatusFilter] = useState(verificationFilters[0]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [reviewRow, setReviewRow] = useState<VerificationRow | null>(null);
   const [previewFile, setPreviewFile] = useState<{
     title: string;
     url: string;
@@ -120,23 +124,6 @@ export default function AdminVerifications() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    rows.forEach((row) => {
-      const storagePath = row.proof?.storagePath;
-      if (!storagePath || row.proof?.downloadUrl || downloadUrls[row.id]) {
-        return;
-      }
-
-      getDownloadURL(ref(storage, storagePath))
-        .then((url) => {
-          setDownloadUrls((current) => ({ ...current, [row.id]: url }));
-        })
-        .catch((err) => {
-          console.error("Error resolving proof download URL:", err);
-        });
-    });
-  }, [downloadUrls, rows]);
-
   const stats = useMemo<StatItem[]>(() => {
     const pending = rows.filter((row) => row.status === "pending").length;
     const approved = rows.filter((row) => row.status === "approved").length;
@@ -172,10 +159,56 @@ export default function AdminVerifications() {
     }
   }, [currentPage, totalPages]);
 
+  const openProofPreview = async (row: VerificationRow) => {
+    const existingUrl = downloadUrls[row.id] || row.proof?.downloadUrl;
+    const storagePath = row.proof?.storagePath;
+
+    try {
+      let url = existingUrl || "";
+
+      if (!url && storagePath) {
+        const currentUser = auth.currentUser;
+
+        if (!currentUser) {
+          setError("Please log in to the admin panel again before opening proof files.");
+          return;
+        }
+
+        // Refresh the auth token before Storage checks custom Firestore admin access.
+        await currentUser.getIdToken(true);
+        url = await getDownloadURL(ref(storage, storagePath));
+      }
+
+      if (!url) {
+        setError("Could not find the uploaded proof file.");
+        return;
+      }
+
+      if (!existingUrl) {
+        setDownloadUrls((current) => ({ ...current, [row.id]: url }));
+      }
+
+      setPreviewFile({
+        title: `${row.studentName} Proof`,
+        url,
+        contentType: row.proof?.contentType,
+        fileName: row.proof?.fileName,
+      });
+    } catch (err) {
+      console.error("Error opening proof preview:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not open the uploaded proof file.",
+      );
+    }
+  };
+
   const handleReview = async (row: VerificationRow, status: "approved" | "rejected") => {
     const adminNote = notes[row.id]?.trim() || "";
     setBusyId(row.id);
     setError("");
+    let approvalEmailQueued = false;
 
     try {
       const verificationRef = doc(db, "providerVerifications", row.id);
@@ -230,9 +263,8 @@ export default function AdminVerifications() {
           href: "/dashboard/provider",
         });
 
-        await queueProviderApprovalEmail(row).catch((mailError) => {
-          console.error("Error queueing approval email:", mailError);
-        });
+        await queueProviderApprovalEmail(row);
+        approvalEmailQueued = true;
       } else {
         await updateDoc(userRef, {
           role: "buyer",
@@ -262,11 +294,17 @@ export default function AdminVerifications() {
         verificationId: row.id,
         actionType: status === "approved" ? "approve_provider" : "reject_provider",
         actionNote: adminNote,
+        approvalEmailQueued,
         createdAt: serverTimestamp(),
       });
+      setReviewRow(null);
     } catch (err) {
       console.error("Error reviewing verification:", err);
-      setError(err instanceof Error ? err.message : "Could not update verification.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not update verification or queue the success email.",
+      );
     } finally {
       setBusyId(null);
     }
@@ -300,7 +338,7 @@ export default function AdminVerifications() {
           <button
             type="button"
             onClick={() => setStatusFilter(verificationFilters[0])}
-            className="inline-flex h-12 w-12 items-center justify-center self-end rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+            className="inline-flex h-12 w-12 cursor-pointer items-center justify-center self-end rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
             aria-label="Clear verification filters"
             title="Clear filters"
           >
@@ -322,13 +360,12 @@ export default function AdminVerifications() {
       ) : null}
 
       <section className="mt-8 overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.05)]">
-        <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1.15fr)_minmax(0,1.05fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(210px,1.1fr)_minmax(170px,0.95fr)] gap-6 border-b border-slate-300 bg-[#f0f1ff] px-6 py-5 text-[12px] font-medium text-slate-700">
+        <div className="grid grid-cols-[minmax(0,1.45fr)_minmax(0,1.2fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(90px,0.45fr)] gap-6 border-b border-slate-300 bg-[#f0f1ff] px-6 py-5 text-[12px] font-medium text-slate-700">
           <span className="min-w-0">Student</span>
           <span className="min-w-0">University</span>
           <span className="min-w-0">Programme</span>
           <span className="min-w-0">Proof Type</span>
           <span className="min-w-0">Status</span>
-          <span className="min-w-0">Admin Note</span>
           <span className="min-w-0">Actions</span>
         </div>
 
@@ -340,7 +377,7 @@ export default function AdminVerifications() {
           paginatedRows.map((row, index) => (
             <div
               key={row.id}
-              className="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1.15fr)_minmax(0,1.05fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(210px,1.1fr)_minmax(170px,0.95fr)] items-start gap-6 border-b border-slate-300 px-6 py-4 last:border-b-0"
+              className="grid grid-cols-[minmax(0,1.45fr)_minmax(0,1.2fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(90px,0.45fr)] items-start gap-6 border-b border-slate-300 px-6 py-4 last:border-b-0"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar
@@ -363,17 +400,10 @@ export default function AdminVerifications() {
               </div>
               <div className="min-w-0 pt-1 text-sm text-slate-700">
                 {row.proof?.fileType || "Student ID"}
-                {(row.proof?.downloadUrl || downloadUrls[row.id]) ? (
+                {(downloadUrls[row.id] || row.proof?.downloadUrl || row.proof?.storagePath) ? (
                   <button
                     type="button"
-                    onClick={() =>
-                        setPreviewFile({
-                          title: `${row.studentName} Proof`,
-                        url: row.proof?.downloadUrl || downloadUrls[row.id],
-                        contentType: row.proof?.contentType,
-                        fileName: row.proof?.fileName,
-                      })
-                    }
+                    onClick={() => void openProofPreview(row)}
                       className="mt-1 block cursor-pointer text-xs font-semibold text-[#1454cc]"
                   >
                     View File
@@ -383,28 +413,15 @@ export default function AdminVerifications() {
               <div className="pt-1">
                 <StatusPill status={row.status} />
               </div>
-              <textarea
-                value={notes[row.id] || ""}
-                onChange={(event) => setNotes((current) => ({ ...current, [row.id]: event.target.value }))}
-                placeholder="Add note"
-                className="min-h-[58px] w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 outline-none transition focus:border-[#2b62e6] focus:ring-2 focus:ring-blue-100"
-              />
-              <div className="flex min-w-0 flex-col gap-2">
+              <div className="flex min-w-0 justify-start pt-0.5">
                 <button
                   type="button"
-                  onClick={() => handleReview(row, "approved")}
-                  disabled={busyId === row.id || row.status === "approved"}
-                  className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-[#2f66e7] px-3 text-xs font-semibold text-white transition hover:bg-[#2457cc] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => setReviewRow(row)}
+                  className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-[#1454cc] shadow-sm transition hover:border-[#2b62e6] hover:bg-blue-50"
+                  aria-label={`Review ${row.studentName}'s verification`}
+                  title="Open review popup"
                 >
-                  Approve
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleReview(row, "rejected")}
-                  disabled={busyId === row.id || row.status === "rejected"}
-                  className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Reject
+                  <ReviewActionIcon />
                 </button>
               </div>
             </div>
@@ -443,6 +460,193 @@ export default function AdminVerifications() {
       </section>
 
       <AdminFilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
+      {reviewRow ? (
+        <VerificationReviewModal
+          row={reviewRow}
+          adminNote={notes[reviewRow.id] || ""}
+          busy={busyId === reviewRow.id}
+          hasProof={Boolean(
+            downloadUrls[reviewRow.id] ||
+              reviewRow.proof?.downloadUrl ||
+              reviewRow.proof?.storagePath,
+          )}
+          onClose={() => setReviewRow(null)}
+          onAdminNoteChange={(value) =>
+            setNotes((current) => ({ ...current, [reviewRow.id]: value }))
+          }
+          onPreview={() => void openProofPreview(reviewRow)}
+          onReview={(status) => handleReview(reviewRow, status)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function VerificationReviewModal({
+  row,
+  adminNote,
+  busy,
+  hasProof,
+  onClose,
+  onAdminNoteChange,
+  onPreview,
+  onReview,
+}: {
+  row: VerificationRow;
+  adminNote: string;
+  busy: boolean;
+  hasProof: boolean;
+  onClose: () => void;
+  onAdminNoteChange: (value: string) => void;
+  onPreview: () => void;
+  onReview: (status: "approved" | "rejected") => void;
+}) {
+  const studentMessage = row.resubmissionMessage?.trim() || row.studentMessage?.trim();
+  const previousAdminNote = row.adminNote?.trim();
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const [needsScroll, setNeedsScroll] = useState(false);
+
+  useEffect(() => {
+    const modal = modalRef.current;
+    if (!modal) return;
+
+    const updateScrollState = () => {
+      setNeedsScroll(modal.scrollHeight > modal.clientHeight + 2);
+    };
+
+    updateScrollState();
+    window.addEventListener("resize", updateScrollState);
+
+    return () => window.removeEventListener("resize", updateScrollState);
+  }, [adminNote, previousAdminNote, studentMessage, row.id]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/35 px-4 py-2 backdrop-blur-md sm:py-3"
+      onClick={onClose}
+    >
+      <div
+        ref={modalRef}
+        className={`relative max-h-[calc(100dvh-1rem)] w-full max-w-xl overflow-x-hidden overscroll-contain rounded-3xl border border-white/70 bg-white/95 p-4 text-slate-900 shadow-[0_24px_80px_rgba(15,23,42,0.25)] sm:max-h-[calc(100dvh-1.5rem)] sm:p-5 ${
+          needsScroll ? "overflow-y-auto" : "overflow-y-hidden"
+        }`}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-blue-100/80 blur-3xl" aria-hidden="true" />
+        <div className="absolute -bottom-24 -left-20 h-56 w-56 rounded-full bg-emerald-100/80 blur-3xl" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-5 top-5 z-10 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+          aria-label="Close verification review popup"
+        >
+          <CloseSmallIcon />
+        </button>
+
+        <div className="relative">
+          <div className="flex flex-col gap-3 pr-10 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#1454cc]">
+                Verification review
+              </p>
+              <h3 className="mt-1.5 truncate text-2xl font-semibold text-slate-950">
+                {row.studentName}
+              </h3>
+              <p className="mt-1 truncate text-sm text-slate-500">{row.email}</p>
+            </div>
+            <div className="shrink-0">
+              <StatusPill status={row.status} />
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <InfoTile label="University" value={row.university || "Not provided"} />
+            <InfoTile label="Programme" value={`${row.degree || "Not provided"} - ${row.yearOfStudy || "Year not provided"}`} />
+            <InfoTile label="Proof Type" value={row.proof?.fileType || "Student ID"} />
+            <InfoTile
+              label={row.resubmittedAt ? "Resubmitted" : "Submitted"}
+              value={formatDate(row.resubmittedAt || row.submittedAt)}
+            />
+          </div>
+
+          {studentMessage ? (
+            <div className="mt-3 rounded-2xl border border-blue-100 bg-blue-50/80 p-3">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1454cc]">
+                Student request
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-700">{studentMessage}</p>
+            </div>
+          ) : null}
+
+          {previousAdminNote ? (
+            <div className="mt-3 rounded-2xl border border-red-100 bg-red-50/80 p-3">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-red-600">
+                Previous admin note
+              </p>
+              <p className="mt-2 text-sm leading-6 text-red-900">{previousAdminNote}</p>
+            </div>
+          ) : null}
+
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-white/80 p-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900">Uploaded proof</p>
+                <p className="mt-1 truncate text-xs text-slate-500">
+                  {row.proof?.fileName || "Proof document"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onPreview}
+                disabled={!hasProof}
+                className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                View Proof
+              </button>
+            </div>
+          </div>
+
+          <label className="mt-3 block text-sm font-semibold text-slate-700">
+            Admin note
+            <textarea
+              value={adminNote}
+              onChange={(event) => onAdminNoteChange(event.target.value)}
+              placeholder="Tell the student what was checked, or why the proof is rejected."
+              className="mt-2 min-h-20 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-normal text-slate-700 outline-none transition focus:border-[#2b62e6] focus:ring-2 focus:ring-blue-100"
+            />
+          </label>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => onReview("approved")}
+              disabled={busy}
+              className="inline-flex h-12 cursor-pointer items-center justify-center rounded-xl bg-[#2f66e7] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2457cc] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {busy ? "Updating..." : "Approve"}
+            </button>
+            <button
+              type="button"
+              onClick={() => onReview("rejected")}
+              disabled={busy}
+              className="inline-flex h-12 cursor-pointer items-center justify-center rounded-xl border border-red-200 bg-red-50 px-5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {busy ? "Updating..." : "Reject"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-slate-800">{value}</p>
     </div>
   );
 }
@@ -466,14 +670,17 @@ async function queueProviderApprovalEmail(row: VerificationRow) {
   if (!recipientEmail) return;
 
   const studentName = row.studentName?.trim() || "there";
-  const subject = "Your Skill Swap Hub student provider account is approved";
+  const subject = "Verification successful - welcome to Skill Swap Hub";
   const text = [
     `Hi ${studentName},`,
     "",
-    "Good news - your student provider verification has been approved.",
-    "Welcome to Skill Swap Hub. You can now sign in and use the system as a verified student provider.",
+    "Good news! Your student verification has been approved by the admin.",
+    "Your Skill Swap Hub account is now verified. You can sign in, access your provider dashboard, create service gigs, and start using the system.",
     "",
-    "Open Skill Swap Hub and start using your provider dashboard.",
+    "Welcome to Skill Swap Hub, and thank you for joining our trusted student service community.",
+    "",
+    "Open Skill Swap Hub and continue to your verified account:",
+    "http://localhost:3000/login",
     "",
     "Skill Swap Hub",
   ].join("\n");
@@ -484,17 +691,22 @@ async function queueProviderApprovalEmail(row: VerificationRow) {
       subject,
       text,
       html: `
-        <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
-          <h2 style="color: #0f4cbf; margin: 0 0 12px;">Welcome to Skill Swap Hub</h2>
-          <p>Hi ${escapeHtml(studentName)},</p>
-          <p>Good news - your student provider verification has been approved.</p>
-          <p>You can now sign in and use the system as a verified student provider.</p>
-          <p style="margin-top: 24px;">Skill Swap Hub</p>
+        <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6; max-width: 560px;">
+          <div style="padding: 24px; border: 1px solid #dbeafe; border-radius: 18px; background: linear-gradient(135deg, #eff6ff 0%, #ecfdf5 100%);">
+            <p style="margin: 0 0 10px; color: #0f766e; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;">Verification Successful</p>
+            <h2 style="color: #0f4cbf; margin: 0 0 12px;">Your account is verified</h2>
+            <p>Hi ${escapeHtml(studentName)},</p>
+            <p>Good news! Your student verification has been approved by the admin.</p>
+            <p>Your Skill Swap Hub account is now verified. You can sign in, access your provider dashboard, create service gigs, and start using the system.</p>
+            <p style="margin: 18px 0 0;">Welcome to Skill Swap Hub, and thank you for joining our trusted student service community.</p>
+            <a href="http://localhost:3000/login" style="display: inline-block; margin-top: 20px; padding: 11px 18px; border-radius: 12px; background: #2b62e6; color: #ffffff; font-weight: 700; text-decoration: none;">Open Skill Swap Hub</a>
+          </div>
+          <p style="margin-top: 18px; color: #64748b; font-size: 12px;">Skill Swap Hub</p>
         </div>
       `,
     },
     metadata: {
-      type: "provider_approval",
+      type: "student_verification_success",
       userId: row.userId,
       verificationId: row.id,
     },
@@ -662,6 +874,26 @@ function FilterResetIcon() {
       <path d="M7 12h10" />
       <path d="M10 17h4" />
       <path d="m5 5 14 14" />
+    </svg>
+  );
+}
+
+function ReviewActionIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 5h14v14H5z" />
+      <path d="M8 9h8" />
+      <path d="M8 13h5" />
+      <path d="m14.5 16 1.2 1.2 2.5-3" />
+    </svg>
+  );
+}
+
+function CloseSmallIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
     </svg>
   );
 }

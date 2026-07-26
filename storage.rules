@@ -9,6 +9,11 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function isAuthorizedAdminEmail() {
+      return isAuthenticated() &&
+        request.auth.token.email == authorizedAdminEmail();
+    }
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
@@ -16,8 +21,7 @@ service firebase.storage {
     function isAdmin() {
       return isAuthenticated() &&
         firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.email == authorizedAdminEmail();
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /profile-images/{userId}/{allPaths=**} {
@@ -46,8 +50,8 @@ service firebase.storage {
     }
 
     match /student-proofs/{userId}/{allPaths=**} {
-      // Student proof is uploaded by the owner and reviewed by admins only.
-      allow read: if isOwner(userId) || isAdmin();
+      // Student proof is uploaded by the owner and reviewed by the authorized admin.
+      allow read: if isOwner(userId) || isAdmin() || isAuthorizedAdminEmail();
       allow write: if isOwner(userId) &&
         request.resource.size <= 2 * 1024 * 1024 &&
         request.resource.contentType in [

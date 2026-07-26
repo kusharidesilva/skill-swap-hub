@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "skill-swap-hub-eca37"
+  },
+  "targets": {},
+  "etags": {
+    "skill-swap-hub-eca37": {
+      "extensionInstances": {
+        "firestore-send-email": "eb769d13479b6dde90cb5614d95d1fbc77543c10d2ba06c3bd6d3e76d923dc95"
+      }
+    }
   }
 }
