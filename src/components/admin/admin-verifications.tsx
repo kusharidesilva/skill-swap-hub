@@ -229,12 +229,16 @@ export default function AdminVerifications() {
           tone: "emerald",
           href: "/dashboard/provider",
         });
+
+        await queueProviderApprovalEmail(row).catch((mailError) => {
+          console.error("Error queueing approval email:", mailError);
+        });
       } else {
         await updateDoc(userRef, {
           role: "buyer",
-          accountStatus: "active",
+          accountStatus: "suspended",
           providerVerificationStatus: "rejected",
-          canBuyServices: true,
+          canBuyServices: false,
           canSellServices: false,
           verifiedStudentProvider: false,
           adminNote,
@@ -455,6 +459,56 @@ function formatDate(value: VerificationRow["submittedAt"]) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+async function queueProviderApprovalEmail(row: VerificationRow) {
+  const recipientEmail = row.email?.trim();
+  if (!recipientEmail) return;
+
+  const studentName = row.studentName?.trim() || "there";
+  const subject = "Your Skill Swap Hub student provider account is approved";
+  const text = [
+    `Hi ${studentName},`,
+    "",
+    "Good news - your student provider verification has been approved.",
+    "Welcome to Skill Swap Hub. You can now sign in and use the system as a verified student provider.",
+    "",
+    "Open Skill Swap Hub and start using your provider dashboard.",
+    "",
+    "Skill Swap Hub",
+  ].join("\n");
+
+  await addDoc(collection(db, "mail"), {
+    to: [recipientEmail],
+    message: {
+      subject,
+      text,
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
+          <h2 style="color: #0f4cbf; margin: 0 0 12px;">Welcome to Skill Swap Hub</h2>
+          <p>Hi ${escapeHtml(studentName)},</p>
+          <p>Good news - your student provider verification has been approved.</p>
+          <p>You can now sign in and use the system as a verified student provider.</p>
+          <p style="margin-top: 24px;">Skill Swap Hub</p>
+        </div>
+      `,
+    },
+    metadata: {
+      type: "provider_approval",
+      userId: row.userId,
+      verificationId: row.id,
+    },
+    createdAt: serverTimestamp(),
+  });
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function StatCard({ stat }: { stat: StatItem }) {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,12 +30,24 @@ const loginSchema = z
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+interface LoginPageProps {
+  searchParams?: { reason?: string };
+}
+
+export default function LoginPage({ searchParams }: LoginPageProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (searchParams?.reason === "verification-rejected") {
+      setServerError(
+        "Your account verification was rejected. Please contact support before logging in again.",
+      );
+    }
+  }, [searchParams?.reason]);
 
   const {
     register,
@@ -77,6 +89,10 @@ export default function LoginPage() {
         );
       } else if (msg.includes("User profile not found")) {
         setServerError("Account setup incomplete. Please contact support.");
+      } else if (msg.includes("account verification was rejected")) {
+        setServerError(
+          "Your account verification was rejected. Please contact support before logging in again.",
+        );
       } else {
         setServerError(msg);
       }

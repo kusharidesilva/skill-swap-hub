@@ -198,7 +198,7 @@ export default function SelectField({
   return (
     <div
       ref={rootRef}
-      className={`grid min-w-0 gap-1.5 ${wrapperClassName}`}
+      className={`grid min-w-0 max-w-full gap-1.5 ${wrapperClassName}`}
     >
       <label
         htmlFor={selectId}
@@ -207,7 +207,7 @@ export default function SelectField({
         {label}
       </label>
 
-      <div className="relative">
+      <div className="relative min-w-0">
         <button
           ref={buttonRef}
           type="button"
@@ -226,14 +226,14 @@ export default function SelectField({
             }
           }}
           onKeyDown={handleKeyDown}
-          className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 pr-3 text-left text-sm font-medium text-slate-800 outline-none transition focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 ${
+          className={`flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 overflow-hidden rounded-lg border bg-white px-3 py-2 pr-3 text-left text-sm font-medium text-slate-800 outline-none transition focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 ${
             error
               ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100"
               : "border-slate-300 focus:border-[#2f66e7] focus:ring-blue-100"
           } ${className}`}
         >
           <span
-            className={`min-w-0 truncate ${
+            className={`block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
               !value ? "text-slate-400" : "text-slate-800"
             }`}
           >
@@ -275,7 +275,7 @@ export default function SelectField({
                       disabled: false,
                     })
                   }
-                  className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition ${
+                  className={`flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-sm transition ${
                     !value
                       ? "bg-blue-50 text-[#1453c4]"
                       : "text-slate-500 hover:bg-slate-50"
@@ -302,7 +302,7 @@ export default function SelectField({
                     }}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => selectOption(option)}
-                    className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-300 ${
+                    className={`flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-300 ${
                       isSelected || isActive
                         ? "bg-blue-50 text-[#1453c4]"
                         : "text-slate-700 hover:bg-slate-50"

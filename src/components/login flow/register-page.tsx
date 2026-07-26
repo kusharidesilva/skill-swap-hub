@@ -404,6 +404,7 @@ export default function RegisterPage() {
                         className={compactSelectClass}
                         labelClassName="text-[11px] leading-4"
                         wrapperClassName={compactSelectWrapperClass}
+                        title={proofTypeValue}
                       />
                       <div className="grid min-w-0 gap-1 self-start">
                         <label className={formLabelClass}>Student Proof Document</label>
@@ -508,10 +509,16 @@ export default function RegisterPage() {
                 />
               </div>
               <div className="mt-5">
-                <span className="inline-flex items-center gap-2 rounded-full bg-[#c9f3e8] px-3 py-1 text-[11px] font-semibold text-[#0f8a6b]">
-                  <ShieldIcon className="h-3 w-3" />
-                  Verified Student Providers
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-[#dbe8ff] px-3 py-1 text-[11px] font-semibold text-[#1454cc]">
+                    <ShieldIcon className="h-3 w-3" />
+                    Verified Student Providers
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-[#d8f7e8] px-3 py-1 text-[11px] font-semibold text-[#0f8a6b]">
+                    <ShieldIcon className="h-3 w-3" />
+                    Verified Buyers
+                  </span>
+                </div>
                 <h2 className="mt-2.5 text-base font-semibold text-slate-900">Proof-based Provider Approval</h2>
                 <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
                   Students can become providers after admin approval. Buyers can register with a normal email.

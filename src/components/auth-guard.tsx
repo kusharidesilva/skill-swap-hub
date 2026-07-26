@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { accountNeedsEmailVerification } from "@/lib/auth";
+import { accountNeedsEmailVerification, signOut } from "@/lib/auth";
 import { isPendingAdminVerificationStatus } from "@/lib/platform";
 import { dashboardHref, type Role } from "@/lib/role-routes";
 
@@ -30,6 +30,13 @@ export default function AuthGuard({ requiredRole, children }: AuthGuardProps) {
     // Guests must sign in before any protected content is shown.
     if (!firebaseUser) {
       router.replace("/login");
+      return;
+    }
+
+    if (userProfile?.providerVerificationStatus === "rejected") {
+      void signOut().finally(() => {
+        router.replace("/login?reason=verification-rejected");
+      });
       return;
     }
 
@@ -76,6 +83,7 @@ export default function AuthGuard({ requiredRole, children }: AuthGuardProps) {
   if (
     loading ||
     !firebaseUser ||
+    userProfile?.providerVerificationStatus === "rejected" ||
     isPendingAdminVerificationStatus(userProfile?.accountStatus) ||
     userProfile?.providerVerificationStatus === "pending" ||
     (userProfile &&

@@ -466,6 +466,13 @@ export async function loginUser(
 
   let profile = userDoc.data() as UserProfile;
 
+  if (profile.providerVerificationStatus === "rejected") {
+    await firebaseSignOut(auth);
+    throw new Error(
+      "Your account verification was rejected. Please log in again after contacting support.",
+    );
+  }
+
   if (
     accountNeedsEmailVerification(profile.accountType) &&
     user.emailVerified
@@ -564,6 +571,12 @@ export async function getPostLoginRedirect(
   profile: UserProfile,
   uid: string,
 ): Promise<string> {
+  if (profile.providerVerificationStatus === "rejected") {
+    throw new Error(
+      "Your account verification was rejected. Please log in again after contacting support.",
+    );
+  }
+
   if (profile.accountStatus === "suspended") {
     throw new Error("This account is suspended. Please contact support.");
   }

@@ -315,5 +315,10 @@ service cloud.firestore {
       allow read, create: if isAdmin();
       allow update, delete: if false;
     }
+
+    match /mail/{mailId} {
+      allow create: if isAdmin();
+      allow read, update, delete: if false;
+    }
   }
 }

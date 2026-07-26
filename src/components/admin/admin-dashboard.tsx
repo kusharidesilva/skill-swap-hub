@@ -54,8 +54,11 @@ type ReportRecord = {
 };
 
 type OrderRecord = {
+  id?: string;
   orderStatus?: string;
   status?: string;
+  review?: Record<string, unknown>;
+  providerReview?: Record<string, unknown>;
 };
 
 type ActionRow = {
@@ -222,12 +225,17 @@ export default function AdminDashboard() {
         (error) => handleSnapshotError("reports", error),
       ),
       onSnapshot(
-        collection(db, "serviceOrders"),
+        collection(db, "requests"),
         (snapshot) => {
-          setOrders(snapshot.docs.map((docSnap) => docSnap.data() as OrderRecord));
-          markLoaded("serviceOrders");
+          setOrders(
+            snapshot.docs.map((docSnap) => ({
+              id: docSnap.id,
+              ...(docSnap.data() as OrderRecord),
+            })),
+          );
+          markLoaded("requests");
         },
-        (error) => handleSnapshotError("serviceOrders", error),
+        (error) => handleSnapshotError("requests", error),
       ),
     ];
 
@@ -246,7 +254,9 @@ export default function AdminDashboard() {
     (item) => normalizeStatus(item.status || "pending") === "pending",
   );
   const approvedProviders = users.filter(
-    (user) => user.role === "provider" || user.role === "both",
+    (user) =>
+      normalizeStatus(user.accountStatus || "active") === "active" &&
+      normalizeStatus(user.providerVerificationStatus || "") === "approved",
   );
   const activeBuyers = users.filter(
     (user) =>
@@ -256,6 +266,7 @@ export default function AdminDashboard() {
   const activeProviders = users.filter(
     (user) =>
       normalizeStatus(user.accountStatus || "active") === "active" &&
+      normalizeStatus(user.providerVerificationStatus || "") === "approved" &&
       (user.role === "provider" || user.role === "both"),
   );
   const dashboardGigs = useMemo(() => mergeDashboardGigs(gigs, users), [gigs, users]);
@@ -263,7 +274,10 @@ export default function AdminDashboard() {
     (gig) => normalizeStatus(gig.status || gig.gigStatus || "active") === "active",
   );
   const completedOrders = orders.filter(
-    (order) => normalizeStatus(order.orderStatus || order.status || "") === "completed",
+    (order) =>
+      normalizeStatus(order.orderStatus || order.status || "") === "completed" &&
+      Boolean(order.review) &&
+      Boolean(order.providerReview),
   );
   const pendingReports = reports.filter(
     (report) => normalizeStatus(report.status || "pending") === "pending",
@@ -290,7 +304,10 @@ export default function AdminDashboard() {
 
   const activitySeries = useMemo<ActivitySeries[]>(() => {
     const providerUsers = users.filter(
-      (user) => user.role === "provider" || user.role === "both",
+      (user) =>
+        normalizeStatus(user.accountStatus || "active") === "active" &&
+        normalizeStatus(user.providerVerificationStatus || "") === "approved" &&
+        (user.role === "provider" || user.role === "both"),
     );
     const buyerUsers = users.filter(
       (user) => user.role === "buyer" || user.role === "both",
