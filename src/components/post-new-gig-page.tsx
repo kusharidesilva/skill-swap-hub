@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
+import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -241,6 +241,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
           gigId: gigDocumentId,
           providerId: userProfile.uid,
           providerName: userProfile.name || "Provider",
+          providerImage: userProfile.profileImageUrl || "",
           university: userProfile.university || "",
           degreeName: userProfile.degree || "",
           yearOfStudy: userProfile.yearOfStudy || "",

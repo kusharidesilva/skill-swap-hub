@@ -164,7 +164,10 @@ service cloud.firestore {
     }
 
     match /gigs/{gigId} {
-      allow read: if hasActiveAccount() && resource.data.status != 'removed';
+      allow read: if (
+        resource.data.status == 'active' ||
+        resource.data.gigStatus == 'active'
+      ) && resource.data.status != 'removed';
       allow create: if isVerifiedProvider() &&
         request.resource.data.providerId == request.auth.uid;
       allow update: if isAdmin() || (

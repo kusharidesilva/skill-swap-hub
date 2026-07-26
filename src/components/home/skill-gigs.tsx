@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { collection, doc, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
+import { collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { usePathname } from "next/navigation";
 import type { SVGProps } from "react";
 import ScrollReveal from "@/components/scroll-reveal";
@@ -35,12 +35,38 @@ type LiveGig = {
   tags: string[];
 };
 
+type FirestoreGig = {
+  gigId?: string;
+  providerId?: string;
+  status?: string;
+  gigStatus?: string;
+  title?: string;
+  category?: string;
+  providerName?: string;
+  university?: string;
+  providerImage?: string;
+  summary?: string;
+  description?: string;
+  availability?: string[] | string;
+  image?: string;
+  sampleWorkUrl?: string;
+  updatedAt?: { toMillis?: () => number };
+  createdAt?: { toMillis?: () => number };
+};
+
+type RankedLiveGig = LiveGig & {
+  sortTime: number;
+};
+
+type GigRecord = {
+  card: RankedLiveGig;
+};
+
 export default function SkillGigsSection() {
   const pathname = usePathname();
   const { userProfile } = useAuth();
   const [gigs, setGigs] = useState<LiveGig[]>([]);
   const [loading, setLoading] = useState(true);
-  const [ratingsVersion, setRatingsVersion] = useState(0);
 
   const isBuyerHome = pathname === "/home/buyer";
   const isProviderHome = pathname === "/home/provider";
@@ -52,132 +78,76 @@ export default function SkillGigsSection() {
       ? "/find-services/provider"
       : isBothHome
         ? "/find-services/both"
-        : "/explore-services";
+        : "/get-started";
 
   useEffect(() => {
-    // A completed swap triggers a fresh calculation of the featured ratings.
-    const unsubscribe = onSnapshot(
-      query(collection(db, "requests"), where("status", "==", "completed")),
-      () => setRatingsVersion((value) => value + 1),
-      (err) => console.error("Error subscribing to live homepage ratings:", err)
-    );
-
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    // Combine provider profiles with completed-request ratings into the gig cards.
     async function fetchGigs() {
       try {
-        const usersSnap = await getDocs(collection(db, "users"));
-        const requestsSnap = await getDocs(
-          query(collection(db, "requests"), where("status", "==", "completed"))
+        const statusSnapshot = await getDocs(
+          query(collection(db, "gigs"), where("status", "==", "active")),
         );
-        const ratingsMap: Record<string, { totalStars: number; count: number }> = {};
 
-        requestsSnap.forEach((reqDoc) => {
-          const req = reqDoc.data();
-          const providerId = req.providerId;
-          if (providerId && req.review && typeof req.review.rating === "number") {
-            ratingsMap[providerId] ??= { totalStars: 0, count: 0 };
-            ratingsMap[providerId].totalStars += req.review.rating;
-            ratingsMap[providerId].count += 1;
-          }
-        });
+        const gigRecords: GigRecord[] = statusSnapshot.docs
+          .map((gigDoc, index) => {
+            const gig = gigDoc.data() as FirestoreGig;
+            const availability = Array.isArray(gig.availability)
+              ? gig.availability.join(", ")
+              : gig.availability || "Flexible";
 
-        const liveGigs: LiveGig[] = [];
+            const rankedGig: RankedLiveGig = {
+              id: gigDoc.id,
+              gigId: gig.gigId || gigDoc.id,
+              providerId: gig.providerId || "",
+              title: gig.title || "Student Skill",
+              category: gig.category || "Service",
+              rating: 0,
+              providerName: gig.providerName || "Campus Student",
+              university: gig.university || "Campus",
+              providerImage: gig.providerImage || "",
+              summary:
+                gig.summary ||
+                gig.description ||
+                "Practical support from a verified university student.",
+              availability,
+              image:
+                gig.image ||
+                gig.sampleWorkUrl ||
+                gigImages[index % gigImages.length],
+              serviceType: "Service Gig",
+              tags: [gig.category || "Service", "Service Gig", availability],
+              sortTime:
+                gig.updatedAt?.toMillis?.() ||
+                gig.createdAt?.toMillis?.() ||
+                0,
+            };
 
-        usersSnap.forEach((userDoc) => {
-          if (hideOwnGig && userProfile && userDoc.id === userProfile.uid) return;
+            return {
+              card: rankedGig,
+            };
+          })
+          .filter((gig) => gig.card.providerId)
+          .filter((gig) => !(hideOwnGig && userProfile && gig.card.providerId === userProfile.uid))
+          .sort((a, b) => b.card.sortTime - a.card.sortTime)
+          .slice(0, 4);
 
-          const user = userDoc.data();
-          const skills: string[] = user.providerProfile?.skills || [];
-          const storedGigs = (user.providerProfile?.gigs || []).filter(
-            (gig: { status?: string }) => (gig.status || "active") === "active",
-          );
-          const providerName: string = user.name || "Campus Student";
-          const university: string = user.university || "Campus";
-          const providerImage: string = user.profileImageUrl || "";
-          const availability: string =
-            typeof user.providerProfile?.availability === "string"
-              ? user.providerProfile.availability
-              : Array.isArray(user.providerProfile?.availability)
-                ? (user.providerProfile.availability[0] as string) || "Flexible"
-                : "Flexible";
-          const ratingData = ratingsMap[userDoc.id];
-          const rating = ratingData
-            ? Number((ratingData.totalStars / ratingData.count).toFixed(1))
-            : 0;
+        const liveGigs: LiveGig[] = gigRecords.map(({ card: gig }) => ({
+          id: gig.id,
+          gigId: gig.gigId,
+          providerId: gig.providerId,
+          title: gig.title,
+          category: gig.category,
+          rating: gig.rating,
+          providerName: gig.providerName,
+          university: gig.university,
+          providerImage: gig.providerImage,
+          summary: gig.summary,
+          availability: gig.availability,
+          image: gig.image,
+          serviceType: gig.serviceType,
+          tags: gig.tags,
+        }));
 
-          const gigEntries: Array<{
-            title: string;
-            category: string;
-            summary: string;
-            image: string;
-          }> =
-            storedGigs.length > 0
-              ? storedGigs.map(
-                  (
-                    gig: {
-                      title?: string;
-                      category?: string;
-                      summary?: string;
-                      image?: string;
-                    },
-                    skillIndex: number
-                  ) => ({
-                    title: gig.title || skills[skillIndex] || "Student Skill",
-                    category: gig.category || skills[skillIndex] || "Skill",
-                    summary:
-                      gig.summary ||
-                      "Practical support from a verified university student.",
-                    image:
-                      gig.image ||
-                      user.providerProfile?.gigImages?.[skillIndex] ||
-                      gigImages[skillIndex % gigImages.length],
-                  })
-                )
-              : skills.map((skill, skillIndex) => ({
-                  title: `I will do ${skill}`,
-                  category: skill,
-                  summary: `Practical ${skill.toLowerCase()} support from a verified university student.`,
-                  image:
-                    user.providerProfile?.gigImages?.[skillIndex] ||
-                    gigImages[skillIndex % gigImages.length],
-                }));
-
-          gigEntries.slice(0, 1).forEach(
-            (
-              gigEntry: {
-                title: string;
-                category: string;
-                summary: string;
-                image: string;
-              },
-              skillIndex: number
-            ) => {
-              if (liveGigs.length >= 4) return;
-              liveGigs.push({
-                id: `${userDoc.id}-${skillIndex}`,
-                gigId: storedGigs[skillIndex]?.id,
-                providerId: userDoc.id,
-                title: gigEntry.title,
-                category: gigEntry.category,
-                rating,
-                providerName,
-                university,
-                providerImage,
-                summary: gigEntry.summary,
-                availability,
-                image: gigEntry.image,
-                serviceType: "Service Gig",
-                tags: [gigEntry.category, "Service Gig", availability],
-              });
-            }
-          );
-        });
-
-        setGigs(liveGigs.slice(0, 4));
+        setGigs(liveGigs);
       } catch (err) {
         console.error("Error fetching live gigs for home section:", err);
         setGigs([]);
@@ -187,7 +157,7 @@ export default function SkillGigsSection() {
     }
 
     fetchGigs();
-  }, [hideOwnGig, ratingsVersion, userProfile]);
+  }, [hideOwnGig, userProfile]);
 
   return (
     <section id="explore-skills" className="ssh-section-clear bg-white scroll-mt-20">
@@ -208,7 +178,7 @@ export default function SkillGigsSection() {
               className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f4cbf]"
             >
               View All Skills
-              <span aria-hidden="true">→</span>
+              <span aria-hidden="true">&rarr;</span>
             </Link>
           </div>
         </ScrollReveal>
@@ -260,8 +230,10 @@ function GigCard({ gig }: { gig: LiveGig }) {
   const isBuyerHome = pathname === "/home/buyer";
   const isProviderHome = pathname === "/home/provider";
   const isBothHome = pathname === "/home/both";
-  const requestRole = isBuyerHome ? "buyer" : isProviderHome ? "provider" : isBothHome ? "both" : "buyer";
-  const previewHref = `/gig-preview/${requestRole}?source=home&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}`;
+  const requestRole = isBuyerHome ? "buyer" : isProviderHome ? "provider" : isBothHome ? "both" : null;
+  const previewHref = requestRole
+    ? `/gig-preview/${requestRole}?source=home&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}`
+    : `/gig-preview?providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}`;
   const isFavorited = Boolean(
     userProfile?.favorites?.some(
       (fav) =>
@@ -318,7 +290,6 @@ function GigCard({ gig }: { gig: LiveGig }) {
         ];
       }
 
-      // Favorites are saved on the user profile and refreshed in shared auth state.
       await updateDoc(doc(db, "users", userProfile.uid), {
         favorites: updatedFavorites,
       });

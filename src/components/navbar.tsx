@@ -27,7 +27,7 @@ interface NavbarProps {
 
 export default function Navbar({ role: propRole }: NavbarProps) {
   const pathname = usePathname();
-  const { userProfile } = useAuth();
+  const { firebaseUser, loading, userProfile } = useAuth();
   const [activeSection, setActiveSection] = useState("Home");
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -105,7 +105,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
     pathname.startsWith(`${notificationsHref}/`);
 
   useEffect(() => {
-    if (!userProfile) {
+    if (loading || role === "guest" || !firebaseUser || !userProfile) {
       return;
     }
 
@@ -122,7 +122,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
     );
 
     return () => unsubscribe();
-  }, [userProfile]);
+  }, [firebaseUser, loading, role, userProfile]);
 
   useEffect(() => {
     if (!isProfileMenuOpen) {

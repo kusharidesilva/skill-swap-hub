@@ -8,14 +8,14 @@ import { addDoc, collection, doc, getDoc, onSnapshot, query, serverTimestamp, se
 
 import { db } from "@/lib/firebase";
 import { formatRatingLabel } from "@/lib/ratings";
-import { scopedHref } from "@/lib/role-routes";
+import { scopedHref, type SiteRole } from "@/lib/role-routes";
 import type { UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { createNotification } from "@/lib/notifications";
 import { inferServiceCategory } from "@/lib/platform";
 
 type GigPreviewPageProps = {
-  role: "buyer" | "provider" | "both";
+  role: SiteRole;
   backHref?: string;
   gigId?: string;
   providerId?: string;
@@ -172,14 +172,85 @@ export default function GigPreviewPage({
   };
 
   useEffect(() => {
-    if (!providerId) return;
+    if (!providerId && !gigId) return;
 
-    const selectedProviderId = providerId;
     let active = true;
     let unsubscribeRatings: (() => void) | null = null;
 
     async function loadGig() {
       try {
+        if (role === "guest") {
+          if (!gigId) {
+            if (active) setLoading(false);
+            return;
+          }
+
+          const publicGigSnap = await getDoc(doc(db, "gigs", gigId));
+          if (!publicGigSnap.exists()) {
+            if (active) setLoading(false);
+            return;
+          }
+
+          const publicGig = publicGigSnap.data() as {
+            gigId?: string;
+            providerId?: string;
+            providerName?: string;
+            degreeName?: string;
+            university?: string;
+            yearOfStudy?: string;
+            category?: string;
+            title?: string;
+            summary?: string;
+            description?: string;
+            price?: number | string;
+            availability?: string[];
+            sampleWorkUrl?: string;
+            image?: string;
+            delivery?: string;
+          };
+
+          const publicGigDetails: GigPreviewData = {
+            gigId: publicGig.gigId || gigId,
+            providerId: publicGig.providerId || providerId || "guest-provider",
+            providerName: publicGig.providerName || "Campus Student",
+            providerDegree: publicGig.degreeName || publicGig.yearOfStudy || "Verified Student",
+            university: publicGig.university || "Sri Lankan University",
+            proficiency: "Skilled",
+            skill: publicGig.title || publicGig.category || "Student Support",
+            skills: [publicGig.title || publicGig.category || "Student Support"],
+            title: publicGig.title || "Student Skill Gig",
+            category: publicGig.category || "Service",
+            summary:
+              publicGig.summary ||
+              publicGig.description ||
+              "Practical support from a verified student service provider.",
+            price: publicGig.price || "",
+            availability: formatAvailability(publicGig.availability),
+            rating: 0,
+            reviews: 0,
+            reviewCards: [],
+            image:
+              publicGig.sampleWorkUrl ||
+              publicGig.image ||
+              gigImages[Math.max(skillIndex, 0) % gigImages.length],
+            value: "20",
+            delivery: publicGig.delivery || "Flexible",
+            match: 95,
+          };
+
+          if (active) {
+            setGig(publicGigDetails);
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (!providerId) {
+          if (active) setLoading(false);
+          return;
+        }
+
+        const selectedProviderId = providerId;
         // Load provider details first, then subscribe to completed swap reviews.
         const providerSnap = await getDoc(doc(db, "users", selectedProviderId));
         if (!providerSnap.exists()) return;
@@ -291,7 +362,7 @@ export default function GigPreviewPage({
       active = false;
       if (unsubscribeRatings) unsubscribeRatings();
     };
-  }, [gigId, providerId, skillIndex]);
+  }, [gigId, providerId, role, skillIndex]);
 
   // Package details are derived from the current gig rather than stored separately.
   const packageItems = useMemo(
@@ -305,8 +376,11 @@ export default function GigPreviewPage({
   );
 
   const isOwnGig = userProfile && userProfile.uid === gig.providerId;
-  const editHref = `/edit-gig/${role}/gig-${skillIndex}`;
-  const chatHref = `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(gig.providerId)}&subject=${encodeURIComponent(gig.title)}&gigId=${encodeURIComponent(gig.gigId)}&category=${encodeURIComponent(gig.category)}&price=${encodeURIComponent(String(gig.price || ""))}&providerName=${encodeURIComponent(gig.providerName)}`;
+  const isGuestView = role === "guest";
+  const editHref = !isGuestView ? `/edit-gig/${role}/gig-${skillIndex}` : "/get-started";
+  const chatHref = !isGuestView
+    ? `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(gig.providerId)}&subject=${encodeURIComponent(gig.title)}&gigId=${encodeURIComponent(gig.gigId)}&category=${encodeURIComponent(gig.category)}&price=${encodeURIComponent(String(gig.price || ""))}&providerName=${encodeURIComponent(gig.providerName)}`
+    : "/get-started";
 
   const handleRequestNow = async () => {
     if (!userProfile) {
@@ -442,7 +516,7 @@ export default function GigPreviewPage({
       {/* Back navigation and gig breadcrumb */}
       <div className="mb-3">
         <Link
-          href={backHref ?? `/post-gig/${role}`}
+          href={backHref ?? (isGuestView ? "/" : `/post-gig/${role}`)}
           className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
         >
           <span aria-hidden="true">&lt;</span>
@@ -543,8 +617,13 @@ export default function GigPreviewPage({
 }
 
 function ProviderCard({ gig, role }: { gig: GigPreviewData; role: string }) {
+  const href =
+    role === "guest"
+      ? "/get-started"
+      : `/provider-profile/${gig.providerId}?role=${role}`;
+
   return (
-    <Link href={`/provider-profile/${gig.providerId}?role=${role}`}>
+    <Link href={href}>
       <article className="cursor-pointer rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:border-[#1453c4]/45 hover:shadow-md lg:p-3.5">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-sm font-bold text-white ring-2 ring-[#2f66e7]/20">
