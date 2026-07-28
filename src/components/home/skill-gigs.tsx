@@ -190,7 +190,7 @@ export default function SkillGigsSection() {
               }}
               className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f4cbf]"
             >
-              View All Skills
+              Discover More Skills
               <span aria-hidden="true">&rarr;</span>
             </button>
           </div>
