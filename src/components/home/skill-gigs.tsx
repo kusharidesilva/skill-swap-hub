@@ -4,9 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { SVGProps } from "react";
 import ScrollReveal from "@/components/scroll-reveal";
+import ModalPortal from "@/components/ui/modal-portal";
+import GigPreviewPage from "@/components/gig-preview-page";
+import GuestAuthModal from "@/components/guest-auth-modal";
 import { db } from "@/lib/firebase";
 import { formatRatingLabel } from "@/lib/ratings";
 import { useAuth } from "@/context/AuthContext";
@@ -63,10 +66,12 @@ type GigRecord = {
 };
 
 export default function SkillGigsSection() {
+  const router = useRouter();
   const pathname = usePathname();
   const { userProfile } = useAuth();
   const [gigs, setGigs] = useState<LiveGig[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const isBuyerHome = pathname === "/home/buyer";
   const isProviderHome = pathname === "/home/provider";
@@ -173,13 +178,21 @@ export default function SkillGigsSection() {
                 Find skills offered by verified university students.
               </p>
             </div>
-            <Link
-              href={viewAllHref}
+            <button
+              type="button"
+              onClick={() => {
+                if (!userProfile) {
+                  setAuthModalOpen(true);
+                  return;
+                }
+
+                router.push(viewAllHref);
+              }}
               className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f4cbf]"
             >
               View All Skills
               <span aria-hidden="true">&rarr;</span>
-            </Link>
+            </button>
           </div>
         </ScrollReveal>
 
@@ -220,6 +233,12 @@ export default function SkillGigsSection() {
           </div>
         )}
       </div>
+      <GuestAuthModal
+        open={authModalOpen}
+        title="Sign in to explore all skills"
+        description="To browse the full skills marketplace, log in with your existing account or create a new one first."
+        onClose={() => setAuthModalOpen(false)}
+      />
     </section>
   );
 }
@@ -234,6 +253,8 @@ function GigCard({ gig }: { gig: LiveGig }) {
   const previewHref = requestRole
     ? `/gig-preview/${requestRole}?source=home&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}`
     : `/gig-preview?providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}`;
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const isFavorited = Boolean(
     userProfile?.favorites?.some(
       (fav) =>
@@ -246,7 +267,7 @@ function GigCard({ gig }: { gig: LiveGig }) {
 
   const handleToggleFavorite = async () => {
     if (!userProfile) {
-      window.location.href = "/get-started";
+      setAuthModalOpen(true);
       return;
     }
 
@@ -299,90 +320,141 @@ function GigCard({ gig }: { gig: LiveGig }) {
     }
   };
 
+  const openGuestAuth = () => setAuthModalOpen(true);
+
   return (
-    <article className="ssh-card flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
-      <div className="ssh-card-image relative h-40 bg-slate-100">
-        <Image
-          src={gig.image}
-          alt={gig.title}
-          fill
-          className="object-cover"
-          sizes="(min-width: 1024px) 320px, 100vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/45 via-slate-900/10 to-transparent" />
-        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-[#1453c4] shadow-sm">
-          {gig.category}
-        </span>
-        <div className="absolute right-3 top-3 flex flex-col items-end gap-2">
-          <button
-            type="button"
-            onClick={handleToggleFavorite}
-            aria-label={isFavorited ? "Remove this gig from favorites" : "Save this gig to favorites"}
-            className={`flex h-9 w-9 items-center justify-center rounded-full shadow-sm transition ${
-              isFavorited ? "bg-red-500 text-white" : "bg-white/95 text-slate-700 hover:bg-red-50 hover:text-red-600"
-            }`}
-          >
-            <HeartIcon className="h-4.5 w-4.5" filled={isFavorited} />
-          </button>
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
-            <StarIcon className="h-3.5 w-3.5 text-amber-400" />
-            {formatRatingLabel(gig.rating)}
+    <>
+      <article className="ssh-card flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
+        <div className="ssh-card-image relative h-40 bg-slate-100">
+          <Image
+            src={gig.image}
+            alt={gig.title}
+            fill
+            className="object-cover"
+            sizes="(min-width: 1024px) 320px, 100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/45 via-slate-900/10 to-transparent" />
+          <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-[#1453c4] shadow-sm">
+            {gig.category}
           </span>
-        </div>
-      </div>
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="line-clamp-2 text-[0.97rem] font-bold leading-6 text-slate-900">
-          {gig.title}
-        </h3>
-
-        <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#2f66e7] text-[10px] font-bold text-white ring-2 ring-white">
-            {gig.providerImage && gig.providerImage.startsWith("/") ? (
-              <Image
-                src={gig.providerImage}
-                alt={gig.providerName}
-                width={32}
-                height={32}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              gig.providerName.charAt(0).toUpperCase()
-            )}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-[13px] font-semibold leading-5 text-slate-700">{gig.providerName}</p>
-            <p className="truncate text-[12px] leading-4 text-slate-500">{gig.university} student</p>
-          </div>
-        </div>
-
-        <p className="mt-3 line-clamp-2 text-[12.5px] leading-5 text-slate-600">
-          {gig.summary}
-        </p>
-
-        <div className="mt-auto border-t border-slate-200 pt-3">
-          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
-            <span className="truncate">{gig.availability}</span>
-            <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-[#dff2f4] px-2 py-0.5 text-[10px] font-semibold leading-none text-teal-800">
-              {gig.serviceType}
+          <div className="absolute right-3 top-3 flex flex-col items-end gap-2">
+            <button
+              type="button"
+              onClick={handleToggleFavorite}
+              aria-label={isFavorited ? "Remove this gig from favorites" : "Save this gig to favorites"}
+              className={`flex h-9 w-9 items-center justify-center rounded-full shadow-sm transition ${
+                isFavorited ? "bg-red-500 text-white" : "bg-white/95 text-slate-700 hover:bg-red-50 hover:text-red-600"
+              }`}
+            >
+              <HeartIcon className="h-4.5 w-4.5" filled={isFavorited} />
+            </button>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
+              <StarIcon className="h-3.5 w-3.5 text-amber-400" />
+              {formatRatingLabel(gig.rating)}
             </span>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Link
-              href={previewHref}
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              View Gig
-            </Link>
-            <Link
-              href={previewHref}
-              className="ssh-primary-action inline-flex h-9 items-center justify-center rounded-lg bg-[#2f66e7] px-2 text-xs font-semibold text-white transition hover:bg-[#2557cf]"
-            >
-              Request Now
-            </Link>
+        </div>
+        <div className="flex flex-1 flex-col p-4">
+          <h3 className="line-clamp-2 text-[0.97rem] font-bold leading-6 text-slate-900">
+            {gig.title}
+          </h3>
+
+          <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+            <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#2f66e7] text-[10px] font-bold text-white ring-2 ring-white">
+              {gig.providerImage && gig.providerImage.startsWith("/") ? (
+                <Image
+                  src={gig.providerImage}
+                  alt={gig.providerName}
+                  width={32}
+                  height={32}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                gig.providerName.charAt(0).toUpperCase()
+              )}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-semibold leading-5 text-slate-700">{gig.providerName}</p>
+              <p className="truncate text-[12px] leading-4 text-slate-500">{gig.university} student</p>
+            </div>
+          </div>
+
+          <p className="mt-3 line-clamp-2 text-[12.5px] leading-5 text-slate-600">
+            {gig.summary}
+          </p>
+
+          <div className="mt-auto border-t border-slate-200 pt-3">
+            <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+              <span className="truncate">{gig.availability}</span>
+              <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-[#dff2f4] px-2 py-0.5 text-[10px] font-semibold leading-none text-teal-800">
+                {gig.serviceType}
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Link
+                href={previewHref}
+                onClick={(event) => {
+                  if (userProfile) return;
+
+                  event.preventDefault();
+                  setPreviewOpen(true);
+                }}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                View Gig
+              </Link>
+              <Link
+                href={previewHref}
+                onClick={(event) => {
+                  if (!userProfile) {
+                    event.preventDefault();
+                    setAuthModalOpen(true);
+                    return;
+                  }
+                }}
+                className="ssh-primary-action inline-flex h-9 items-center justify-center rounded-lg bg-[#2f66e7] px-2 text-xs font-semibold text-white transition hover:bg-[#2557cf]"
+              >
+                Request Now
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
-    </article>
+      </article>
+
+      {previewOpen ? (
+        <ModalPortal>
+          <div className="fixed inset-0 z-[80] bg-slate-950/50 backdrop-blur-md">
+            <div className="flex h-full w-full items-start justify-center overflow-y-auto px-4 py-5 sm:px-6 sm:py-8">
+              <div className="relative w-full max-w-6xl rounded-[28px] bg-[#f8faff] p-4 shadow-[0_28px_90px_rgba(15,23,42,0.24)] sm:p-5">
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(false)}
+                  aria-label="Close gig preview"
+                  className="absolute right-4 top-4 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
+                >
+                  <CloseIcon />
+                </button>
+                <GigPreviewPage
+                  role="guest"
+                  providerId={gig.providerId}
+                  gigId={gig.gigId}
+                  skillIndex={0}
+                  embedded
+                  onGuestAction={openGuestAuth}
+                />
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      ) : null}
+
+      <GuestAuthModal
+        open={authModalOpen}
+        title="Log in or create an account to continue"
+        description="If you already have a Skill Swap Hub account, log in to continue with this gig. If not, create a new account first."
+        onClose={() => setAuthModalOpen(false)}
+      />
+    </>
   );
 }
 
@@ -405,6 +477,24 @@ function HeartIcon({ className, filled = false }: { className?: string; filled?:
       aria-hidden="true"
     >
       <path d="M12 21s-6.4-4.1-9-8.1C1 9.8 2.4 6.2 5.8 5.6c2.1-.4 3.8.6 5 2.3.2.3.3.4.4.4s.2-.1.4-.4c1.2-1.7 2.9-2.7 5-2.3 3.4.6 4.8 4.2 2.8 7.3C18.4 16.9 12 21 12 21z" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
     </svg>
   );
 }

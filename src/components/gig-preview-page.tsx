@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { addDoc, collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
@@ -20,6 +20,8 @@ type GigPreviewPageProps = {
   gigId?: string;
   providerId?: string;
   skillIndex?: number;
+  embedded?: boolean;
+  onGuestAction?: () => void;
 };
 
 type ReviewData = {
@@ -105,6 +107,8 @@ export default function GigPreviewPage({
   gigId,
   providerId,
   skillIndex = 0,
+  embedded = false,
+  onGuestAction,
 }: GigPreviewPageProps) {
   const router = useRouter();
   const { userProfile, refreshProfile } = useAuth();
@@ -123,7 +127,10 @@ export default function GigPreviewPage({
 
   const handleToggleFavorite = async () => {
     if (!userProfile) {
-      window.location.href = "/get-started";
+      onGuestAction?.();
+      if (!onGuestAction) {
+        router.push("/get-started");
+      }
       return;
     }
 
@@ -377,6 +384,7 @@ export default function GigPreviewPage({
 
   const isOwnGig = userProfile && userProfile.uid === gig.providerId;
   const isGuestView = role === "guest";
+  const activeRole = isGuestView ? "buyer" : role;
   const editHref = !isGuestView ? `/edit-gig/${role}/gig-${skillIndex}` : "/get-started";
   const chatHref = !isGuestView
     ? `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(gig.providerId)}&subject=${encodeURIComponent(gig.title)}&gigId=${encodeURIComponent(gig.gigId)}&category=${encodeURIComponent(gig.category)}&price=${encodeURIComponent(String(gig.price || ""))}&providerName=${encodeURIComponent(gig.providerName)}`
@@ -384,7 +392,10 @@ export default function GigPreviewPage({
 
   const handleRequestNow = async () => {
     if (!userProfile) {
-      router.push("/get-started");
+      onGuestAction?.();
+      if (!onGuestAction) {
+        router.push("/get-started");
+      }
       return;
     }
 
@@ -495,11 +506,21 @@ export default function GigPreviewPage({
         await refreshProfile();
       }
 
-      router.push(`${scopedHref("/chats", role)}?chatId=${encodeURIComponent(chatId)}`);
+      router.push(`${scopedHref("/chats", activeRole)}?chatId=${encodeURIComponent(chatId)}`);
     } catch (error) {
       console.error("Error creating direct request:", error);
     } finally {
       setRequesting(false);
+    }
+  };
+
+  const handleMessageProvider = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (userProfile) return;
+
+    event.preventDefault();
+    onGuestAction?.();
+    if (!onGuestAction) {
+      router.push("/get-started");
     }
   };
 
@@ -514,15 +535,17 @@ export default function GigPreviewPage({
   return (
     <div className="pb-10">
       {/* Back navigation and gig breadcrumb */}
-      <div className="mb-3">
-        <Link
-          href={backHref ?? (isGuestView ? "/" : `/post-gig/${role}`)}
-          className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-        >
-          <span aria-hidden="true">&lt;</span>
-          Back
-        </Link>
-      </div>
+      {!embedded ? (
+        <div className="mb-3">
+          <Link
+            href={backHref ?? (isGuestView ? "/" : `/post-gig/${role}`)}
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            <span aria-hidden="true">&lt;</span>
+            Back
+          </Link>
+        </div>
+      ) : null}
 
       <p className="break-words text-[11px] font-semibold text-slate-500">
         {gig.category} <span className="px-1 text-slate-400">&gt;</span> {gig.skill}{" "}
@@ -609,6 +632,7 @@ export default function GigPreviewPage({
             editHref={editHref}
             requesting={requesting}
             onRequestNow={handleRequestNow}
+            onMessageProvider={handleMessageProvider}
           />
         </aside>
       </div>
@@ -658,6 +682,7 @@ function PackageCard({
   editHref,
   requesting,
   onRequestNow,
+  onMessageProvider,
 }: {
   gig: GigPreviewData;
   packageItems: string[];
@@ -666,6 +691,7 @@ function PackageCard({
   editHref: string;
   requesting: boolean;
   onRequestNow: () => void;
+  onMessageProvider: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   return (
     <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -711,6 +737,7 @@ function PackageCard({
             </button>
             <Link
               href={chatHref}
+              onClick={onMessageProvider}
               className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               <MailIcon className="h-4 w-4" />

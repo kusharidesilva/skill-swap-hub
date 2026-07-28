@@ -68,7 +68,7 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { remember: false },
+    defaultValues: { remember: false }, 
   });
 
   const onSubmit = async (data: LoginFormValues) => {

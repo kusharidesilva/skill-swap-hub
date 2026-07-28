@@ -7,9 +7,6 @@ import { useAuth } from "@/context/AuthContext";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-const VERIFICATION_SEEN_KEY = "admin-verifications-seen-at";
-const REPORTS_SEEN_KEY = "admin-reports-seen-at";
-
 type NavItem = {
   label: string;
   href: string;
@@ -39,16 +36,17 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { userProfile, loading } = useAuth();
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const notificationMenuRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
   const [pendingReportCount, setPendingReportCount] = useState(0);
-  const [verificationSeenAt, setVerificationSeenAt] = useState(0);
-  const [reportsSeenAt, setReportsSeenAt] = useState(0);
   const title = pageTitles[pathname] ?? "Dashboard";
   const isAdmin = userProfile?.role === "admin";
   const isStandaloneAdminAuthPage =
     pathname === "/admin/login" || pathname === "/admin/sign-out";
+  const totalPendingAdminItems = pendingVerificationCount + pendingReportCount;
 
   useEffect(() => {
     if (isStandaloneAdminAuthPage) return;
@@ -66,39 +64,20 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   }, [isStandaloneAdminAuthPage, loading, router, userProfile]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    setVerificationSeenAt(readSeenAt(VERIFICATION_SEEN_KEY));
-    setReportsSeenAt(readSeenAt(REPORTS_SEEN_KEY));
-  }, []);
-
-  useEffect(() => {
     // Close the account menu when the admin clicks anywhere outside it.
     function handleClickOutside(event: MouseEvent) {
       if (!menuRef.current?.contains(event.target as Node)) {
         setMenuOpen(false);
+      }
+
+      if (!notificationMenuRef.current?.contains(event.target as Node)) {
+        setNotificationMenuOpen(false);
       }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    if (pathname.startsWith("/admin/verifications")) {
-      const seenAt = Date.now();
-      setVerificationSeenAt(seenAt);
-      writeSeenAt(VERIFICATION_SEEN_KEY, seenAt);
-    }
-
-    if (pathname.startsWith("/admin/issue-resolution")) {
-      const seenAt = Date.now();
-      setReportsSeenAt(seenAt);
-      writeSeenAt(REPORTS_SEEN_KEY, seenAt);
-    }
-  }, [pathname]);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -111,10 +90,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         setPendingVerificationCount(
           snapshot.docs.filter((docSnap) => {
             const data = docSnap.data();
-            return (
-              data.status === "pending" &&
-              toMillis(data.submittedAt) > verificationSeenAt
-            );
+            return data.status === "pending";
           }).length,
         );
       },
@@ -129,10 +105,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         setPendingReportCount(
           snapshot.docs.filter((docSnap) => {
             const data = docSnap.data();
-            return (
-              normalizeAdminStatus(data.status || "Pending") === "pending" &&
-              toMillis(data.createdAt) > reportsSeenAt
-            );
+            return normalizeAdminStatus(data.status || "Pending") === "pending";
           }).length,
         );
       },
@@ -145,7 +118,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       unsubscribeVerifications();
       unsubscribeReports();
     };
-  }, [isAdmin, reportsSeenAt, verificationSeenAt]);
+  }, [isAdmin]);
 
   if (isStandaloneAdminAuthPage) {
     return <>{children}</>;
@@ -282,53 +255,119 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             </button>
             <h2 className="text-[25px] font-medium text-slate-900">{title}</h2>
           </div>
-          <div ref={menuRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setMenuOpen((value) => !value)}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              className="flex h-12 w-12 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-slate-200 text-slate-900 transition hover:border-slate-300 hover:text-slate-700"
-            >
-              {userProfile.profileImageUrl ? (
-                <img
-                  src={userProfile.profileImageUrl}
-                  alt={userProfile.name || "Admin profile"}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <img
-                  src="/img/Skill Swap Hub Logo icon.png"
-                  alt="Skill Swap Hub logo"
-                  className="h-full w-full p-1 object-contain"
-                />
-              )}
-            </button>
+          <div className="flex items-center gap-3">
+            <div ref={notificationMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setNotificationMenuOpen((value) => !value)}
+                aria-haspopup="menu"
+                aria-expanded={notificationMenuOpen}
+                aria-label="Open admin notifications"
+                className={`relative inline-flex h-12 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition ${
+                  totalPendingAdminItems > 0
+                    ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+              >
+                <BellIcon />
+                <span className="hidden sm:inline">
+                  {totalPendingAdminItems > 0
+                    ? `${totalPendingAdminItems} pending`
+                    : "No alerts"}
+                </span>
+                {totalPendingAdminItems > 0 ? (
+                  <span className="absolute -right-1 -top-1 inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                    {totalPendingAdminItems}
+                  </span>
+                ) : null}
+              </button>
 
-            {menuOpen ? (
-              <div className="absolute right-0 top-14 z-20 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.12)]">
-                <Link
-                  href="/admin/settings"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-                    <AccountIcon />
-                  </span>
-                  Account
-                </Link>
-                <Link
-                  href="/admin/sign-out"
-                  onClick={() => setMenuOpen(false)}
-                  className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-                    <LogoutArrowIcon />
-                  </span>
-                  Sign Out
-                </Link>
-              </div>
-            ) : null}
+              {notificationMenuOpen ? (
+                <div className="absolute right-0 top-14 z-20 w-80 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_20px_45px_rgba(15,23,42,0.12)]">
+                  <div className="border-b border-slate-100 px-2 pb-3">
+                    <p className="text-sm font-semibold text-slate-900">Admin notifications</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Pending items stay here until they are reviewed.
+                    </p>
+                  </div>
+                  <div className="space-y-2 px-1 pt-3">
+                    <NotificationLink
+                      href="/admin/verifications"
+                      title="Student provider proofs"
+                      description={
+                        pendingVerificationCount > 0
+                          ? `${pendingVerificationCount} verification request${pendingVerificationCount === 1 ? "" : "s"} waiting for review`
+                          : "No pending verification requests"
+                      }
+                      count={pendingVerificationCount}
+                      tone="blue"
+                      onClick={() => setNotificationMenuOpen(false)}
+                    />
+                    <NotificationLink
+                      href="/admin/issue-resolution"
+                      title="Reported issues"
+                      description={
+                        pendingReportCount > 0
+                          ? `${pendingReportCount} report${pendingReportCount === 1 ? "" : "s"} still need action`
+                          : "No pending reports"
+                      }
+                      count={pendingReportCount}
+                      tone="red"
+                      onClick={() => setNotificationMenuOpen(false)}
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div ref={menuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((value) => !value)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                className="flex h-12 w-12 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-slate-200 text-slate-900 transition hover:border-slate-300 hover:text-slate-700"
+              >
+                {userProfile.profileImageUrl ? (
+                  <img
+                    src={userProfile.profileImageUrl}
+                    alt={userProfile.name || "Admin profile"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <img
+                    src="/img/Skill Swap Hub Logo icon.png"
+                    alt="Skill Swap Hub logo"
+                    className="h-full w-full p-1 object-contain"
+                  />
+                )}
+              </button>
+
+              {menuOpen ? (
+                <div className="absolute right-0 top-14 z-20 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.12)]">
+                  <Link
+                    href="/admin/settings"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                      <AccountIcon />
+                    </span>
+                    Account
+                  </Link>
+                  <Link
+                    href="/admin/sign-out"
+                    onClick={() => setMenuOpen(false)}
+                    className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                      <LogoutArrowIcon />
+                    </span>
+                    Sign Out
+                  </Link>
+                </div>
+              ) : null}
+            </div>
           </div>
         </header>
 
@@ -364,36 +403,48 @@ function normalizeAdminStatus(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, "_");
 }
 
-function toMillis(value: unknown) {
-  if (!value) return 0;
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === "number") return value;
-  if (typeof value === "string") {
-    const parsed = new Date(value).getTime();
-    return Number.isNaN(parsed) ? 0 : parsed;
-  }
-  if (typeof value === "object") {
-    const timestampLike = value as { toMillis?: () => number; toDate?: () => Date };
-    if (typeof timestampLike.toMillis === "function") {
-      return timestampLike.toMillis();
-    }
-    if (typeof timestampLike.toDate === "function") {
-      return timestampLike.toDate().getTime();
-    }
-  }
-  return 0;
-}
+function NotificationLink({
+  href,
+  title,
+  description,
+  count,
+  tone,
+  onClick,
+}: {
+  href: string;
+  title: string;
+  description: string;
+  count: number;
+  tone: "blue" | "red";
+  onClick: () => void;
+}) {
+  const toneClasses =
+    tone === "blue"
+      ? "bg-blue-50 text-blue-700"
+      : "bg-red-50 text-red-600";
 
-function readSeenAt(key: string) {
-  if (typeof window === "undefined") return 0;
-  const raw = window.localStorage.getItem(key);
-  const value = raw ? Number(raw) : 0;
-  return Number.isFinite(value) ? value : 0;
-}
-
-function writeSeenAt(key: string, value: number) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, String(value));
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className="flex items-start gap-3 rounded-2xl px-3 py-3 transition hover:bg-slate-50"
+    >
+      <span
+        className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${toneClasses}`}
+      >
+        {tone === "blue" ? <ShieldIcon /> : <TriangleIcon />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-slate-900">{title}</span>
+        <span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span>
+      </span>
+      {count > 0 ? (
+        <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-bold text-white">
+          {count}
+        </span>
+      ) : null}
+    </Link>
+  );
 }
 
 function SettingsIcon() {
@@ -410,6 +461,16 @@ function MenuIcon() {
       <path d="M4 7h16" />
       <path d="M4 12h16" />
       <path d="M4 17h16" />
+    </svg>
+  );
+}
+
+function BellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 17H9" />
+      <path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16z" />
+      <path d="M10 19a2 2 0 0 0 4 0" />
     </svg>
   );
 }

@@ -5,6 +5,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import GuestAuthModal from "@/components/guest-auth-modal";
 import { dashboardHref, homeHref, scopedHref, type SiteRole } from "@/lib/role-routes";
 
 type IconType = (props: SVGProps<SVGSVGElement>) => ReactElement;
@@ -26,19 +27,16 @@ type HeroSectionProps = {
 export default function HeroSection({ role = "guest" }: HeroSectionProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const exploreHref = `${homeHref(role)}#explore-skills`;
   const primaryHref = role === "guest" ? "/get-started" : dashboardHref(role);
   const primaryLabel = role === "guest" ? "Get Started" : "Go to Dashboard";
-  const searchResultsHref =
-    role === "guest"
-      ? "/get-started"
-      : `${scopedHref("/find-services", role)}?query=${encodeURIComponent(searchQuery.trim())}`;
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (role === "guest") {
-      router.push("/get-started");
+      setAuthModalOpen(true);
       return;
     }
 
@@ -90,6 +88,11 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
             </Link>
             <Link
               href={exploreHref}
+              onClick={(event) => {
+                if (role !== "guest") return;
+                event.preventDefault();
+                setAuthModalOpen(true);
+              }}
               className="ssh-secondary-action rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900" 
             >
               Explore Skills
@@ -110,21 +113,12 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
                 placeholder="Search for skills or services"
               />
             </div>
-            {role === "guest" ? (
-              <Link
-                href={searchResultsHref}
-                className="ssh-primary-action rounded-lg bg-[#2b62e6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
-              >
-                Search Skills
-              </Link>
-            ) : (
-              <button
-                type="submit"
-                className="ssh-primary-action rounded-lg bg-[#2b62e6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
-              >
-                Search Skills
-              </button>
-            )}
+            <button
+              type="submit"
+              className="ssh-primary-action rounded-lg bg-[#2b62e6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+            >
+              Search Skills
+            </button>
           </form>
         </div>
         <div className="ssh-hero-art relative flex items-end justify-center lg:justify-end -mb-5 lg:-mb-10 self-end lg:translate-x-16">
@@ -139,6 +133,12 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
           />
         </div>
       </div>
+      <GuestAuthModal
+        open={authModalOpen}
+        title="Sign in to continue"
+        description="To search skills or continue exploring the marketplace, log in with your account or create a new one first."
+        onClose={() => setAuthModalOpen(false)}
+      />
     </section>
   );
 }
