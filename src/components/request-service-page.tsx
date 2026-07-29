@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -96,19 +96,38 @@ export default function RequestServiceContent({
   }
 
   return (
-    <div className="flex w-full flex-col gap-8 pb-10">
-      {/* Page introduction */}
-      <header>
-        <h1 className="text-xl font-bold tracking-tight text-slate-900">
-          Request a Service
-        </h1>
-        <p className="mt-1 text-xs text-slate-500">
-          Post a public request so verified providers can respond.
-        </p>
-      </header>
+    <div className="flex w-full flex-col gap-6 pb-10">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(238,244,255,0.98),rgba(255,255,255,0.94),rgba(232,245,255,0.98))] shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+        <div className="grid gap-6 px-6 py-6 sm:px-8 sm:py-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-end">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700 shadow-sm">
+              <SparkIcon className="h-3.5 w-3.5" />
+              Buyer Workspace
+            </div>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-[2.2rem]">
+              Request a service with a cleaner, faster workflow
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-[15px]">
+              Post a public request, share your budget and deadline, and keep recent requests neatly organized in one place so providers can respond quickly.
+            </p>
+          </div>
 
-      {/* Request form and recent request timeline */}
-      <section className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <InfoTile
+              icon={<LayersIcon className="h-4 w-4" />}
+              label="Structured form"
+              value="Category, date, budget, and notes are grouped for quick scanning."
+            />
+            <InfoTile
+              icon={<PulseIcon className="h-4 w-4" />}
+              label="Recent activity"
+              value="Track the latest provider updates and review actions from one panel."
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_380px]">
         <RequestForm
           buyerProfile={userProfile}
           providerId={targetProviderId}
@@ -198,7 +217,6 @@ function RequestForm({
 
     setConfirmModalOpen(false);
     setFeedback(null);
-    setFeedback(null);
     setIsSubmitting(true);
 
     try {
@@ -235,19 +253,17 @@ function RequestForm({
         updatedAt: serverTimestamp(),
       });
 
-      // Direct providers get a notification after the request is saved successfully.
       if (providerId && providerId !== "general") {
         await createNotification({
           userId: providerId,
           title: "New Service Request",
           description: `${buyerProfile.name} requested "${title}"`,
           type: "request",
-          icon: "◆",
+          icon: "♦",
           tone: "blue",
         });
       }
 
-      // A provider making their first buyer request now needs access to both modes.
       if (buyerProfile.role === "provider") {
         await updateDoc(doc(db, "users", buyerProfile.uid), { role: "both" });
         await refreshProfile();
@@ -275,110 +291,141 @@ function RequestForm({
   };
 
   return (
-    // The form owns validation and creates the request document.
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <form
-        onSubmit={handleSubmit(onSubmit, onInvalidSubmit)}
-        noValidate
-        className="grid gap-4"
-      >
-        {feedback && (
-          <div
-            className={`rounded-lg px-4 py-3 text-sm font-semibold border ${
-              feedback.type === "success"
-                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                : "bg-red-50 text-red-800 border-red-200"
-            }`}
-          >
-            {feedback.msg}
-          </div>
-        )}
-
-        <SelectField
-          label="Service Category *"
-          value={selectedCategory}
-          onChange={(nextValue) =>
-            setValue("category", nextValue, {
-              shouldDirty: true,
-              shouldValidate: true,
-            })
-          }
-          options={serviceCategories}
-          placeholder="Select a service category"
-          className="text-sm"
-          error={errors.category?.message}
-        />
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="grid min-w-0 gap-1.5">
-            <span className="text-xs font-semibold text-slate-600">
-              Required Date <span className="text-red-500">*</span>
-            </span>
-            <input
-              type="date"
-              {...register("requiredDate")}
-              aria-invalid={Boolean(errors.requiredDate)}
-              className={getFieldClassName(Boolean(errors.requiredDate))}
-            />
-            {errors.requiredDate && (
-              <p className="text-xs font-medium text-red-600">
-                {errors.requiredDate.message}
-              </p>
-            )}
-          </label>
-
-          <label className="grid min-w-0 gap-1.5">
-            <span className="text-xs font-semibold text-slate-600">
-              Budget Price (Optional, LKR)
-            </span>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              placeholder="e.g., 5000"
-              {...register("budgetPrice")}
-              aria-invalid={Boolean(errors.budgetPrice)}
-              className={getFieldClassName(Boolean(errors.budgetPrice))}
-            />
-          </label>
-        </div>
-
-        <label className="grid min-w-0 gap-1.5">
-          <span className="text-xs font-semibold text-slate-600">
-            Request Note <span className="text-red-500">*</span>
-          </span>
-          <textarea
-            rows={5}
-            {...register("requestNote")}
-            placeholder="Describe what service you need, the event/task details, and any deadline."
-            aria-invalid={Boolean(errors.requestNote)}
-            className={`w-full resize-none rounded-lg border px-3 py-2 text-sm leading-relaxed text-slate-700 outline-none transition placeholder:text-slate-400 focus:ring-4 ${
-              errors.requestNote
-                ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100"
-                : "border-slate-300 bg-[#f7f8ff] focus:border-[#2f66e7] focus:ring-blue-100"
-            }`}
-          />
-          <p className="text-[11px] font-medium text-slate-500">
-            Minimum 10 characters.
-          </p>
-          {errors.requestNote && (
-            <p className="text-xs font-medium text-red-600">
-              {errors.requestNote.message}
+    <section className="overflow-hidden rounded-[26px] border border-slate-200/80 bg-white shadow-[0_18px_56px_rgba(15,23,42,0.06)]">
+      <div className="border-b border-slate-200/80 bg-[linear-gradient(180deg,#ffffff,rgba(245,248,255,0.96))] px-5 py-5 sm:px-7">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-slate-950">
+              New Service Request
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Fill in the details below. Only the interface has changed, your request flow stays the same.
             </p>
-          )}
-        </label>
-
-        {/* Submit action */}
-        <div className="border-t border-slate-200 pt-4">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#2f66e7] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2557cf] disabled:opacity-60"
-          >
-            {isSubmitting ? "Submitting..." : "Submit Request"}
-          </button>
+          </div>
+          <div className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
+            <ShieldIcon className="h-3.5 w-3.5 text-blue-600" />
+            Visible to verified providers
+          </div>
         </div>
-      </form>
+      </div>
+
+      <div className="px-5 py-5 sm:px-7 sm:py-6">
+        <form
+          onSubmit={handleSubmit(onSubmit, onInvalidSubmit)}
+          noValidate
+          className="grid gap-5"
+        >
+          {feedback && (
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm font-semibold shadow-sm ${
+                feedback.type === "success"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : "border-red-200 bg-red-50 text-red-800"
+              }`}
+            >
+              {feedback.msg}
+            </div>
+          )}
+
+          <div className="grid gap-5 rounded-[24px] border border-slate-200/80 bg-slate-50/55 p-4 sm:p-5">
+            <div className="grid gap-5">
+              <SelectField
+                label="Service Category *"
+                value={selectedCategory}
+                onChange={(nextValue) =>
+                  setValue("category", nextValue, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }
+                options={serviceCategories}
+                placeholder="Select a service category"
+                className="min-h-12 rounded-xl border-slate-200 bg-white px-4 text-sm shadow-sm"
+                labelClassName="text-[12px] uppercase tracking-[0.14em] text-slate-500"
+                error={errors.category?.message}
+              />
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <label className="grid min-w-0 gap-2">
+                  <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Required Date <span className="text-red-500">*</span>
+                  </span>
+                  <input
+                    type="date"
+                    {...register("requiredDate")}
+                    aria-invalid={Boolean(errors.requiredDate)}
+                    className={getFieldClassName(Boolean(errors.requiredDate))}
+                  />
+                  {errors.requiredDate && (
+                    <p className="text-xs font-medium text-red-600">
+                      {errors.requiredDate.message}
+                    </p>
+                  )}
+                </label>
+
+                <label className="grid min-w-0 gap-2">
+                  <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Budget Price (Optional, LKR)
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="e.g., 5000"
+                    {...register("budgetPrice")}
+                    aria-invalid={Boolean(errors.budgetPrice)}
+                    className={getFieldClassName(Boolean(errors.budgetPrice))}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <label className="grid min-w-0 gap-2">
+              <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                Request Note <span className="text-red-500">*</span>
+              </span>
+              <textarea
+                rows={6}
+                {...register("requestNote")}
+                placeholder="Describe what service you need, the event/task details, and any deadline."
+                aria-invalid={Boolean(errors.requestNote)}
+                className={`w-full resize-none rounded-2xl border px-4 py-3 text-sm leading-7 text-slate-700 outline-none transition placeholder:text-slate-400 focus:ring-4 ${
+                  errors.requestNote
+                    ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100"
+                    : "border-slate-200 bg-white shadow-sm focus:border-[#2f66e7] focus:ring-blue-100"
+                }`}
+              />
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-slate-500">
+                <p>Minimum 10 characters.</p>
+                <p>Tip: include the scope, expected output, and deadline.</p>
+              </div>
+              {errors.requestNote && (
+                <p className="text-xs font-medium text-red-600">
+                  {errors.requestNote.message}
+                </p>
+              )}
+            </label>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-[22px] border border-slate-200/80 bg-slate-50/55 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">
+                Ready to publish?
+              </p>
+              <p className="mt-1 text-xs leading-6 text-slate-500">
+                Providers will be able to review the request after you submit it.
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#2f66e7] px-6 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(47,102,231,0.28)] transition hover:bg-[#2557cf] disabled:opacity-60 sm:w-auto sm:min-w-[220px]"
+            >
+              {isSubmitting ? "Submitting..." : "Submit Request"}
+            </button>
+          </div>
+        </form>
+      </div>
 
       {invalidModalOpen ? (
         <FormActionModal
@@ -508,19 +555,14 @@ function RecentRequestsPanel({
 }) {
   const [requests, setRequests] = useState<RequestData[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Track the request whose review form is currently open.
   const [activeReviewId, setActiveReviewId] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
-
-  // Revision notes are kept separate from review feedback.
   const [activeRevisionId, setActiveRevisionId] = useState<string | null>(null);
   const [revisionText, setRevisionText] = useState("");
 
   const RECENT_REQUEST_LIMIT = 1;
 
-  // The buyer sees provider status changes as soon as Firestore updates.
   useEffect(() => {
     const q = query(
       collection(db, "requests"),
@@ -534,7 +576,6 @@ function RecentRequestsPanel({
         snapshot.forEach((docSnap) => {
           docs.push({ id: docSnap.id, ...docSnap.data() } as RequestData);
         });
-        // Sort here because a new server timestamp can briefly be null.
         docs.sort((a, b) => b.id.localeCompare(a.id));
         setRequests(docs);
         setLoading(false);
@@ -563,7 +604,6 @@ function RecentRequestsPanel({
   const allRequestsHref =
     role === "buyer" ? "/request-service/all" : `/request-service/${role}/all`;
 
-  // Accepting delivered work completes the swap and stores the buyer's review.
   const handleAcceptComplete = async (reqId: string) => {
     try {
       const reqObj = requests.find((r) => r.id === reqId);
@@ -596,7 +636,6 @@ function RecentRequestsPanel({
     }
   };
 
-  // A revision returns the request to the provider with clear notes.
   const handleRequestRevision = async (reqId: string) => {
     if (!revisionText.trim()) return;
     try {
@@ -630,54 +669,53 @@ function RecentRequestsPanel({
       case "pending":
         return {
           label: "Pending Match",
-          style: "bg-amber-100 text-amber-800 border-amber-200",
+          style: "border-amber-200 bg-amber-100 text-amber-800",
         };
       case "working":
         return {
           label: "In Progress / Working",
-          style: "bg-blue-100 text-blue-800 border-blue-200",
+          style: "border-blue-200 bg-blue-100 text-blue-800",
         };
       case "done":
         return {
           label: "Marked Done by Provider",
-          style:
-            "bg-purple-100 text-purple-800 border-purple-200 border-2 animate-pulse",
+          style: "border-purple-200 bg-purple-100 text-purple-800",
         };
       case "review_pending":
         return {
           label: "Pending Provider Review",
-          style: "bg-amber-100 text-amber-800 border-amber-200",
+          style: "border-amber-200 bg-amber-100 text-amber-800",
         };
       case "revision":
         return {
           label: "Revision Sent",
-          style: "bg-rose-100 text-rose-800 border-rose-200",
+          style: "border-rose-200 bg-rose-100 text-rose-800",
         };
       case "completed":
         return {
           label: "Completed",
-          style: "bg-emerald-100 text-emerald-800 border-emerald-200",
+          style: "border-emerald-200 bg-emerald-100 text-emerald-800",
         };
       case "rejected":
         return {
           label: "Declined",
-          style: "bg-slate-100 text-slate-600 border-slate-200",
+          style: "border-slate-200 bg-slate-100 text-slate-600",
         };
       default:
         return {
           label: status,
-          style: "bg-slate-100 text-slate-600 border-slate-200",
+          style: "border-slate-200 bg-slate-100 text-slate-600",
         };
     }
   };
 
   if (loading) {
     return (
-      <aside className="min-w-0">
-        <h2 className="text-2xl font-semibold text-slate-900">
+      <aside className="min-w-0 rounded-[26px] border border-slate-200/80 bg-white p-5 shadow-[0_18px_56px_rgba(15,23,42,0.06)] 2xl:sticky 2xl:top-6">
+        <h2 className="text-xl font-bold tracking-tight text-slate-950">
           Recent Requests
         </h2>
-        <div className="mt-4 flex items-center justify-center p-6 text-sm text-slate-500">
+        <div className="mt-5 flex min-h-[220px] items-center justify-center rounded-[20px] border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
           Loading requests...
         </div>
       </aside>
@@ -685,224 +723,260 @@ function RecentRequestsPanel({
   }
 
   return (
-    <aside className="min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-semibold text-slate-900">
-          Recent Requests
-        </h2>
+    <aside className="min-w-0 rounded-[26px] border border-slate-200/80 bg-white p-5 shadow-[0_18px_56px_rgba(15,23,42,0.06)] 2xl:sticky 2xl:top-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200/80 pb-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-slate-950">
+            Recent Requests
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Keep track of provider progress and next actions.
+          </p>
+        </div>
+        {requests.length > 0 && (
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-3 py-2 text-right">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-700">
+              Active total
+            </p>
+            <p className="text-lg font-bold text-blue-900">{requests.length}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+          Latest request status
+        </p>
         {requests.length > 0 && (
           <Link
             href={allRequestsHref}
-            className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-xs font-bold text-[#2f66e7] shadow-sm transition-colors hover:bg-slate-50"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-xs font-bold text-[#2f66e7] shadow-sm transition-colors hover:bg-white"
           >
             View All Requests ({requests.length}) →
           </Link>
         )}
       </div>
 
-      <div className="scrollbar-none mt-4 grid gap-4 max-h-[700px] overflow-y-auto pr-1">
+      <div className="scrollbar-none mt-4 grid max-h-[720px] gap-4 overflow-y-auto pr-1">
         {displayedRequests.length > 0 ? (
           displayedRequests.map((item) => {
             const badge = getStatusBadge(item.status);
             return (
               <article
                 key={item.id}
-                className={`rounded-2xl border bg-white p-5 shadow-[0_10px_26px_rgba(15,23,42,0.03)] border-slate-200/80`}
+                className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff,rgba(248,250,255,0.96))] shadow-[0_14px_36px_rgba(15,23,42,0.06)]"
               >
-                <div className="flex flex-col gap-2 border-b border-slate-100 pb-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-full bg-blue-50 border border-blue-100 px-3 py-0.5 text-xs font-semibold text-blue-700">
-                      {item.category}
-                    </span>
-                    <span className="text-[11px] font-medium text-slate-400">
-                      To: {item.providerName.split(" ")[0]}
-                    </span>
+                <div className="border-b border-slate-200/70 px-5 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="inline-flex max-w-full items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                        <span className="truncate">{item.category}</span>
+                      </span>
+                      <h3 className="mt-3 text-xl font-bold leading-tight text-slate-950">
+                        {item.title}
+                      </h3>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-right shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                        Provider
+                      </p>
+                      <p className="text-xs font-semibold text-slate-600">
+                        {item.providerName.split(" ")[0]}
+                      </p>
+                    </div>
                   </div>
 
-                  <span
-                    className={`inline-block self-start rounded-lg border px-3 py-1 text-xs font-semibold ${badge.style}`}
-                  >
-                    {badge.label}
-                  </span>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${badge.style}`}
+                    >
+                      {badge.label}
+                    </span>
+                    {item.budget ? (
+                      <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                        {item.budget}
+                      </span>
+                    ) : null}
+                    {item.time ? (
+                      <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                        Due: {item.time}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
-                <h3 className="mt-3 text-lg font-bold leading-7 text-slate-900">
-                  {item.title}
-                </h3>
+                <div className="px-5 py-4">
+                  <p className="text-sm leading-7 text-slate-600 line-clamp-4">
+                    {item.description}
+                  </p>
 
-                <p className="mt-2 text-sm leading-6 text-slate-600 line-clamp-3">
-                  {item.description}
-                </p>
+                  {item.status === "revision" && item.revisionNotes && (
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs leading-6 text-rose-700">
+                      <strong className="block font-bold">
+                        Your Revision Notes
+                      </strong>
+                      <span>&ldquo;{item.revisionNotes}&rdquo;</span>
+                    </div>
+                  )}
 
-                {item.status === "revision" && item.revisionNotes && (
-                  <div className="mt-3 rounded-lg bg-rose-50 border border-rose-100 p-2.5 text-xs text-rose-700">
-                    <strong className="block font-bold">
-                      Your Revision Notes:
-                    </strong>
-                    &ldquo;{item.revisionNotes}&rdquo;
-                  </div>
-                )}
+                  {item.status === "done" &&
+                    !activeReviewId &&
+                    !activeRevisionId && (
+                      <div className="mt-5 rounded-[20px] border border-emerald-100 bg-emerald-50/60 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                          Action required
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                          Provider finished the work. Review it and choose the next step.
+                        </p>
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                          <button
+                            onClick={() => setActiveReviewId(item.id)}
+                            className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
+                          >
+                            ✓ Accept & Complete
+                          </button>
+                          <button
+                            onClick={() => setActiveRevisionId(item.id)}
+                            className="rounded-xl border border-red-300 bg-white px-4 py-3 text-sm font-bold text-red-700 transition hover:bg-red-50"
+                          >
+                            Request Revision
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
-                {/* Buyer decision for delivered work */}
-                {item.status === "done" &&
-                  !activeReviewId &&
-                  !activeRevisionId && (
-                    <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3">
-                      <p className="text-xs font-semibold text-slate-500">
-                        Provider finished! Check the work:
+                  {activeReviewId === item.id && (
+                    <div className="mt-5 rounded-[20px] border border-amber-200 bg-amber-50/50 p-4 transition">
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-800">
+                        Rate Provider Session
                       </p>
-                      <div className="flex gap-2">
+                      <div className="mt-2 flex gap-1.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            type="button"
+                            key={star}
+                            onClick={() => setReviewRating(star)}
+                            className={`text-2xl transition ${
+                              reviewRating >= star
+                                ? "scale-110 text-amber-500"
+                                : "text-slate-300"
+                            }`}
+                          >
+                            ★
+                          </button>
+                        ))}
+                      </div>
+                      <textarea
+                        placeholder="How did they do? Share your helpful review..."
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        className="mt-3 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                        rows={3}
+                      />
+                      <div className="mt-3 flex justify-end gap-2">
                         <button
-                          onClick={() => setActiveReviewId(item.id)}
-                          className="flex-1 rounded-lg bg-emerald-600 py-2 text-xs font-bold text-white hover:bg-emerald-700"
+                          onClick={() => setActiveReviewId(null)}
+                          className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500"
                         >
-                          ✓ Accept & Complete
+                          Cancel
                         </button>
                         <button
-                          onClick={() => setActiveRevisionId(item.id)}
-                          className="flex-1 rounded-lg border border-red-300 py-2 text-xs font-bold text-red-700 hover:bg-red-50"
+                          onClick={() => handleAcceptComplete(item.id)}
+                          className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
                         >
-                          ⚠️ Has Errors / Revise
+                          Submit & Complete
                         </button>
                       </div>
                     </div>
                   )}
 
-                {/* Completion review form */}
-                {activeReviewId === item.id && (
-                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/40 p-3.5 transition">
-                    <p className="text-xs font-bold text-slate-800">
-                      Rate Provider Session:
-                    </p>
-                    <div className="flex gap-1.5 mt-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
+                  {activeRevisionId === item.id && (
+                    <div className="mt-5 rounded-[20px] border border-red-200 bg-red-50/50 p-4 transition">
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-red-700">
+                        Describe the changes needed
+                      </p>
+                      <textarea
+                        placeholder="List what needs to be fixed or updated by the provider..."
+                        value={revisionText}
+                        onChange={(e) => setRevisionText(e.target.value)}
+                        className="mt-3 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100"
+                        rows={3}
+                      />
+                      <div className="mt-3 flex justify-end gap-2">
                         <button
-                          type="button"
-                          key={star}
-                          onClick={() => setReviewRating(star)}
-                          className={`text-2xl transition ${
-                            reviewRating >= star
-                              ? "text-amber-500 scale-110"
-                              : "text-slate-300"
-                          }`}
+                          onClick={() => setActiveRevisionId(null)}
+                          className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500"
                         >
-                          ★
+                          Cancel
                         </button>
-                      ))}
-                    </div>
-                    <textarea
-                      placeholder="How did they do? Share your helpful review..."
-                      value={reviewComment}
-                      onChange={(e) => setReviewComment(e.target.value)}
-                      className="mt-2.5 w-full rounded-md border border-slate-300 bg-white p-2 text-xs text-slate-700 outline-none"
-                      rows={2}
-                    />
-                    <div className="mt-2 flex gap-2 justify-end">
-                      <button
-                        onClick={() => setActiveReviewId(null)}
-                        className="rounded px-3 py-1.5 text-[10px] font-semibold text-slate-500"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => handleAcceptComplete(item.id)}
-                        className="rounded bg-emerald-600 px-3.5 py-1.5 text-[10px] font-bold text-white hover:bg-emerald-700 shadow-sm"
-                      >
-                        Submit & Complete
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Revision request form */}
-                {activeRevisionId === item.id && (
-                  <div className="mt-4 rounded-xl border border-red-200 bg-red-50/40 p-3.5 transition">
-                    <p className="text-xs font-bold text-slate-800">
-                      Describe the changes needed:
-                    </p>
-                    <textarea
-                      placeholder="List what needs to be fixed or updated by the provider..."
-                      value={revisionText}
-                      onChange={(e) => setRevisionText(e.target.value)}
-                      className="mt-2 w-full rounded-md border border-slate-300 bg-white p-2 text-xs text-slate-700 outline-none"
-                      rows={2}
-                    />
-                    <div className="mt-2 flex gap-2 justify-end">
-                      <button
-                        onClick={() => setActiveRevisionId(null)}
-                        className="rounded px-3 py-1.5 text-[10px] font-semibold text-slate-500"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => handleRequestRevision(item.id)}
-                        disabled={!revisionText.trim()}
-                        className="rounded bg-red-600 px-3.5 py-1.5 text-[10px] font-bold text-white hover:bg-red-700 shadow-sm disabled:opacity-50"
-                      >
-                        Send to Provider
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Completed swap details */}
-                {(item.status === "completed" ||
-                  item.status === "review_pending") && (
-                  <div className="mt-3 space-y-2">
-                    {item.review && (
-                      <div className="rounded-lg bg-emerald-50/50 border border-emerald-100 p-2.5 text-xs text-emerald-800">
-                        <span className="font-bold block">
-                          ✓ Your Review of Provider:
-                        </span>
-                        <span className="text-amber-600 font-bold">
-                          {"★".repeat(item.review.rating)}
-                          {"☆".repeat(5 - item.review.rating)}
-                        </span>
-                        <p className="italic mt-0.5">
-                          &ldquo;{item.review.comment}&rdquo;
-                        </p>
+                        <button
+                          onClick={() => handleRequestRevision(item.id)}
+                          disabled={!revisionText.trim()}
+                          className="rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
+                        >
+                          Send to Provider
+                        </button>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {item.providerReview ? (
-                      <div className="rounded-lg bg-blue-50/60 border border-blue-100 p-2.5 text-xs text-blue-800">
-                        <span className="font-bold block">
-                          ★ {"Provider's Review of You"}:
-                        </span>
-                        <span className="text-blue-500 font-bold">
-                          {"★".repeat(item.providerReview.rating)}
-                          {"☆".repeat(5 - item.providerReview.rating)}
-                        </span>
-                        <p className="italic mt-0.5">
-                          &ldquo;{item.providerReview.comment}&rdquo;
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="rounded-lg bg-slate-50 border border-slate-200/60 p-2.5 text-xs text-slate-500 italic">
-                        {
-                          "Awaiting Provider's feedback before this moves to completed."
-                        }
-                      </div>
-                    )}
-                  </div>
-                )}
+                  {(item.status === "completed" ||
+                    item.status === "review_pending") && (
+                    <div className="mt-4 space-y-3">
+                      {item.review && (
+                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3 text-xs text-emerald-800">
+                          <span className="block font-bold">
+                            ✓ Your Review of Provider
+                          </span>
+                          <span className="font-bold text-amber-600">
+                            {"★".repeat(item.review.rating)}
+                            {"☆".repeat(5 - item.review.rating)}
+                          </span>
+                          <p className="mt-1 italic">
+                            &ldquo;{item.review.comment}&rdquo;
+                          </p>
+                        </div>
+                      )}
 
-                {item.status === "working" && (
-                  <div className="mt-4 border-t border-slate-100 pt-3">
-                    <Link
-                      href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(item.providerId)}&subject=${encodeURIComponent(item.title)}`}
-                      className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-blue-600 px-4 text-xs font-bold text-white shadow-xs transition hover:bg-blue-700"
-                    >
-                      <ChatIcon className="mr-1.5 h-3.5 w-3.5" />
-                      Open Session Chat
-                    </Link>
-                  </div>
-                )}
+                      {item.providerReview ? (
+                        <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-800">
+                          <span className="block font-bold">
+                            ★ Provider&apos;s Review of You
+                          </span>
+                          <span className="font-bold text-blue-500">
+                            {"★".repeat(item.providerReview.rating)}
+                            {"☆".repeat(5 - item.providerReview.rating)}
+                          </span>
+                          <p className="mt-1 italic">
+                            &ldquo;{item.providerReview.comment}&rdquo;
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl border border-slate-200/80 bg-slate-50 p-3 text-xs italic text-slate-500">
+                          Awaiting provider feedback before this moves to completed.
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {item.status === "working" && (
+                    <div className="mt-5 border-t border-slate-200/80 pt-4">
+                      <Link
+                        href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(item.providerId)}&subject=${encodeURIComponent(item.title)}`}
+                        className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
+                      >
+                        <ChatIcon className="mr-2 h-4 w-4" />
+                        Open Session Chat
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </article>
             );
           })
         ) : (
-          <div className="rounded-xl border border-slate-200 border-dashed bg-slate-50/40 p-8 text-center text-sm text-slate-500">
+          <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/60 p-8 text-center text-sm leading-7 text-slate-500">
             {requests.length > 0
               ? "Your active request is complete. Older requests are available in My Requests."
               : "You have not submitted any swap requests yet."}
@@ -915,7 +989,7 @@ function RecentRequestsPanel({
           <button
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed select-none"
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 select-none"
           >
             ← Prev
           </button>
@@ -929,8 +1003,8 @@ function RecentRequestsPanel({
                   onClick={() => setCurrentPage(pageNum)}
                   className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-extrabold transition-all duration-150 ${
                     currentPage === pageNum
-                      ? "bg-[#2f66e7] text-white shadow-xs"
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-800 border border-transparent hover:border-slate-200"
+                      ? "bg-[#2f66e7] text-white"
+                      : "border border-transparent text-slate-500 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-800"
                   }`}
                 >
                   {pageNum}
@@ -944,19 +1018,18 @@ function RecentRequestsPanel({
               setCurrentPage((prev) => Math.min(prev + 1, totalPages))
             }
             disabled={currentPage === totalPages}
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed select-none"
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 select-none"
           >
             Next →
           </button>
         </div>
       )}
-
     </aside>
   );
 }
 
 const fieldClassName =
-  "h-10 w-full rounded-lg border border-slate-300 bg-[#f7f8ff] px-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100";
+  "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100";
 
 function slugify(value: string) {
   return value
@@ -982,3 +1055,95 @@ function ChatIcon({ className }: { className?: string }) {
   );
 }
 
+function InfoTile({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-[22px] border border-white/80 bg-white/80 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur">
+      <div className="flex items-center gap-2 text-blue-700">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50">
+          {icon}
+        </span>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+          {label}
+        </p>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-slate-600">{value}</p>
+    </div>
+  );
+}
+
+function SparkIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m12 3 1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8Z" />
+      <path d="M19 4v3" />
+      <path d="M20.5 5.5h-3" />
+    </svg>
+  );
+}
+
+function LayersIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m12 4 8 4-8 4-8-4 8-4Z" />
+      <path d="m4 12 8 4 8-4" />
+      <path d="m4 16 8 4 8-4" />
+    </svg>
+  );
+}
+
+function PulseIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 12h4l2-5 4 10 2-5h6" />
+    </svg>
+  );
+}
+
+function ShieldIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 3.5 6 6v5.7c0 3.8 2.3 7.3 6 8.8 3.7-1.5 6-5 6-8.8V6l-6-2.5Z" />
+      <path d="m9.5 12 1.7 1.7 3.3-3.6" />
+    </svg>
+  );
+}

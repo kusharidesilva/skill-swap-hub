@@ -17,11 +17,10 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext"; 
 import { type UserProfile } from "@/lib/auth"; 
 import { scopedHref } from "@/lib/role-routes"; 
-import { UNIVERSITIES } from "@/lib/universities"; 
 import { createNotification } from "@/lib/notifications";
-import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
 import { useLookupOptions } from "@/lib/lookups";
+import { ensureGigTitlePrefix } from "@/lib/gig-titles";
 
 type IncomingRequestsTab = "new" | "accepted" | "completed" | "declined";
 
@@ -30,19 +29,19 @@ type IncomingRequestsPageContentProps = {
   role?: "provider" | "both";
 };
 
-interface RequestData {
-  id: string;
+interface RequestData { 
+  id: string; 
   sourceCollection?: "requests" | "directServiceRequests";
-  buyerId: string;
-  buyerName: string;
+  buyerId: string; 
+  buyerName: string; 
   buyerProfileImageUrl?: string;
   buyerAccountType?: string;
-  buyerUniversity: string;
-  buyerDegree: string;
-  buyerYearOfStudy: string;
-  title: string;
-  category: string;
-  description: string;
+  buyerUniversity: string; 
+  buyerDegree: string; 
+  buyerYearOfStudy: string; 
+  title: string; 
+  category: string; 
+  description: string; 
   level: string;
   serviceType: string;
   time: string;
@@ -317,15 +316,21 @@ export default function IncomingRequestsPageContent({
   return (
     <section className="space-y-6 pb-10">
       {/* Page summary */}
-      <header>
-        <h1 className="text-xl font-bold text-slate-900">Skill Requests</h1>
-        <p className="mt-1 text-xs text-slate-500">
-          Manage requests from students needing your expertise.
-        </p>
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Skill Requests</h1>
+          <p className="mt-1 text-xs text-slate-500">
+            Manage requests from students needing your expertise.
+          </p>
+        </div>
+
+        {activeTab === "new" ? (
+          <HeaderCategoryFilter />
+        ) : null}
       </header>
 
       {/* Request status navigation */}
-      <div className="flex items-center gap-6 border-b border-slate-200">
+      <div className="flex flex-wrap items-center gap-5 border-b border-slate-200">
         <TabLink
           href={tabHref("new")}
           label="New Requests"
@@ -432,64 +437,21 @@ function NewRequestsView({
   role: "provider" | "both";
   userProfile: UserProfile | null;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const serviceCategories = useLookupOptions("serviceCategories");
   const categoryOptions = ["All Categories", ...serviceCategories];
-  const universityOptions = ["Any University", ...UNIVERSITIES];
   const nextCategory = searchParams.get("category") || "All Categories";
-  const nextUniversity = searchParams.get("university") || "Any University";
   const category = categoryOptions.includes(nextCategory)
     ? nextCategory
     : "All Categories";
-  const university = universityOptions.includes(nextUniversity)
-    ? nextUniversity
-    : "Any University";
-
   // Apply the selected tab and search text before rendering the cards.
   const filteredRequests = useMemo(() => {
     return requests.filter((request) => {
-      const categoryOk =
-        category === "All Categories" || request.category === category;
-      const universityOk =
-        university === "Any University" ||
-        request.buyerUniversity
-          .toLowerCase()
-          .includes(university.toLowerCase()) ||
-        university
-          .toLowerCase()
-          .includes(request.buyerUniversity.toLowerCase());
-      return categoryOk && universityOk;
+      return category === "All Categories" || request.category === category;
     });
-  }, [requests, category, university]);
+  }, [requests, category]);
 
-  const hasActiveFilters =
-    category !== "All Categories" || university !== "Any University";
-
-  const updateFilters = (
-    nextCategory: string,
-    nextUniversity: string,
-  ) => {
-    const params = new URLSearchParams(searchParams.toString());
-
-    if (nextCategory === "All Categories") {
-      params.delete("category");
-    } else {
-      params.set("category", nextCategory);
-    }
-
-    if (nextUniversity === "Any University") {
-      params.delete("university");
-    } else {
-      params.set("university", nextUniversity);
-    }
-
-    const nextQuery = params.toString();
-    router.push(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
-      scroll: false,
-    });
-  };
+  const hasActiveFilters = category !== "All Categories";
 
   const handleDecision = async (
     reqId: string,
@@ -537,80 +499,28 @@ function NewRequestsView({
 
   return (
     <div className="space-y-5">
-      <article className="relative z-20 overflow-visible rounded-[22px] border border-slate-200 bg-white shadow-[0_14px_32px_rgba(15,23,42,0.05)]">
-        <div className="border-b border-slate-100 bg-[linear-gradient(135deg,rgba(47,102,231,0.08),rgba(20,83,196,0.02))] px-4 py-3 sm:px-5">
-          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#1453c4]">
-                Request Filters
-              </p>
-              <h2 className="mt-1 text-base font-bold text-slate-900 sm:text-[1.05rem]">
-                Browse skill requests with focus
-              </h2>
-              <p className="mt-1 text-[13px] leading-5 text-slate-500">
-                Filter by category and university to find the requests that fit your expertise best.
-              </p>
-            </div>
-            {hasActiveFilters ? (
-              <button
-                type="button"
-                onClick={() => updateFilters("All Categories", "Any University")}
-                className="inline-flex h-9 items-center justify-center self-start rounded-full border border-[#c9d7fb] bg-white px-3.5 text-xs font-semibold text-[#1453c4] transition hover:border-[#1453c4] hover:bg-blue-50 lg:self-auto"
-              >
-                Clear filters
-              </button>
-            ) : (
-              <span className="inline-flex h-9 items-center self-start rounded-full bg-emerald-50 px-3.5 text-xs font-semibold text-emerald-700 lg:self-auto">
-                Showing all requests
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="p-4 sm:px-5 sm:py-4">
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
-              <Field
-                label="Category"
-                value={category}
-                options={categoryOptions}
-                wrapperClassName="gap-1"
-                fieldClassName="min-h-10 rounded-xl border-slate-200 bg-white text-sm font-medium"
-                onChange={(nextCategory) => {
-                  updateFilters(nextCategory, university);
-                }}
-              />
-            </div>
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
-              <Field
-                label="University"
-                value={university}
-                options={universityOptions}
-                wrapperClassName="gap-1"
-                fieldClassName="min-h-10 rounded-xl border-slate-200 bg-white text-sm font-medium"
-                onChange={(nextUniversity) => {
-                  updateFilters(category, nextUniversity);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </article>
-
       {filteredRequests.length > 0 ? (
         <div className="grid items-start gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {filteredRequests.map((request) => {
             const isGeneralRequest = request.providerId === "general";
+            const buyerStatusLabel =
+              request.buyerAccountType === "non-student"
+                ? "Verified Buyer"
+                : "Verified Student";
+            const buyerStatusClassName =
+              request.buyerAccountType === "non-student"
+                ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+                : "border-blue-100 bg-blue-50 text-blue-700";
 
             return (
               <article
                 key={request.id}
-                className="flex h-[380px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="group flex min-h-[286px] flex-col overflow-hidden rounded-[22px] border border-slate-200/90 bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] p-3.5 shadow-[0_12px_26px_rgba(15,23,42,0.05)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_18px_34px_rgba(15,23,42,0.08)]"
               >
                 <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
-                  <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
                     <div
-                      className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 text-sm font-bold text-slate-800 ${
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 text-sm font-bold text-slate-800 shadow-sm ${
                         hasActiveFilters
                           ? "border-[#2f66e7] bg-blue-100"
                           : "border-emerald-500 bg-emerald-50"
@@ -627,114 +537,83 @@ function NewRequestsView({
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-base font-bold leading-5 text-slate-900">
-                        {request.buyerName}
-                      </p>
-                      <p className="truncate text-xs leading-5 text-slate-500">
-                        {request.buyerAccountType === "non-student"
-                          ? "Non-student Buyer"
-                          : request.buyerDegree}
-                      </p>
-                      <p className="truncate whitespace-nowrap text-xs leading-5 text-slate-500">
-                        {request.buyerAccountType === "non-student"
-                          ? request.buyerName
-                            ? request.buyerName.split(" ")[0] + "'s buyer account"
-                            : "Buyer account"
-                          : `${request.buyerUniversity}${request.buyerYearOfStudy ? ` (${request.buyerYearOfStudy})` : ""}`}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-[0.98rem] font-bold leading-5 text-slate-900">
+                          {request.buyerName}
+                        </p>
+                        <p className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${buyerStatusClassName}`}>
+                          <VerifiedBadgeIcon className="mr-1 h-3 w-3" />
+                          {buyerStatusLabel}
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <div className="flex min-h-6 shrink-0 items-start">
                     {hasActiveFilters ? (
-                      <span className="group relative inline-flex h-5 w-5 items-center justify-center">
-                        <span className="h-2.5 w-2.5 rounded-full bg-[#1453c4]" />
-                        <span className="pointer-events-none absolute right-0 top-6 z-10 whitespace-nowrap rounded-md bg-[#1453c4] px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-sm transition group-hover:opacity-100">
-                          Matched
-                        </span>
+                      <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-[#1453c4]">
+                        Matched
                       </span>
                     ) : null}
                   </div>
                 </div>
 
                 <div className="flex min-h-0 flex-1 flex-col pt-3">
-                  <span className="inline-flex w-fit rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#1453c4]">
-                    {request.category}
-                  </span>
-                  <div className="mt-3 flex items-baseline gap-2">
-                    <p className="line-clamp-2 text-[15px] font-extrabold leading-5 text-[#1453c4]">
-                      {request.title}
+                  <div className="mt-2.5 flex items-start gap-2">
+                    <p className="line-clamp-2 text-[1.08rem] font-black leading-[1.25] tracking-tight text-[#1453c4]">
+                      {ensureGigTitlePrefix(request.title)}
                     </p>
-                    <p className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                      Skill Needed
+                    <span className="mt-0.5 inline-flex shrink-0 rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-[#1453c4]">
+                      {request.category}
+                    </span>
+                  </div>
+
+                  <div className="mt-2.5 rounded-[18px] border border-slate-100 bg-slate-50/75 p-3">
+                    <p className="line-clamp-2 text-[12.5px] leading-5 text-slate-600">
+                      {request.description}
                     </p>
                   </div>
 
-                  <div className="relative mt-3 min-h-0 flex-1 overflow-hidden">
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-5 bg-gradient-to-t from-white via-white/85 to-transparent" />
-                    <div className="min-h-0 flex h-full flex-col space-y-3 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                      <p className="line-clamp-3 text-sm leading-6 text-slate-600">
-                        {request.description}
+                  <div className="mt-2.5 grid grid-cols-2 gap-2">
+                    <div className="min-w-0 rounded-[16px] border border-slate-100 bg-white px-3 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                        Price
                       </p>
-
-                      <div className="grid grid-cols-2 gap-2 rounded-2xl bg-[#f7f8ff] p-2.5 text-[11px] text-slate-600">
-                        <div className="min-w-0 rounded-xl border border-white/70 bg-white/85 px-2.5 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                            Time
-                          </p>
-                          <p className="mt-1 truncate font-semibold text-slate-700">
-                            {request.time}
-                          </p>
-                        </div>
-                        <div className="min-w-0 rounded-xl border border-white/70 bg-white/85 px-2.5 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                            Type
-                          </p>
-                          <p className="mt-1 truncate font-semibold text-slate-700">
-                            {request.serviceType}
-                          </p>
-                        </div>
-                        <div className="min-w-0 rounded-xl border border-white/70 bg-white/85 px-2.5 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                            Budget
-                          </p>
-                          <p className="mt-1 truncate font-semibold text-slate-700">
-                            {formatBudgetLabel(request.budget)}
-                          </p>
-                        </div>
-                        <div className="min-w-0 rounded-xl border border-white/70 bg-white/85 px-2.5 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                            Level
-                          </p>
-                          <p className="mt-1 truncate font-semibold text-slate-700">
-                            {request.level}
-                          </p>
-                        </div>
-                      </div>
+                      <p className="mt-1 text-[12.5px] font-semibold leading-5 text-slate-700">
+                        {formatBudgetLabel(request.budget)}
+                      </p>
+                    </div>
+                    <div className="min-w-0 rounded-[16px] border border-slate-100 bg-white px-3 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                        Details
+                      </p>
+                      <p className="mt-1 text-[12.5px] font-semibold leading-5 text-slate-700">
+                        {request.serviceType}
+                      </p>
                     </div>
                   </div>
 
                   <div
-                    className={`mt-3 grid gap-2 border-t border-slate-100 pt-3 ${
+                    className={`mt-auto grid gap-2 border-t border-slate-100 pt-3 ${
                       isGeneralRequest ? "grid-cols-2" : "grid-cols-3"
                     }`}
                   >
                     <button
                       onClick={() => handleDecision(request.id, "working")}
-                      className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700"
+                      className="rounded-[14px] bg-emerald-600 px-2 py-2 text-[10.5px] font-bold text-white shadow-[0_10px_20px_rgba(5,150,105,0.16)] transition hover:bg-emerald-700"
                     >
                       Accept Swap
                     </button>
                     {!isGeneralRequest && (
                       <button
                         onClick={() => handleDecision(request.id, "rejected")}
-                        className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50"
+                        className="rounded-[14px] border border-rose-200 bg-white px-2 py-2 text-[10.5px] font-bold text-rose-600 transition hover:bg-rose-50"
                       >
                         Decline
                       </button>
                     )}
                     <Link
                       href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(request.buyerId)}&subject=${encodeURIComponent(request.title)}`}
-                      className="inline-flex items-center justify-center rounded-lg border border-[#1453c4] px-3 py-2 text-xs font-bold text-[#1453c4] transition hover:bg-blue-50"
+                      className="inline-flex items-center justify-center rounded-[14px] border border-[#c7d7ff] bg-blue-50/60 px-2 py-2 text-[11.5px] font-bold text-[#1453c4] transition hover:border-[#1453c4] hover:bg-blue-50"
                     >
                       Chat
                     </Link>
@@ -752,6 +631,80 @@ function NewRequestsView({
     </div>
   );
 }
+
+function HeaderCategoryFilter() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const serviceCategories = useLookupOptions("serviceCategories");
+  const categoryOptions = ["All Categories", ...serviceCategories];
+  const nextCategory = searchParams.get("category") || "All Categories";
+  const category = categoryOptions.includes(nextCategory)
+    ? nextCategory
+    : "All Categories";
+
+  const updateFilters = (nextValue: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (nextValue === "All Categories") {
+      params.delete("category");
+    } else {
+      params.set("category", nextValue);
+    }
+
+    const nextQuery = params.toString();
+    router.push(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+      scroll: false,
+    });
+  };
+
+  return (
+    <div className="flex w-full flex-col gap-2 lg:w-auto lg:min-w-[260px] lg:max-w-[320px]">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
+          Category
+        </span>
+        {category !== "All Categories" ? (
+          <button
+            type="button"
+            onClick={() => updateFilters("All Categories")}
+            className="text-[11px] font-semibold text-[#1453c4] transition hover:text-[#0f3f96]"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
+
+      <SelectField
+        label="Category"
+        value={category}
+        onChange={updateFilters}
+        options={categoryOptions}
+        className="min-h-10 rounded-xl border-slate-200 bg-white text-sm font-medium"
+        labelClassName="sr-only"
+      />
+    </div>
+  );
+}
+
+function VerifiedBadgeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3.75 6.75 6v5.1c0 3.4 2.03 6.53 5.25 7.9 3.22-1.37 5.25-4.5 5.25-7.9V6L12 3.75Z" />
+      <path d="m9.6 12 1.6 1.6 3.3-3.5" />
+    </svg>
+  );
+}
+
 function AcceptedView({
   requests,
   role,
@@ -1230,48 +1183,4 @@ function DeclinedView({ requests }: { requests: RequestData[] }) {
   );
 }
 
-function Field({
-  label,
-  value,
-  options,
-  onChange,
-  fieldClassName = "",
-  wrapperClassName = "",
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (value: string) => void;
-  fieldClassName?: string;
-  wrapperClassName?: string;
-}) {
-  const isUniversity = label.toLowerCase() === "university";
-
-  if (isUniversity) {
-    return (
-      <UniversityCombobox
-        label={label}
-        value={value}
-        onSelect={onChange}
-        emptyValue="Any University"
-        placeholder="Any University"
-        labelClassName="block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500"
-        wrapperClassName={wrapperClassName}
-        className={fieldClassName}
-      />
-    );
-  }
-
-  return (
-    <SelectField
-      label={label}
-      value={value}
-      onChange={onChange}
-      options={options}
-      labelClassName="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500"
-      wrapperClassName={wrapperClassName}
-      className={`h-11 px-3 text-sm font-semibold text-slate-700 ${fieldClassName}`}
-    />
-  );
-}
 
