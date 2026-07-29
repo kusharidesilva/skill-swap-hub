@@ -360,6 +360,7 @@ function RequestCard({
       // Completion stores the buyer review on the same request for later ratings.
       await updateDoc(doc(db, "requests", request.id), {
         status: "review_pending",
+        buyerReviewedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         review: {
           rating: reviewRating,

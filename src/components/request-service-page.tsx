@@ -569,6 +569,7 @@ function RecentRequestsPanel({
       const reqObj = requests.find((r) => r.id === reqId);
       await updateDoc(doc(db, "requests", reqId), {
         status: "review_pending",
+        buyerReviewedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         review: {
           rating: reviewRating,
@@ -699,7 +700,7 @@ function RecentRequestsPanel({
         )}
       </div>
 
-      <div className="mt-4 grid gap-4 max-h-[700px] overflow-y-auto pr-1">
+      <div className="scrollbar-none mt-4 grid gap-4 max-h-[700px] overflow-y-auto pr-1">
         {displayedRequests.length > 0 ? (
           displayedRequests.map((item) => {
             const badge = getStatusBadge(item.status);

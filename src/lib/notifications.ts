@@ -10,6 +10,7 @@ export interface CreateNotificationParams {
   tone: "blue" | "emerald" | "green" | "teal" | "indigo" | "red";
   href?: string;
   destination?: string;
+  metadata?: Record<string, unknown>;
 }
 
 // All features use this helper so notifications share the same Firestore shape.

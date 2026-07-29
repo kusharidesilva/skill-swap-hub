@@ -645,6 +645,7 @@ function AcceptedView({
       const reqObj = requests.find((r) => r.id === reqId);
       await updateDoc(doc(db, "requests", reqId), {
         status: "done",
+        deliveredAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
@@ -674,6 +675,7 @@ function AcceptedView({
           rating: providerRating,
           comment: providerComment.trim(),
         },
+        providerReviewedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
@@ -892,6 +894,7 @@ function CompletedView({ requests }: { requests: RequestData[] }) {
           rating: providerRating,
           comment: providerComment.trim(),
         },
+        providerReviewedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 

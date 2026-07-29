@@ -7,12 +7,15 @@ import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "r
 import { addDoc, collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
+import { buildGigRatingSummary, requestMatchesGig } from "@/lib/gig-ratings";
+import { ensureGigTitlePrefix } from "@/lib/gig-titles";
 import { formatRatingLabel } from "@/lib/ratings";
 import { scopedHref, type SiteRole } from "@/lib/role-routes";
 import type { UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { createNotification } from "@/lib/notifications";
 import { inferServiceCategory } from "@/lib/platform";
+import { getGigCoverForCategory } from "@/lib/gig-covers";
 
 type GigPreviewPageProps = {
   role: SiteRole;
@@ -53,17 +56,6 @@ type GigPreviewData = {
   match: number;
 };
 
-const gigImages = [
-  "/img/package%201.jpg",
-  "/img/package%202.jpg",
-  "/img/package%203.jpg",
-  "/img/package%204.jpg",
-  "/img/favorites/web-development.jpg",
-  "/img/favorites/ui-ux-design.jpg",
-  "/img/favorites/data-science.jpg",
-  "/img/favorites/mathematics.jpg",
-];
-
 const fallbackGig: GigPreviewData = {
   gigId: "preview-provider-0",
   providerId: "preview-provider",
@@ -73,29 +65,16 @@ const fallbackGig: GigPreviewData = {
   proficiency: "Advanced",
   skill: "Book Cover Design",
   skills: ["Book Cover Design", "KDP Formatting", "Creative Design"],
-  title: "Creative Book Cover Design - KDP & eBook",
+  title: ensureGigTitlePrefix("Creative Book Cover Design - KDP & eBook"),
   category: "Graphic Design",
   summary:
     "A great book deserves a cover that grabs attention and reflects its story.",
   price: 5000,
   availability: "3-Day Delivery",
   rating: 0,
-  reviews: 68,
-  reviewCards: [
-    {
-      name: "jhonhopkins",
-      rating: 0,
-      quote:
-        "An amazing experience working with this seller. The cover design looks modern, clean, and perfectly aligned with the concept.",
-    },
-    {
-      name: "abigail_mend",
-      rating: 0,
-      quote:
-        "Very high quality book cover design. The visuals immediately attract attention and match the book theme.",
-    },
-  ],
-  image: "/img/package%201.jpg",
+    reviews: 0,
+    reviewCards: [],
+  image: "/img/gig-graphic.png",
   value: "LKR 5,000",
   delivery: "3-Day Delivery",
   match: 92,
@@ -162,9 +141,11 @@ export default function GigPreviewPage({
             rating: formatRatingLabel(gig.rating),
             image: gig.image,
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(gig.providerName)}&background=2f66e7&color=fff&size=400`,
-            level: gig.proficiency,
             savedAt: `Saved ${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
             description: gig.summary,
+            university: gig.university,
+            price: gig.price,
+            availability: gig.availability,
           },
         ];
       }
@@ -225,7 +206,7 @@ export default function GigPreviewPage({
             proficiency: "Skilled",
             skill: publicGig.title || publicGig.category || "Student Support",
             skills: [publicGig.title || publicGig.category || "Student Support"],
-            title: publicGig.title || "Student Skill Gig",
+            title: ensureGigTitlePrefix(publicGig.title || "Student Skill Gig"),
             category: publicGig.category || "Service",
             summary:
               publicGig.summary ||
@@ -239,7 +220,7 @@ export default function GigPreviewPage({
             image:
               publicGig.sampleWorkUrl ||
               publicGig.image ||
-              gigImages[Math.max(skillIndex, 0) % gigImages.length],
+              getGigCoverForCategory(publicGig.category, publicGig.title, Math.max(skillIndex, 0)),
             value: "20",
             delivery: publicGig.delivery || "Flexible",
             match: 95,
@@ -287,19 +268,24 @@ export default function GigPreviewPage({
 
         unsubscribeRatings = onSnapshot(requestsQuery, (completedSnap) => {
           const reviewCards: ReviewData[] = [];
-          let totalRating = 0;
-          let reviewCount = 0;
+          const gigMatchTarget = {
+            id: gigId || storedGig?.id || `${user.uid}-${safeSkillIndex}`,
+            gigId: gigId || storedGig?.id,
+            title: ensureGigTitlePrefix(String(normalizedGig?.title || storedGig?.title || skill)),
+            category: String(normalizedGig?.category || storedGig?.category || inferCategory(skill)),
+          };
+          const matchedRequests = completedSnap.docs
+            .map((requestDoc) => requestDoc.data())
+            .filter((request) => requestMatchesGig(gigMatchTarget, request));
+          const ratingSummary = buildGigRatingSummary(gigMatchTarget, matchedRequests);
 
-          completedSnap.forEach((requestDoc) => {
-            const request = requestDoc.data();
+          matchedRequests.forEach((request) => {
             const rating =
               request.review && typeof request.review.rating === "number"
                 ? request.review.rating
                 : undefined;
             if (!rating) return;
 
-            totalRating += rating;
-            reviewCount += 1;
             if (reviewCards.length < 2) {
               reviewCards.push({
                 name: request.buyerName || "Student buyer",
@@ -320,7 +306,7 @@ export default function GigPreviewPage({
           proficiency: profile?.proficiency || "Skilled",
           skill,
           skills,
-          title: String(normalizedGig?.title || storedGig?.title || `I will do ${skill}`),
+          title: ensureGigTitlePrefix(String(normalizedGig?.title || storedGig?.title || skill)),
           category: String(normalizedGig?.category || storedGig?.category || inferCategory(skill)),
           summary:
             String(
@@ -336,16 +322,20 @@ export default function GigPreviewPage({
             (Array.isArray(normalizedGig?.availability) && normalizedGig.availability.join(", ")) ||
             (storedGig?.availability && storedGig.availability.join(", ")) ||
             formatAvailability(profile?.availability),
-          rating: reviewCount > 0 ? Number((totalRating / reviewCount).toFixed(1)) : 0,
-          reviews: reviewCount,
+          rating: ratingSummary.rating,
+          reviews: ratingSummary.count,
           reviewCards,
           image:
             String(
               normalizedGig?.sampleWorkUrl ||
               normalizedGig?.image ||
               storedGig?.image ||
-            (profile?.gigImages && profile.gigImages[safeSkillIndex]) ||
-              gigImages[safeSkillIndex % gigImages.length],
+              (profile?.gigImages && profile.gigImages[safeSkillIndex]) ||
+              getGigCoverForCategory(
+                String(normalizedGig?.category || storedGig?.category || inferCategory(skill)),
+                String(normalizedGig?.title || storedGig?.title || skill),
+                safeSkillIndex,
+              ),
             ),
           value: `${20 + (safeSkillIndex % 3) * 5}`,
           delivery:
@@ -481,7 +471,7 @@ export default function GigPreviewPage({
         senderId: buyerId,
         senderName: userProfile.name || "Buyer",
         senderRole: "buyer",
-        text: `Hi ${gig.providerName}, I am interested in your "${gig.title}" gig. Can you share more details about how this service works, what you need from me, and the next steps to get started?`,
+        text: `Hi ${gig.providerName}, I'm interested in your "${gig.title}" gig. Could you share more details about how this service works, what you need from me, and the next steps to get started?`,
         serviceContext,
         attachments: [],
         createdAt: serverTimestamp(),
@@ -665,7 +655,7 @@ function ProviderCard({ gig, role }: { gig: GigPreviewData; role: string }) {
             </p>
             <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-teal-700">
               <StarIcon className="h-3.5 w-3.5" />{" "}
-              {formatRatingLabel(gig.rating)} ({gig.reviews} reviews)
+              {gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} (${gig.reviews} reviews)` : "New"}
             </p>
           </div>
         </div>
@@ -818,17 +808,25 @@ function Requirement({ title, detail }: { title: string; detail: string }) {
 }
 
 function ReviewsSection({ reviews }: { reviews: ReviewData[] }) {
-  // Demo reviews keep the layout useful until a new provider receives feedback.
-  const visibleReviews = reviews.length > 0 ? reviews : fallbackGig.reviewCards;
+  if (reviews.length === 0) {
+    return (
+      <section className="space-y-2.5">
+        <h2 className="text-xl font-bold text-slate-900">What people say about this swap</h2>
+        <div className="rounded-2xl border border-slate-200 bg-white px-5 py-8 text-sm text-slate-500 shadow-sm">
+          No ratings or reviews yet.
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="space-y-2.5">
-      <h2 className="text-xl font-bold text-slate-900">What people say about this swap</h2>
-      <div className="grid gap-3 md:grid-cols-2">
-        {visibleReviews.slice(0, 2).map((review, index) => (
-          <ReviewCard
-            key={`${review.name}-${index}`}
-            review={review}
+      <section className="space-y-2.5">
+        <h2 className="text-xl font-bold text-slate-900">What people say about this swap</h2>
+        <div className="grid gap-3 md:grid-cols-2">
+        {reviews.slice(0, 2).map((review, index) => (
+            <ReviewCard
+              key={`${review.name}-${index}`}
+              review={review}
             accent={index % 2 === 0 ? "blue" : "teal"}
           />
         ))}

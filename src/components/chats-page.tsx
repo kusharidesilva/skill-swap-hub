@@ -583,19 +583,19 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="grid min-h-[720px] lg:grid-cols-[320px_minmax(0,1fr)_260px]">
+    <section className="flex h-[calc(100dvh-12rem)] min-h-[560px] max-h-[calc(100dvh-12rem)] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="grid min-h-0 flex-1 lg:grid-cols-[320px_minmax(0,1fr)_260px]">
         {/* Peer search and inbox */}
-        <aside className="border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
+        <aside className="flex min-h-0 flex-col border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
           <div className="border-b border-slate-100 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h1 className="text-xl font-bold text-slate-950">Messages</h1>
+                <h1 className="text-lg font-bold text-slate-950">Messages</h1>
                 <p className="mt-1 text-xs font-medium text-slate-400">
                   Chat with your skill-swap peers
                 </p>
               </div>
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#0f4cbf]">
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold text-[#0f4cbf]">
                 {peerSummaries.length} {peerSummaries.length === 1 ? "person" : "people"}
               </span>
             </div>
@@ -607,12 +607,12 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search chats..."
-                className="h-11 w-full rounded-full border border-transparent bg-slate-100 pl-11 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-200 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                className="h-11 w-full rounded-full border border-transparent bg-slate-100 pl-11 pr-4 text-[13px] text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-200 focus:bg-white focus:ring-4 focus:ring-blue-100"
               />
             </label>
           </div>
 
-          <div className="divide-y divide-slate-100 overflow-y-auto max-h-[580px]">
+          <div className="scrollbar-none min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto">
             {filteredPeers.length > 0 ? (
               filteredPeers.map((peer) => (
                 <PeerConversationButton
@@ -632,10 +632,10 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
 
         {/* Active conversation and message composer */}
         {activeConversation ? (
-          <div className="flex min-h-[720px] flex-col bg-[#eef2ff]">
+          <div className="flex min-h-0 flex-col bg-[#eef2ff]">
             <ChatHeader conversation={activeConversation} role={role} />
 
-            <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8 max-h-[540px]">
+            <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-8">
               <div className="space-y-4">
                 {messages.length > 0 ? (
                   messages.map((message) => (
@@ -666,12 +666,12 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
             />
           </div>
         ) : (
-          <div className="flex min-h-[720px] flex-col items-center justify-center bg-[#eef2ff] p-8 text-center">
+          <div className="flex min-h-0 flex-col items-center justify-center bg-[#eef2ff] p-8 text-center">
             <div className="rounded-full bg-blue-100 p-4 text-[#2f66e7]">
               <SendIcon className="h-8 w-8" />
             </div>
-            <h2 className="mt-4 text-lg font-bold text-slate-800">Your Inbox</h2>
-            <p className="mt-1 text-sm text-slate-500 max-w-sm">
+            <h2 className="mt-4 text-base font-bold text-slate-800">Your Inbox</h2>
+            <p className="mt-1 max-w-sm text-[13px] text-slate-500">
               Select a conversation from the sidebar or request a skill swap to message other members.
             </p>
           </div>
@@ -702,10 +702,10 @@ function ServiceThreadsPanel({
   onSelectConversation: (conversationId: string) => void;
 }) {
   return (
-    <aside className="border-t border-slate-200 bg-white p-5 lg:border-l lg:border-t-0 lg:max-h-[720px] lg:overflow-y-auto">
-      <h2 className="text-sm font-bold text-slate-900">Requested Gigs</h2>
+    <aside className="flex min-h-0 flex-col border-t border-slate-200 bg-white p-5 lg:border-l lg:border-t-0">
+      <h2 className="shrink-0 text-[13px] font-bold text-slate-900">Requested Gigs</h2>
 
-      <div className="mt-4 space-y-3">
+      <div className="scrollbar-none mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
         {threads.map((thread) => (
           <button
             key={thread.id}
@@ -717,17 +717,17 @@ function ServiceThreadsPanel({
                 : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white"
             }`}
           >
-            <p className="truncate text-sm font-bold text-slate-900">
+            <p className="truncate text-[13px] font-bold text-slate-900">
               {thread.serviceContext?.title || thread.skill || "General chat"}
             </p>
-            <p className="mt-1 truncate text-xs font-medium text-[#1453c4]">
+            <p className="mt-1 truncate text-[11px] font-medium text-[#1453c4]">
               {formatThreadTypeLabel(thread)}
             </p>
             <div className="mt-2 flex items-center justify-between gap-3">
-              <p className="truncate text-xs text-slate-500">
+              <p className="truncate text-[11px] text-slate-500">
                 {thread.lastMessage || "Open this thread"}
               </p>
-              <span className="shrink-0 text-[11px] font-medium text-slate-400">
+              <span className="shrink-0 text-[10px] font-medium text-slate-400">
                 {thread.time}
               </span>
             </div>
@@ -782,24 +782,24 @@ function PeerConversationButton({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-slate-900">
+            <p className="truncate text-[13px] font-bold text-slate-900">
               {peer.name}
             </p>
-            <p className="mt-1 truncate text-xs font-medium text-[#2f66e7]">
+            <p className="mt-1 truncate text-[11px] font-medium text-[#2f66e7]">
               {peer.latestSkill}
             </p>
           </div>
-          <span className="shrink-0 text-xs font-medium text-slate-400">
+          <span className="shrink-0 text-[11px] font-medium text-slate-400">
             {peer.time}
           </span>
         </div>
 
         <div className="mt-2 flex items-center justify-between gap-3">
-          <p className="truncate text-sm text-slate-500">
+          <p className="truncate text-[13px] text-slate-500">
             {peer.lastMessage}
           </p>
           {peer.threadCount > 1 ? (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#2f66e7] px-1.5 text-xs font-bold text-white">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#2f66e7] px-1.5 text-[11px] font-bold text-white">
               {peer.threadCount}
             </span>
           ) : null}
@@ -851,7 +851,7 @@ function ChatHeader({
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="truncate text-lg font-bold text-slate-950">
+              <h2 className="truncate text-base font-bold text-slate-950">
                 {conversation.name}
               </h2>
               {(() => {
@@ -863,14 +863,14 @@ function ChatHeader({
                   : null;
 
                 return verificationBadge ? (
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm ${verificationBadge.className}`}>
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold shadow-sm ${verificationBadge.className}`}>
                     <VerifiedIcon className={`h-3.5 w-3.5 shrink-0 ${verificationBadge.iconClassName}`} />
                     {verificationBadge.label}
                   </span>
                 ) : null;
               })()}
             </div>
-            <p className="mt-1 truncate text-sm font-medium text-slate-500">
+            <p className="mt-1 truncate text-[13px] font-medium text-slate-500">
               {conversation.university} | {conversation.serviceContext?.title || conversation.skill}
             </p>
           </div>
@@ -964,7 +964,7 @@ function MessageBubble({
           </div>
         ) : null}
         {normalizedMessageText ? (
-          <p className={`${message.serviceContext ? "mt-2.5" : ""} whitespace-pre-line text-[15px] leading-6`}>
+          <p className={`${message.serviceContext ? "mt-2.5" : ""} whitespace-pre-line text-[13px] leading-5`}>
             {normalizedMessageText}
           </p>
         ) : null}
@@ -983,10 +983,10 @@ function MessageBubble({
                 }`}
               >
                 <div className="min-w-0">
-                  <p className={`truncate text-sm font-semibold ${isMine ? "text-white" : "text-slate-800"}`}>
+                  <p className={`truncate text-[13px] font-semibold ${isMine ? "text-white" : "text-slate-800"}`}>
                     {attachment.name}
                   </p>
-                  <p className={`text-xs ${isMine ? "text-blue-100" : "text-slate-500"}`}>
+                  <p className={`text-[11px] ${isMine ? "text-blue-100" : "text-slate-500"}`}>
                     {formatFileKind(attachment.type)} • {formatBytes(attachment.size)}
                   </p>
                 </div>
@@ -1084,7 +1084,7 @@ function Composer({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Type your message..."
-          className="h-12 min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-5 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+          className="h-12 min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-5 text-[13px] text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
         />
 
         <button

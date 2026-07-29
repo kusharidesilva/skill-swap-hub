@@ -220,7 +220,7 @@ export default function RegisterPage() {
       <div className="auth-gradient-animate fixed inset-0 bg-[linear-gradient(120deg,rgba(13,148,136,0.16),rgba(37,99,235,0.12),rgba(255,255,255,0.2))] backdrop-blur-sm" aria-hidden="true" />
       <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-4 py-6 sm:px-6">
         <div
-          className={`grid w-full max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl lg:max-h-[calc(100vh-3rem)] lg:overflow-hidden lg:grid-cols-[1.02fr_0.98fr] ${
+          className={`scrollbar-none grid w-full max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl lg:max-h-[calc(100vh-3rem)] lg:overflow-hidden lg:grid-cols-[1.02fr_0.98fr] ${
             isStudentRegistration ? "max-w-5xl" : "max-w-4xl"
           }`}
         >

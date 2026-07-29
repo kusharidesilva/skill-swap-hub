@@ -5,10 +5,13 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { collection, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { buildGigRatingSummary } from "@/lib/gig-ratings";
+import { ensureGigTitlePrefix } from "@/lib/gig-titles";
 import { formatRatingLabel } from "@/lib/ratings";
 import { useAuth } from "@/context/AuthContext";
 import type { ProviderGig, UserProfile } from "@/lib/auth";
 import ModalPortal from "@/components/ui/modal-portal";
+import { getGigCoverForCategory } from "@/lib/gig-covers";
 
 type MyGigsPageContentProps = {
   activeTab?: "offered" | "manage";
@@ -25,25 +28,28 @@ interface Gig {
   summary: string;
   availability: string;
   proficiency: string;
+  rating: number;
+  reviews: number;
 }
 
 interface RequestItem {
   id: string;
   status?: string;
   providerId?: string;
+  gigId?: string;
+  title?: string;
+  category?: string;
   review?: {
     rating?: number;
   };
 }
 
 function getFallbackImage(index: number) {
-  if (index % 3 === 1) return "/img/package%202.jpg";
-  if (index % 3 === 2) return "/img/package%203.jpg";
-  return "/img/package%201.jpg";
+  return getGigCoverForCategory("", "", index);
 }
 
 // Convert both the current gig format and older skill-only profiles into one card shape.
-function buildGigs(profile: UserProfile): Gig[] {
+function buildGigs(profile: UserProfile, requests: RequestItem[] = []): Gig[] {
   const providerProfile = profile.providerProfile;
   const storedGigs = providerProfile?.gigs || [];
   const legacySkills = providerProfile?.skills || [];
@@ -53,36 +59,63 @@ function buildGigs(profile: UserProfile): Gig[] {
   const providerProficiency = providerProfile?.proficiency || "Intermediate";
 
   if (storedGigs.length > 0) {
-    return storedGigs.map((gig: ProviderGig, index: number) => ({
-      id: `gig-${index}`,
-      title: gig.title,
-      shortTitle: gig.title,
-      category: gig.category || legacySkills[index] || "General",
-      image: gig.image || customImages[index] || getFallbackImage(index),
-      rawIndex: index,
-      summary:
-        gig.summary ||
-        gig.description ||
-        providerBio ||
-        `I offer ${gig.title.toLowerCase()} basics, guidance, and practical support for fellow university students.`,
-      availability: gig.availability?.join(", ") || providerAvailability || "Flexible Schedule",
-      proficiency: providerProfile?.proficiency || providerProficiency,
-    }));
+    return storedGigs.map((gig: ProviderGig, index: number) => {
+      const ratingSummary = buildGigRatingSummary(
+        {
+          id: gig.id || `gig-${index}`,
+          gigId: gig.id,
+          title: gig.title,
+          category: gig.category || legacySkills[index] || "General",
+        },
+        requests,
+      );
+
+      return {
+        id: `gig-${index}`,
+          title: ensureGigTitlePrefix(gig.title),
+          shortTitle: ensureGigTitlePrefix(gig.title),
+        category: gig.category || legacySkills[index] || "General",
+        image: gig.image || customImages[index] || getGigCoverForCategory(gig.category, gig.title, index),
+        rawIndex: index,
+        summary:
+          gig.summary ||
+          gig.description ||
+          providerBio ||
+          `I offer ${gig.title.toLowerCase()} basics, guidance, and practical support for fellow university students.`,
+        availability: gig.availability?.join(", ") || providerAvailability || "Flexible Schedule",
+        proficiency: providerProfile?.proficiency || providerProficiency,
+        rating: ratingSummary.rating,
+        reviews: ratingSummary.count,
+      };
+    });
   }
 
-  return legacySkills.map((skill: string, index: number) => ({
-    id: `gig-${index}`,
-    title: skill,
-    shortTitle: skill.endsWith("Help") ? skill : `${skill} Help`,
-    category: skill,
-    image: customImages[index] || getFallbackImage(index),
-    rawIndex: index,
-    summary:
-      providerBio ||
-      `I offer ${skill.toLowerCase()} basics, guidance, and practical support for fellow university students.`,
-    availability: providerAvailability || "Flexible Schedule",
-    proficiency: providerProficiency,
-  }));
+  return legacySkills.map((skill: string, index: number) => {
+    const ratingSummary = buildGigRatingSummary(
+      {
+        id: `gig-${index}`,
+        title: skill,
+        category: skill,
+      },
+      requests,
+    );
+
+    return {
+      id: `gig-${index}`,
+        title: ensureGigTitlePrefix(skill),
+        shortTitle: ensureGigTitlePrefix(skill),
+      category: skill,
+      image: customImages[index] || getGigCoverForCategory("", skill, index),
+      rawIndex: index,
+      summary:
+        providerBio ||
+        `I offer ${skill.toLowerCase()} basics, guidance, and practical support for fellow university students.`,
+      availability: providerAvailability || "Flexible Schedule",
+      proficiency: providerProficiency,
+      rating: ratingSummary.rating,
+      reviews: ratingSummary.count,
+    };
+  });
 }
 
 export default function MyGigsPageContent({
@@ -102,6 +135,7 @@ export default function MyGigsPageContent({
     reviewsCount: 0,
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const [requestHistory, setRequestHistory] = useState<RequestItem[]>([]);
   const cardsPerPage = 4;
 
   useEffect(() => {
@@ -133,9 +167,14 @@ export default function MyGigsPageContent({
             id: docSnap.id,
             status: data.status,
             providerId: data.providerId,
+            gigId: data.gigId,
+            title: data.title,
+            category: data.category,
             review: data.review,
           });
         });
+
+        setRequestHistory(reqs);
 
         const completedRequests = reqs.filter((r) => r.status === "completed");
         const ratings = completedRequests
@@ -159,7 +198,7 @@ export default function MyGigsPageContent({
           totalSwaps: String(completedRequests.length),
           avgRating: formatRatingLabel(avgRating),
           avgResponse: "1h",
-          reviewsCount: completedRequests.length,
+          reviewsCount: ratings.length,
         });
 
         setDbLoading(false);
@@ -180,7 +219,7 @@ export default function MyGigsPageContent({
           return;
         }
 
-        setGigs(buildGigs(userSnap.data() as UserProfile));
+        setGigs(buildGigs(userSnap.data() as UserProfile, requestHistory));
         setDbLoading(false);
       },
       (err) => {
@@ -193,7 +232,7 @@ export default function MyGigsPageContent({
       unsubscribeRequests();
       unsubscribeUser();
     };
-  }, [userProfile, authLoading]);
+  }, [authLoading, requestHistory, userProfile]);
 
   const handleDeleteGig = async (rawIndex: number) => {
     if (!userProfile) return;
@@ -317,7 +356,7 @@ export default function MyGigsPageContent({
                   </div>
                   <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[12px] font-bold text-slate-800 shadow-sm">
                     <RatingStarIcon className="h-3.5 w-3.5 text-amber-400" />
-                    <span>{stats.avgRating}</span>
+                    <span>{gig.reviews > 0 ? formatRatingLabel(gig.rating) : "New"}</span>
                   </div>
                   <Link
                     href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile.uid)}&skillIndex=${gig.rawIndex}`}
@@ -344,10 +383,11 @@ export default function MyGigsPageContent({
 
                   <div className="mt-2">
                     <p className="text-[13px] font-semibold leading-5 text-slate-700">
-                      {userProfile.name}
-                    </p>
-                    <p className="text-[12px] leading-5 text-slate-500">
-                      {userProfile.university || "Sri Lankan University"}
+                      {userProfile.name}{" "}
+                      <span className="font-medium text-slate-400">|</span>{" "}
+                      <span className="font-medium text-slate-500">
+                        {userProfile.university || "Sri Lankan University"}
+                      </span>
                     </p>
                   </div>
 
@@ -366,12 +406,9 @@ export default function MyGigsPageContent({
                     </span>
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between gap-2.5 border-t border-slate-200 pt-2.5">
-                    <span className="truncate text-[12px] text-slate-500">
+                  <div className="mt-3 border-t border-slate-200 pt-2.5">
+                    <span className="block truncate text-[12px] text-slate-500">
                       {gig.availability}
-                    </span>
-                    <span className="shrink-0 rounded-full bg-[#dff7f5] px-2.5 py-1 text-[11px] font-semibold text-[#0d7f78]">
-                      Service Gig
                     </span>
                   </div>
 

@@ -174,7 +174,7 @@ export default function ProviderRegisterPage() {
         <div className="fixed inset-0 z-[70] bg-slate-950/40 backdrop-blur-md" aria-hidden="true" />
       </ModalPortal>
       <div className="relative z-[80] mx-auto flex min-h-screen items-center justify-center px-6 py-10">
-        <div className="relative grid w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="scrollbar-none relative grid w-full max-w-6xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl lg:grid-cols-[0.95fr_1.05fr]">
           <button
             onClick={() => router.push("/home/buyer")}
             title="Close"

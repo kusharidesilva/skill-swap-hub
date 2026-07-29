@@ -2,19 +2,22 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import SelectField from "@/components/ui/select-field";
 import { useAuth } from "@/context/AuthContext";
 import type { ProviderGig } from "@/lib/auth";
-import SelectField from "@/components/ui/select-field";
-import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
+import { db, storage } from "@/lib/firebase";
+import { GIG_COVER_PRESETS, getGigCoverForCategory, isPresetGigCover } from "@/lib/gig-covers";
+import { ensureGigTitlePrefix } from "@/lib/gig-titles";
 import { useLookupOptions } from "@/lib/lookups";
+import { AVAILABILITY_DAYS } from "@/lib/platform";
 
 const DELIVERY_OPTIONS = ["1 Day", "2 Days", "3 Days", "5 Days", "7 Days", "14 Days"];
 const MAX_SAMPLE_IMAGE_BYTES = 2 * 1024 * 1024;
 const SAMPLE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const AVAILABILITY_PERIODS = ["Morning", "Afternoon", "Evening", "Night"] as const;
 
 type PostNewGigPageProps = {
   role: "provider" | "both";
@@ -27,55 +30,44 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   const { userProfile, refreshProfile } = useAuth();
   const isEditMode = mode === "edit";
   const serviceCategories = useLookupOptions("serviceCategories");
-  const timeSlotOptions = useLookupOptions("availabilityTimeSlots");
-  const availabilityOptions = AVAILABILITY_DAYS.flatMap((day) =>
-    (timeSlotOptions.length ? timeSlotOptions : [...AVAILABILITY_TIME_SLOTS]).map(
-      (slot) => `${day} ${slot}`,
-    ),
-  );
 
-  // Edit routes use "gig-N", so this converts the URL value back to an array index.
-  const skillIndex =
-    isEditMode && gigId ? parseInt(gigId.replace("gig-", ""), 10) : -1;
+  const skillIndex = isEditMode && gigId ? parseInt(gigId.replace("gig-", ""), 10) : -1;
 
-  // Main gig details are kept together so create and edit mode share one form.
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState(serviceCategories[0] || "Photography");
+  const [category, setCategory] = useState("");
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0]);
-  const [selectedImage, setSelectedImage] = useState("/img/package%201.jpg");
+  const [selectedImage, setSelectedImage] = useState<string>(
+    getGigCoverForCategory("Photography", "Photography", 0),
+  );
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [availability, setAvailability] = useState<string[]>([]);
-
-  // Tags use a separate input because users can add several values.
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-
-  // These values only control validation and progress feedback.
   const [isSaving, setIsSaving] = useState(false);
   const [didAttemptSubmit, setDidAttemptSubmit] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
-  const backHref =
-    role === "both" ? "/my-gigs/both?tab=manage" : "/my-gigs/provider?tab=manage";
-  const selectedCategory = serviceCategories.includes(category)
-    ? category
-    : serviceCategories[0] || "Photography";
+  const backHref = role === "both" ? "/my-gigs/both?tab=manage" : "/my-gigs/provider?tab=manage";
+  const selectedCategory = category.trim();
 
-  // Edit mode copies the selected saved gig into the form once the profile loads.
   useEffect(() => {
     if (!isEditMode || !userProfile || skillIndex < 0) return;
+
     const gigs = userProfile.providerProfile?.gigs || [];
     const existingGig = gigs[skillIndex];
     const skills = userProfile.providerProfile?.skills || [];
     const legacySkill = skills[skillIndex];
     const resolvedTitle = existingGig?.title || legacySkill;
+
     if (!resolvedTitle) return;
-    
+
     const timer = setTimeout(() => {
-      setTitle(resolvedTitle);
+      setTitle(ensureGigTitlePrefix(resolvedTitle));
       setCategory(existingGig?.category || serviceCategories[0] || "Photography");
       setSummary(existingGig?.summary || "");
       setDescription(existingGig?.description || "");
@@ -83,7 +75,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
       setDelivery(existingGig?.delivery || DELIVERY_OPTIONS[0]);
       setTags(existingGig?.tags || []);
       setAvailability(existingGig?.availability || userProfile.providerProfile?.availability || []);
-      
+
       const gigImages = userProfile.providerProfile?.gigImages || [];
       if (existingGig?.image) {
         setSelectedImage(existingGig.image);
@@ -93,16 +85,51 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [isEditMode, userProfile, skillIndex, serviceCategories]);
+  }, [isEditMode, skillIndex, serviceCategories, userProfile]);
 
   useEffect(() => {
     if (!userProfile) return;
+
     const timer = setTimeout(() => {
-      setAvailability((current) => current.length ? current : (userProfile.providerProfile?.availability || []));
+      setAvailability((current) =>
+        current.length ? current : (userProfile.providerProfile?.availability || []),
+      );
     }, 0);
 
     return () => clearTimeout(timer);
   }, [userProfile]);
+
+  useEffect(() => {
+    if (selectedImageFile) return;
+    if (!isPresetGigCover(selectedImage)) return;
+
+    setSelectedImage(
+      getGigCoverForCategory(selectedCategory || "Photography", title || selectedCategory, 0),
+    );
+  }, [selectedCategory, selectedImage, selectedImageFile, title]);
+
+  useEffect(() => {
+    if (!availability.length) return;
+
+    const nextDays = new Set<string>();
+    const nextPeriods = new Set<string>();
+
+    availability.forEach((slot) => {
+      const normalizedSlot = slot.trim();
+      const matchingDay = AVAILABILITY_DAYS.find((day) => normalizedSlot.startsWith(`${day} `));
+      if (!matchingDay) return;
+
+      const period = normalizedSlot.slice(matchingDay.length).trim();
+      nextDays.add(matchingDay);
+
+      if (AVAILABILITY_PERIODS.includes(period as (typeof AVAILABILITY_PERIODS)[number])) {
+        nextPeriods.add(period);
+      }
+    });
+
+    setSelectedDays(Array.from(nextDays));
+    setSelectedPeriods(Array.from(nextPeriods));
+  }, [availability]);
 
   const addTag = () => {
     const trimmed = tagInput.trim();
@@ -112,18 +139,45 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
     setTagInput("");
   };
 
-  const removeTag = (tag: string) => setTags(tags.filter((t) => t !== tag));
+  const removeTag = (tag: string) => setTags(tags.filter((item) => item !== tag));
 
-  const toggleAvailability = (slot: string) => {
-    setAvailability((current) =>
-      current.includes(slot) ? current.filter((value) => value !== slot) : [...current, slot],
-    );
+  const syncAvailability = (days: string[], periods: string[]) => {
+    const combinations = days.flatMap((day) => periods.map((period) => `${day} ${period}`));
+    setAvailability(combinations);
+  };
+
+  const toggleDay = (day: string) => {
+    const nextDays = selectedDays.includes(day)
+      ? selectedDays.filter((value) => value !== day)
+      : [...selectedDays, day];
+
+    setSelectedDays(nextDays);
+    syncAvailability(nextDays, selectedPeriods);
+  };
+
+  const togglePeriod = (period: string) => {
+    const nextPeriods = selectedPeriods.includes(period)
+      ? selectedPeriods.filter((value) => value !== period)
+      : [...selectedPeriods, period];
+
+    setSelectedPeriods(nextPeriods);
+    syncAvailability(selectedDays, nextPeriods);
   };
 
   const isTitleInvalid = didAttemptSubmit && !title.trim();
+  const isCategoryInvalid = didAttemptSubmit && !selectedCategory;
   const isSummaryInvalid = didAttemptSubmit && !summary.trim();
+  const isAvailabilityInvalid = didAttemptSubmit && availability.length === 0;
   const normalizedPrice = Number(price);
-  const isPriceInvalid = didAttemptSubmit && (!price.trim() || !Number.isFinite(normalizedPrice) || normalizedPrice <= 0);
+  const hasPriceInput = price.trim().length > 0;
+  const resolvedPrice =
+    hasPriceInput && Number.isFinite(normalizedPrice) && normalizedPrice > 0
+      ? normalizedPrice
+      : "";
+  const isPriceInvalid =
+    didAttemptSubmit &&
+    hasPriceInput &&
+    (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0);
 
   const resolveSampleImage = async (gigDocumentId: string) => {
     if (!userProfile || !selectedImageFile) return selectedImage;
@@ -147,7 +201,13 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
 
     setDidAttemptSubmit(true);
 
-    if (!title.trim() || !summary.trim() || !price.trim() || !Number.isFinite(normalizedPrice) || normalizedPrice <= 0) {
+    if (
+      !title.trim() ||
+      !selectedCategory ||
+      !summary.trim() ||
+      availability.length === 0 ||
+      (hasPriceInput && (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0))
+    ) {
       setFeedback({
         type: "error",
         msg: "Please fill in the required fields highlighted in red.",
@@ -168,22 +228,22 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
       }
 
       const userRef = doc(db, "users", userProfile.uid);
-      const existingSkills: string[] = [...(userProfile.providerProfile?.skills || [])];
-      const existingImages: string[] = [...(userProfile.providerProfile?.gigImages || [])];
+      const existingSkills = [...(userProfile.providerProfile?.skills || [])];
+      const existingImages = [...(userProfile.providerProfile?.gigImages || [])];
       const existingGigs: ProviderGig[] = [...(userProfile.providerProfile?.gigs || [])];
       const existingGigId = isEditMode && skillIndex >= 0 ? existingGigs[skillIndex]?.id : undefined;
       const gigDocumentId =
         existingGigId || `${userProfile.uid}-${Date.now()}-${slugify(title.trim() || "gig")}`;
       const imageUrl = await resolveSampleImage(gigDocumentId);
 
-      const gigLabel = title.trim();
+      const gigLabel = ensureGigTitlePrefix(title);
       const gigData: ProviderGig = {
         id: gigDocumentId,
         title: gigLabel,
         category: selectedCategory,
         summary: summary.trim(),
         description: description.trim(),
-        price: normalizedPrice,
+        price: resolvedPrice,
         delivery,
         availability,
         tags,
@@ -192,10 +252,10 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
         status: "active",
       };
 
-      // Pad the image list so each skill keeps the image at the same index.
       while (existingImages.length < existingSkills.length) {
-        existingImages.push("/img/package%201.jpg");
+        existingImages.push(getGigCoverForCategory(selectedCategory, gigLabel, existingImages.length));
       }
+
       while (existingGigs.length < existingSkills.length) {
         existingGigs.push({
           title: existingSkills[existingGigs.length] || gigLabel,
@@ -210,17 +270,16 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
       }
 
       if (isEditMode && skillIndex >= 0) {
-        // Edit only the selected gig and leave the rest of the profile untouched.
         existingSkills[skillIndex] = gigLabel;
         existingImages[skillIndex] = imageUrl;
         existingGigs[skillIndex] = gigData;
       } else {
-        // New gigs are appended to the provider's existing list.
         if (existingSkills.includes(gigLabel)) {
           setFeedback({ type: "error", msg: "A gig with this title already exists." });
           setIsSaving(false);
           return;
         }
+
         existingSkills.push(gigLabel);
         existingImages.push(imageUrl);
         existingGigs.push(gigData);
@@ -250,7 +309,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
           title: gigLabel,
           description: description.trim() || summary.trim(),
           summary: summary.trim(),
-          price: normalizedPrice,
+          price: resolvedPrice,
           currency: "LKR",
           availability,
           sampleWorkUrl: imageUrl,
@@ -266,24 +325,21 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
       );
 
       await batch.commit();
-
       await refreshProfile();
 
       setFeedback({
         type: "success",
-        msg: isEditMode
-          ? "Gig updated successfully! Redirecting..."
-          : "Gig published successfully! Redirecting...",
+        msg: isEditMode ? "Gig updated successfully! Redirecting..." : "Gig published successfully! Redirecting...",
       });
 
       setTimeout(() => {
         router.push(backHref);
       }, 1500);
-    } catch (err) {
-      console.error("Error saving gig:", err);
+    } catch (error) {
+      console.error("Error saving gig:", error);
       setFeedback({
         type: "error",
-        msg: err instanceof Error ? err.message : "Failed to save gig. Please try again.",
+        msg: error instanceof Error ? error.message : "Failed to save gig. Please try again.",
       });
     } finally {
       setIsSaving(false);
@@ -293,14 +349,12 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   return (
     <section className="space-y-6 pb-8">
       <div className="mx-auto max-w-3xl">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 px-1 text-xs text-slate-500 mb-2">
-          <Link href={backHref} className="hover:text-[#1453c4] font-semibold transition">
+        <div className="mb-2 flex items-center gap-2 px-1 text-xs text-slate-500">
+          <Link href={backHref} className="font-semibold transition hover:text-[#1453c4]">
             ← Back to My Gigs
           </Link>
         </div>
 
-        {/* Step indicator */}
         <div className="px-6 pt-2">
           <div className="flex items-center justify-between text-sm font-semibold text-slate-400">
             <StepItem number={1} label="Overview" active />
@@ -311,13 +365,12 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
           </div>
         </div>
 
-        {/* Feedback Banner */}
         {feedback && (
           <div
-            className={`mt-4 rounded-lg px-4 py-3 text-sm font-semibold border ${
+            className={`mt-4 rounded-lg border px-4 py-3 text-sm font-semibold ${
               feedback.type === "success"
-                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                : "bg-red-50 border-red-200 text-red-800"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-red-200 bg-red-50 text-red-800"
             }`}
           >
             {feedback.msg}
@@ -327,8 +380,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
         <article className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <SectionTitle title={isEditMode ? "Edit Gig" : "Gig Overview"} />
 
-          <div className="mt-5 space-y-4">
-            {/* Gig Title */}
+          <div className="mt-5 space-y-6">
             <label className="block text-sm font-semibold text-slate-700">
               Gig Title *
               <input
@@ -339,60 +391,49 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                 }`}
                 placeholder="e.g., I will capture birthday photography"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(event) => setTitle(event.target.value)}
               />
             </label>
             <p className={`-mt-3 text-xs font-medium ${isTitleInvalid ? "text-red-500" : "text-slate-400"}`}>
               Create a catchy title starting with &apos;I will...&apos;
             </p>
 
-            {/* Category */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <SelectField
-                label="Service Category"
-                value={selectedCategory}
-                onChange={setCategory}
-                options={serviceCategories}
-                labelClassName="text-sm font-semibold text-slate-700"
-                className="h-11 px-4 text-base text-slate-700"
-              />
+            <div className="grid gap-4 md:grid-cols-2 md:items-start">
+              <div className="space-y-2">
+                <SelectField
+                  label="Service Category *"
+                  value={selectedCategory}
+                  onChange={setCategory}
+                  options={serviceCategories}
+                  placeholder="Select a service category"
+                  labelClassName="text-sm font-semibold text-slate-700"
+                  className={`h-11 px-4 text-base text-slate-700 ${isCategoryInvalid ? "border-red-400 bg-red-50" : ""}`}
+                />
+                <p className={`text-xs font-medium ${isCategoryInvalid ? "text-red-500" : "text-slate-400"}`}>
+                  Choose the main category that best matches this gig.
+                </p>
+              </div>
 
-              <SelectField
-                label="Delivery Time (Optional)"
-                value={delivery}
-                onChange={setDelivery}
-                options={DELIVERY_OPTIONS}
-                labelClassName="text-sm font-semibold text-slate-700"
-                className="h-11 px-4 text-base text-slate-700"
-              />
+              <div className="space-y-2">
+                <SelectField
+                  label="Delivery Time (Optional)"
+                  value={delivery}
+                  onChange={setDelivery}
+                  options={DELIVERY_OPTIONS}
+                  labelClassName="text-sm font-semibold text-slate-700"
+                  className="h-11 px-4 text-base text-slate-700"
+                />
+                <p className="text-xs font-medium text-slate-400">
+                  Let buyers know your expected turnaround time.
+                </p>
+              </div>
             </div>
 
-            <label className="block text-sm font-semibold text-slate-700">
-              Price (LKR) *
-              <input
-                type="number"
-                min="1"
-                step="1"
-                className={`mt-2 h-11 w-full rounded-lg border px-4 text-base outline-none transition focus:ring-2 ${
-                  isPriceInvalid
-                    ? "border-red-400 bg-red-50 text-slate-700 focus:border-red-500 focus:ring-red-100"
-                    : "border-slate-200 text-slate-700 focus:border-[#1453c4] focus:ring-blue-100"
-                }`}
-                placeholder="e.g., 5000"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-            </label>
-            <p className={`-mt-3 text-xs font-medium ${isPriceInvalid ? "text-red-500" : "text-slate-400"}`}>
-              Add the expected service price in Sri Lankan rupees.
-            </p>
-
-            {/* Tags */}
             <div>
               <label className="block text-sm font-semibold text-slate-700">
                 Search Tags / Keywords (Optional, Max 5)
               </label>
-              <div className="mt-2 flex min-h-11 items-center gap-2 flex-wrap rounded-lg border border-slate-200 bg-[#f6f7ff] px-3 py-2">
+              <div className="mt-2 flex min-h-11 flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-[#f6f7ff] px-3 py-2">
                 {tags.map((tag) => (
                   <span
                     key={tag}
@@ -402,7 +443,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                     <button
                       type="button"
                       onClick={() => removeTag(tag)}
-                      className="text-teal-500 hover:text-teal-800"
+                      className="cursor-pointer text-teal-500 hover:text-teal-800"
                     >
                       ×
                     </button>
@@ -413,21 +454,144 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                     type="text"
                     value={tagInput}
                     placeholder="Add a tag & press Enter..."
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
+                    onChange={(event) => setTagInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
                         addTag();
                       }
                     }}
-                    className="flex-1 min-w-[120px] bg-transparent text-sm text-slate-600 outline-none placeholder:text-slate-400"
+                    className="min-w-[120px] flex-1 bg-transparent text-sm text-slate-600 outline-none placeholder:text-slate-400"
                   />
                 )}
               </div>
             </div>
+
+            <div className="max-w-xl space-y-2">
+              <label className="block text-sm font-semibold text-slate-700">
+                Price (LKR) (Optional)
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  className={`mt-2 h-11 w-full rounded-lg border px-4 text-base outline-none transition focus:ring-2 ${
+                    isPriceInvalid
+                      ? "border-red-400 bg-red-50 text-slate-700 focus:border-red-500 focus:ring-red-100"
+                      : "border-slate-200 text-slate-700 focus:border-[#1453c4] focus:ring-blue-100"
+                  }`}
+                  placeholder="e.g., 5000"
+                  value={price}
+                  onChange={(event) => setPrice(event.target.value)}
+                />
+              </label>
+              <p className={`text-xs font-medium ${isPriceInvalid ? "text-red-500" : "text-slate-400"}`}>
+                Leave this empty if you prefer to discuss the price in chat.
+              </p>
+            </div>
           </div>
 
-          {/* Detailed Info */}
+          <SectionTitle title="Available Time" className="mt-8" />
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-500">
+                Select your available days and time periods for this gig.
+              </p>
+              <span className="text-xs font-semibold text-slate-400">
+                {availability.length} slot{availability.length === 1 ? "" : "s"} selected
+              </span>
+            </div>
+
+            <div
+              className={`mt-4 rounded-2xl border p-4 ${
+                isAvailabilityInvalid ? "border-red-300 bg-red-50/60" : "border-slate-200 bg-slate-50/60"
+              }`}
+            >
+              <div className="space-y-5">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                    Weekly Availability *
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
+                    {AVAILABILITY_DAYS.map((day) => {
+                      const active = selectedDays.includes(day);
+                      return (
+                        <label
+                          key={day}
+                          className={`flex min-h-[78px] cursor-pointer flex-col items-center justify-center rounded-2xl border px-3 py-3 text-center transition ${
+                            active
+                              ? "border-[#1453c4] bg-[#e8efff] text-[#1453c4] shadow-sm"
+                              : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={active}
+                            onChange={() => toggleDay(day)}
+                            className="sr-only"
+                          />
+                          <span
+                            className={`flex h-5 w-5 items-center justify-center rounded-md border text-[11px] ${
+                              active
+                                ? "border-[#1453c4] bg-[#1453c4] text-white"
+                                : "border-slate-300 bg-white text-transparent"
+                            }`}
+                          >
+                            ✓
+                          </span>
+                          <span className="mt-2 text-xs font-bold uppercase tracking-wide">
+                            {day.slice(0, 3)}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                    Time Periods *
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+                    {AVAILABILITY_PERIODS.map((period) => {
+                      const active = selectedPeriods.includes(period);
+                      return (
+                        <label
+                          key={period}
+                          className={`flex min-h-[78px] cursor-pointer flex-col items-center justify-center rounded-2xl border px-3 py-3 text-center transition ${
+                            active
+                              ? "border-[#1453c4] bg-[#e8efff] text-[#1453c4] shadow-sm"
+                              : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={active}
+                            onChange={() => togglePeriod(period)}
+                            className="sr-only"
+                          />
+                          <span
+                            className={`flex h-5 w-5 items-center justify-center rounded-md border text-[11px] ${
+                              active
+                                ? "border-[#1453c4] bg-[#1453c4] text-white"
+                                : "border-slate-300 bg-white text-transparent"
+                            }`}
+                          >
+                            ✓
+                          </span>
+                          <span className="mt-2 text-sm font-semibold">{period}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p className={`text-xs font-medium ${isAvailabilityInvalid ? "text-red-500" : "text-slate-400"}`}>
+              Pick at least one day and one time period to publish this gig.
+            </p>
+          </div>
+
           <SectionTitle title="Detailed Information" className="mt-8" />
           <div className="mt-5 space-y-4">
             <label className="block text-sm font-semibold text-slate-700">
@@ -440,7 +604,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                 }`}
                 placeholder="A one-sentence pitch for your gig"
                 value={summary}
-                onChange={(e) => setSummary(e.target.value)}
+                onChange={(event) => setSummary(event.target.value)}
               />
             </label>
             <p className={`-mt-2 text-xs font-medium ${isSummaryInvalid ? "text-red-500" : "text-slate-400"}`}>
@@ -453,56 +617,19 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                 className="mt-2 h-36 w-full resize-none rounded-lg border border-slate-200 px-4 py-3 text-base text-slate-600 outline-none focus:border-[#1453c4] focus:ring-2 focus:ring-blue-100"
                 placeholder="Describe what you are offering in detail. Mention your tools, process, and what the student will receive..."
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(event) => setDescription(event.target.value)}
               />
             </label>
           </div>
 
-          {/* Availability */}
-          <SectionTitle title="Available Time" className="mt-8" />
-          <div className="mt-5 space-y-3">
-            <p className="text-sm text-slate-500">
-              Select when students can expect you to be available for this gig. This is optional.
-            </p>
-            <div className="flex flex-wrap gap-3 rounded-2xl border border-transparent bg-transparent p-3">
-              {availabilityOptions.map((slot) => {
-                const isSelected = availability.includes(slot);
-                return (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => toggleAvailability(slot)}
-                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                      isSelected
-                        ? "border-[#1453c4] bg-[#e8efff] text-[#1453c4]"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                    }`}
-                  >
-                    {slot}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-xs font-medium text-slate-400">
-              Leave this empty if you do not want to publish availability.
-            </p>
-          </div>
-
-          {/* Gig Poster Section */}
           <SectionTitle title="Gig Poster / Thumbnail" className="mt-8" />
           <div className="mt-5 space-y-4">
             <p className="text-sm font-semibold text-slate-700">
               Choose a template or upload your custom poster:
             </p>
-            
-            {/* Presets */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {[
-                { label: "Photography", src: "/img/package%201.jpg" },
-                { label: "Design", src: "/img/package%202.jpg" },
-                { label: "Crafts", src: "/img/package%203.jpg" },
-                { label: "Events", src: "/img/package%204.jpg" },
-              ].map((preset) => (
+
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              {GIG_COVER_PRESETS.map((preset) => (
                 <button
                   key={preset.src}
                   type="button"
@@ -510,9 +637,9 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                     setSelectedImage(preset.src);
                     setSelectedImageFile(null);
                   }}
-                  className={`relative overflow-hidden rounded-xl border-4 transition ${
+                  className={`relative cursor-pointer overflow-hidden rounded-xl border-4 transition ${
                     selectedImage === preset.src || decodeURIComponent(selectedImage).endsWith(preset.src.replace("/img/", ""))
-                      ? "border-[#1453c4] scale-105"
+                      ? "scale-105 border-[#1453c4]"
                       : "border-transparent opacity-75 hover:opacity-100"
                   }`}
                 >
@@ -525,44 +652,44 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
               ))}
             </div>
 
-            {/* Custom upload */}
             <div className="rounded-xl border-2 border-dashed border-[#c8d0ee] bg-[#f5f6ff] px-6 py-6 text-center">
-              <label className="cursor-pointer block">
+              <label className="block cursor-pointer">
                 <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-teal-300 text-lg text-teal-900">
                   ⤴
                 </div>
                 <p className="mt-2 text-lg font-semibold text-slate-800">Upload Custom Image</p>
-                <p className="text-xs text-slate-500">Support JPG, PNG. Image will be converted for profile display.</p>
+                <p className="text-xs text-slate-500">
+                  Support JPG, PNG. Image will be converted for profile display.
+                </p>
                 <input
                   type="file"
                   accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      if (!SAMPLE_IMAGE_TYPES.has(file.type) || file.size > MAX_SAMPLE_IMAGE_BYTES) {
-                        setFeedback({
-                          type: "error",
-                          msg: "Sample work image must be PNG, JPG, or WEBP and under 2 MB.",
-                        });
-                        return;
-                      }
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
 
-                      setSelectedImageFile(file);
-                      setSelectedImage(URL.createObjectURL(file));
+                    if (!SAMPLE_IMAGE_TYPES.has(file.type) || file.size > MAX_SAMPLE_IMAGE_BYTES) {
+                      setFeedback({
+                        type: "error",
+                        msg: "Sample work image must be PNG, JPG, or WEBP and under 2 MB.",
+                      });
+                      return;
                     }
+
+                    setSelectedImageFile(file);
+                    setSelectedImage(URL.createObjectURL(file));
                   }}
                   className="hidden"
                 />
               </label>
             </div>
 
-            {/* Preview of current poster */}
             {selectedImage && (
               <div className="mt-4">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Current Selected Poster Preview:
                 </p>
-                <div className="mt-2 max-w-sm overflow-hidden rounded-xl border border-slate-200 shadow-sm relative">
+                <div className="relative mt-2 max-w-sm overflow-hidden rounded-xl border border-slate-200 shadow-sm">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={selectedImage} alt="Poster preview" className="h-44 w-full object-cover" />
                 </div>
@@ -570,11 +697,10 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
             )}
           </div>
 
-          {/* Action Buttons */}
           <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-5">
             <Link
               href={backHref}
-              className="rounded-lg border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+              className="rounded-lg border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               Cancel
             </Link>
@@ -582,15 +708,9 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
               type="button"
               onClick={handlePublish}
               disabled={isSaving}
-              className="rounded-lg bg-[#1453c4] px-7 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0e3f9e] transition disabled:opacity-60"
+              className="rounded-lg bg-[#1453c4] px-7 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0e3f9e] disabled:opacity-60"
             >
-              {isSaving
-                ? isEditMode
-                  ? "Saving..."
-                  : "Publishing..."
-                : isEditMode
-                  ? "Save Changes"
-                  : "Publish Gig"}
+              {isSaving ? (isEditMode ? "Saving..." : "Publishing...") : isEditMode ? "Save Changes" : "Publish Gig"}
             </button>
           </div>
         </article>
@@ -626,7 +746,7 @@ function StepItem({
       >
         {number}
       </div>
-      <span className={`${active ? "text-[#1453c4]" : "text-slate-400"} text-sm`}>{label}</span>
+      <span className={`text-sm ${active ? "text-[#1453c4]" : "text-slate-400"}`}>{label}</span>
     </div>
   );
 }

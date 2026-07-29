@@ -49,7 +49,7 @@ export default function BecomeSellerModal() {
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-md">
-        <div className="relative max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
+        <div className="scrollbar-none relative max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
           <button
             onClick={() => router.push("/home/buyer")}
             title="Close"

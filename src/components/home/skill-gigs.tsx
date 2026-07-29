@@ -11,15 +11,11 @@ import ModalPortal from "@/components/ui/modal-portal";
 import GigPreviewPage from "@/components/gig-preview-page";
 import GuestAuthModal from "@/components/guest-auth-modal";
 import { db } from "@/lib/firebase";
+import { buildGigRatingSummary } from "@/lib/gig-ratings";
+import { ensureGigTitlePrefix } from "@/lib/gig-titles";
 import { formatRatingLabel } from "@/lib/ratings";
 import { useAuth } from "@/context/AuthContext";
-
-const gigImages = [
-  "/img/package%201.jpg",
-  "/img/package%202.jpg",
-  "/img/package%203.jpg",
-  "/img/package%204.jpg",
-];
+import { getGigCoverForCategory } from "@/lib/gig-covers";
 
 type LiveGig = {
   id: string;
@@ -91,6 +87,10 @@ export default function SkillGigsSection() {
         const statusSnapshot = await getDocs(
           query(collection(db, "gigs"), where("status", "==", "active")),
         );
+        const requestsSnapshot = await getDocs(
+          query(collection(db, "requests"), where("status", "==", "completed")),
+        );
+        const completedRequests = requestsSnapshot.docs.map((requestDoc) => requestDoc.data());
 
         const gigRecords: GigRecord[] = statusSnapshot.docs
           .map((gigDoc, index) => {
@@ -98,6 +98,15 @@ export default function SkillGigsSection() {
             const availability = Array.isArray(gig.availability)
               ? gig.availability.join(", ")
               : gig.availability || "Flexible";
+            const ratingSummary = buildGigRatingSummary(
+              {
+                id: gigDoc.id,
+                gigId: gig.gigId || gigDoc.id,
+                title: ensureGigTitlePrefix(gig.title || "Student Skill"),
+                category: gig.category || "Service",
+              },
+              completedRequests.filter((request) => request.providerId === (gig.providerId || "")),
+            );
 
             const rankedGig: RankedLiveGig = {
               id: gigDoc.id,
@@ -105,7 +114,7 @@ export default function SkillGigsSection() {
               providerId: gig.providerId || "",
               title: gig.title || "Student Skill",
               category: gig.category || "Service",
-              rating: 0,
+              rating: ratingSummary.rating,
               providerName: gig.providerName || "Campus Student",
               university: gig.university || "Campus",
               providerImage: gig.providerImage || "",
@@ -117,7 +126,7 @@ export default function SkillGigsSection() {
               image:
                 gig.image ||
                 gig.sampleWorkUrl ||
-                gigImages[index % gigImages.length],
+                getGigCoverForCategory(gig.category, gig.title, index),
               serviceType: "Service Gig",
               tags: [gig.category || "Service", "Service Gig", availability],
               sortTime:
@@ -300,13 +309,15 @@ function GigCard({ gig }: { gig: LiveGig }) {
             avatar:
               gig.providerImage ||
               `https://ui-avatars.com/api/?name=${encodeURIComponent(gig.providerName)}&background=2f66e7&color=fff&size=400`,
-            level: gig.university,
             savedAt: `Saved ${now.toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
               year: "numeric",
             })}`,
             description: gig.summary,
+            university: gig.university,
+            availability: gig.availability,
+            price: "",
           },
         ];
       }
@@ -374,8 +385,10 @@ function GigCard({ gig }: { gig: LiveGig }) {
               )}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold leading-5 text-slate-700">{gig.providerName}</p>
-              <p className="truncate text-[12px] leading-4 text-slate-500">{gig.university} student</p>
+              <p className="truncate text-[13px] font-semibold leading-5 text-slate-700">
+                {gig.providerName} <span className="font-medium text-slate-400">|</span>{" "}
+                <span className="font-medium text-slate-500">{gig.university}</span>
+              </p>
             </div>
           </div>
 
@@ -384,11 +397,8 @@ function GigCard({ gig }: { gig: LiveGig }) {
           </p>
 
           <div className="mt-auto border-t border-slate-200 pt-3">
-            <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
-              <span className="truncate">{gig.availability}</span>
-              <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-[#dff2f4] px-2 py-0.5 text-[10px] font-semibold leading-none text-teal-800">
-                {gig.serviceType}
-              </span>
+            <div className="text-[11px] text-slate-500">
+              <span className="block truncate">{gig.availability}</span>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <Link
@@ -424,7 +434,7 @@ function GigCard({ gig }: { gig: LiveGig }) {
       {previewOpen ? (
         <ModalPortal>
           <div className="fixed inset-0 z-[80] bg-slate-950/50 backdrop-blur-md">
-            <div className="flex h-full w-full items-start justify-center overflow-y-auto px-4 py-5 sm:px-6 sm:py-8">
+            <div className="scrollbar-none flex h-full w-full items-start justify-center overflow-y-auto px-4 py-5 sm:px-6 sm:py-8">
               <div className="relative w-full max-w-6xl rounded-[28px] bg-[#f8faff] p-4 shadow-[0_28px_90px_rgba(15,23,42,0.24)] sm:p-5">
                 <button
                   type="button"

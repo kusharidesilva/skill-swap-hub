@@ -6,6 +6,8 @@ import { collection, doc, onSnapshot, serverTimestamp, updateDoc } from "firebas
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { createNotification } from "@/lib/notifications";
+import { formatRatingLabel } from "@/lib/ratings";
+import { isRole, scopedHref } from "@/lib/role-routes";
 import SelectField from "@/components/ui/select-field";
 import ModalPortal from "@/components/ui/modal-portal";
 
@@ -56,6 +58,10 @@ type ReportRecord = {
   createdAt?: TimestampLike;
   adminNote?: string;
 };
+
+function notificationHrefForRole(role?: string) {
+  return isRole(role) ? scopedHref("/notifications", role) : "/notifications";
+}
 
 const accountFilters = ["All Statuses", "Active", "Pending Verification", "Suspended"];
 const verificationFilters = ["All Verifications", "Approved", "Pending", "Rejected", "Verified"];
@@ -205,6 +211,14 @@ export default function AdminUserManagement() {
       await updateDoc(doc(db, "users", targetUserId), {
         accountStatus: nextStatus,
         adminSuspensionReason: nextStatus === "suspended" ? reason.trim() : "",
+        suspensionCode: nextStatus === "suspended" ? "admin_action" : "",
+        suspensionTitle: nextStatus === "suspended" ? "Your account has been suspended by an admin" : "",
+        suspensionReason:
+          nextStatus === "suspended"
+            ? reason.trim() || "Your account was suspended by an admin."
+            : "",
+        suspensionReportId: "",
+        suspensionRequestId: "",
         suspendedAt: nextStatus === "suspended" ? serverTimestamp() : null,
         updatedAt: serverTimestamp(),
       });
@@ -223,8 +237,8 @@ export default function AdminUserManagement() {
           type: "system",
           icon: nextStatus === "active" ? "check-circle" : "alert-triangle",
           tone: nextStatus === "active" ? "emerald" : "red",
-          href: "/notifications",
-          destination: "/notifications",
+          href: notificationHrefForRole(user.role),
+          destination: notificationHrefForRole(user.role),
         });
       }
 
@@ -350,11 +364,11 @@ export default function AdminUserManagement() {
           />
 
           <SelectField
-            label="Student Type"
+            label="User Type"
             value={typeFilter}
             onChange={setTypeFilter}
             options={typeFilters}
-            title="Filter by student type"
+            title="Filter by user type"
             wrapperClassName="min-w-0"
             labelClassName="mb-0 text-sm font-medium text-slate-600"
             className="h-12 rounded-xl border-slate-200 px-4 text-sm font-medium text-slate-700 shadow-sm"
@@ -409,7 +423,7 @@ export default function AdminUserManagement() {
               <span>Name &amp; Email</span>
               <span>Academic Details</span>
               <span className="justify-self-center">Role</span>
-              <span className="justify-self-center">Student Type</span>
+              <span className="justify-self-center">User Type</span>
               <span className="justify-self-center">Status</span>
               <span className="justify-self-center">Rating</span>
               <span className="justify-self-center">Actions</span>
@@ -695,9 +709,7 @@ function roleTone(role?: string): "blue" | "violet" | "green" | "slate" {
 
 function ratingLabel(user: ManagedUser) {
   const rating = user.averageRating ?? user.rating;
-  if (typeof rating === "number") return rating.toFixed(1);
-  if (typeof rating === "string" && rating.trim()) return rating;
-  return user.totalReviews ? `${user.totalReviews} reviews` : "New";
+  return formatRatingLabel(rating);
 }
 
 function toMillis(value: TimestampLike) {
@@ -823,7 +835,7 @@ function ReportsModal({
             </button>
           </div>
 
-          <div className="max-h-[65vh] overflow-y-auto px-6 py-5">
+          <div className="scrollbar-none max-h-[65vh] overflow-y-auto px-6 py-5">
             {reports.length ? (
               <div className="space-y-4">
                 {reports.map((report) => {

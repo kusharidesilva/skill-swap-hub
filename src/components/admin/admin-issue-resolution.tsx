@@ -1,12 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { collection, doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
+import { Timestamp, arrayUnion, collection, doc, getDoc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { createNotification } from "@/lib/notifications";
 import SelectField from "@/components/ui/select-field";
 import ModalPortal from "@/components/ui/modal-portal";
 import AdminFilePreviewModal from "@/components/admin/admin-file-preview-modal";
+import { isRole, scopedHref } from "@/lib/role-routes";
+import {
+  ADMIN_CONTACT_EMAIL,
+  formatReportId,
+  moderationActionLabel,
+  moderationActionDescription,
+  normalizeModerationStatus,
+  queueEmail,
+  toMillis,
+  type ModerationAction,
+  type ModerationEvidenceFile,
+} from "@/lib/moderation";
 
 type TimestampLike =
   | { toDate?: () => Date; toMillis?: () => number }
@@ -25,11 +37,14 @@ type EvidenceFile = {
 
 type ReportRecord = {
   id: string;
+  reportCode?: string;
   reporterId?: string;
   reporterName?: string;
   reporterEmail?: string;
+  reporterRole?: string;
   targetUserId?: string;
   targetUserName?: string;
+  targetUserRole?: string;
   reportedUserId?: string;
   reportedUserName?: string;
   reportedUser?: string;
@@ -42,14 +57,37 @@ type ReportRecord = {
   status?: string;
   adminNote?: string;
   adminAction?: string;
+  decisionMessage?: string;
+  adminNeedsReview?: boolean;
+  lastResponseAt?: TimestampLike;
+  reportedUserResponses?: Array<{
+    userId?: string;
+    userName?: string;
+    message?: string;
+    evidenceFiles?: ModerationEvidenceFile[];
+    submittedAt?: TimestampLike;
+  }>;
+  actionHistory?: Array<{
+    actorType?: "admin" | "reported_user";
+    actorName?: string;
+    action?: string;
+    status?: string;
+    message?: string;
+    evidenceFiles?: ModerationEvidenceFile[];
+    createdAt?: TimestampLike;
+  }>;
   createdAt?: TimestampLike;
   resolvedAt?: TimestampLike;
 };
 
 type UserAvatarMap = Record<string, string>;
 
-const statusFilters = ["All Reports", "Pending", "Resolved", "Rejected"];
+const statusFilters = ["All Reports", "Pending", "Warn", "Suspend", "Resolve", "Reject"];
 const REPORTS_PER_PAGE = 6;
+
+function notificationHrefForRole(role?: string) {
+  return isRole(role) ? scopedHref("/notifications", role) : "/notifications";
+}
 
 export default function AdminIssueResolution() {
   const [reports, setReports] = useState<ReportRecord[]>([]);
@@ -112,7 +150,7 @@ export default function AdminIssueResolution() {
     return reports.filter((report) => {
       const matchesStatus =
         statusFilter === "All Reports" ||
-        normalizeStatus(report.status || "Pending") === normalizeStatus(statusFilter);
+        normalizeModerationStatus(report.status || "Pending") === normalizeModerationStatus(statusFilter);
 
       return matchesStatus;
     });
@@ -134,15 +172,19 @@ export default function AdminIssueResolution() {
   }, [currentPage, totalPages]);
 
   const pendingReports = reports.filter(
-    (report) => normalizeStatus(report.status || "Pending") === "pending",
+    (report) =>
+      normalizeModerationStatus(report.status || "Pending") === "pending" ||
+      report.adminNeedsReview === true,
   );
-  const warnedReports = reports.filter((report) => report.adminAction === "warning_sent");
+  const warnedReports = reports.filter(
+    (report) => normalizeModerationStatus(report.status || "") === "warn",
+  );
   const resolvedToday = reports.filter((report) => {
-    if (normalizeStatus(report.status || "") !== "resolved") return false;
+    if (normalizeModerationStatus(report.status || "") !== "resolve") return false;
     return isToday(report.resolvedAt);
   });
 
-  const updateReportStatus = async (report: ReportRecord, nextStatus: "Resolved" | "Rejected") => {
+  const updateReportStatus = async (report: ReportRecord, nextStatus: "Resolve" | "Reject") => {
     const note = notes[report.id]?.trim() || report.adminNote || "";
     setBusyKey(`${report.id}-${nextStatus}`);
     setNotice(null);
@@ -151,24 +193,26 @@ export default function AdminIssueResolution() {
       await updateDoc(doc(db, "reports", report.id), {
         status: nextStatus,
         adminNote: note,
+        adminAction: nextStatus === "Resolve" ? "report_resolved" : "report_rejected",
+        decisionMessage: note,
+        adminNeedsReview: false,
         updatedAt: serverTimestamp(),
         resolvedAt: serverTimestamp(),
+        actionHistory: arrayUnion({
+          actorType: "admin",
+          actorName: "Admin",
+          action: nextStatus === "Resolve" ? "resolve_and_close" : "reject_response",
+          status: nextStatus,
+          message: note,
+          createdAt: Timestamp.now(),
+        }),
       });
 
-      if (report.reporterId) {
-        await createNotification({
-          userId: report.reporterId,
-          title: "Report status updated",
-          description: `Your report is now ${nextStatus.toLowerCase()}.`,
-          type: "system",
-          icon: nextStatus === "Resolved" ? "check-circle" : "x-circle",
-          tone: nextStatus === "Resolved" ? "emerald" : "red",
-          href: "/notifications",
-          destination: "/notifications",
-        });
-      }
+      await notifyReportedUser(report, nextStatus === "Resolve" ? "resolve" : "reject", note, {
+        openPopup: false,
+      });
 
-      setNotice({ type: "success", text: `Report ${formatReportId(report.id)} marked ${nextStatus}.` });
+      setNotice({ type: "success", text: `Report ${formatReportId(report.reportCode || report.id)} marked ${nextStatus}.` });
     } catch (error) {
       console.error("Error updating report:", error);
       setNotice({ type: "error", text: "Could not update the report." });
@@ -189,21 +233,26 @@ export default function AdminIssueResolution() {
 
     try {
       await updateDoc(doc(db, "reports", report.id), {
+        status: "Warn",
         adminAction: "warning_sent",
         adminNote: notes[report.id]?.trim() || report.adminNote || "",
+        decisionMessage: notes[report.id]?.trim() || report.adminNote || "",
+        adminNeedsReview: false,
         updatedAt: serverTimestamp(),
+        actionHistory: arrayUnion({
+          actorType: "admin",
+          actorName: "Admin",
+          action: "warn",
+          status: "Warn",
+          message: notes[report.id]?.trim() || report.adminNote || "",
+          createdAt: Timestamp.now(),
+        }),
       });
-
-      await createNotification({
-        userId: targetUserId,
-        title: "Account warning",
-        description: "Admin reviewed a report related to your account. Please follow platform rules.",
-        type: "system",
-        icon: "alert-triangle",
-        tone: "red",
-        href: "/notifications",
-        destination: "/notifications",
-      });
+      await notifyReportedUser(
+        report,
+        "warn",
+        notes[report.id]?.trim() || report.adminNote || "",
+      );
 
       setNotice({ type: "success", text: `Warning sent to ${reportedUserName(report)}.` });
     } catch (error) {
@@ -227,45 +276,157 @@ export default function AdminIssueResolution() {
     try {
       await updateDoc(doc(db, "users", targetUserId), {
         accountStatus: "suspended",
+        suspensionCode: "report_action",
+        suspensionTitle: "Your account has been suspended by an admin",
+        suspensionReason:
+          notes[report.id]?.trim() ||
+          report.adminNote ||
+          `Your account was suspended after admin review of ${formatReportId(report.reportCode || report.id)}.`,
+        suspensionReportId: report.id,
+        adminSuspensionReason: notes[report.id]?.trim() || report.adminNote || "",
+        suspendedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
       await updateDoc(doc(db, "reports", report.id), {
-        status: "Resolved",
+        status: "Suspend",
         adminAction: "account_suspended",
         adminNote: notes[report.id]?.trim() || report.adminNote || "",
+        decisionMessage: notes[report.id]?.trim() || report.adminNote || "",
+        adminNeedsReview: false,
         updatedAt: serverTimestamp(),
         resolvedAt: serverTimestamp(),
+        actionHistory: arrayUnion({
+          actorType: "admin",
+          actorName: "Admin",
+          action: "suspend",
+          status: "Suspend",
+          message: notes[report.id]?.trim() || report.adminNote || "",
+          createdAt: Timestamp.now(),
+        }),
       });
-
-      await createNotification({
-        userId: targetUserId,
-        title: "Account suspended",
-        description: "Your Skill Swap Hub account has been suspended after admin report review.",
-        type: "system",
-        icon: "alert-triangle",
-        tone: "red",
-        href: "/notifications",
-        destination: "/notifications",
-      });
-
-      if (report.reporterId) {
-        await createNotification({
-          userId: report.reporterId,
-          title: "Report resolved",
-          description: "Admin reviewed your report and took action.",
-          type: "system",
-          icon: "check-circle",
-          tone: "emerald",
-          href: "/notifications",
-          destination: "/notifications",
-        });
-      }
+      await notifyReportedUser(
+        report,
+        "suspend",
+        notes[report.id]?.trim() || report.adminNote || "",
+      );
 
       setNotice({ type: "success", text: `${reportedUserName(report)} has been suspended.` });
     } catch (error) {
       console.error("Error suspending user:", error);
       setNotice({ type: "error", text: "Could not suspend the reported user." });
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const keepWarning = async (report: ReportRecord) => {
+    const note = notes[report.id]?.trim() || report.adminNote || "";
+    setBusyKey(`${report.id}-keep-warning`);
+    setNotice(null);
+
+    try {
+      await updateDoc(doc(db, "reports", report.id), {
+        status: "Warn",
+        adminAction: "warning_kept",
+        adminNote: note,
+        decisionMessage: note,
+        adminNeedsReview: false,
+        updatedAt: serverTimestamp(),
+        actionHistory: arrayUnion({
+          actorType: "admin",
+          actorName: "Admin",
+          action: "keep_warning",
+          status: "Warn",
+          message: note,
+          createdAt: Timestamp.now(),
+        }),
+      });
+
+      await notifyReportedUser(report, "warn", note || "Admin reviewed your response and kept the warning on this report.", {
+        openPopup: true,
+      });
+      setNotice({ type: "success", text: `Warning kept for ${reportedUserName(report)}.` });
+    } catch (error) {
+      console.error("Error keeping warning:", error);
+      setNotice({ type: "error", text: "Could not keep the warning." });
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const removeWarning = async (report: ReportRecord) => {
+    const note = notes[report.id]?.trim() || report.adminNote || "";
+    setBusyKey(`${report.id}-remove-warning`);
+    setNotice(null);
+
+    try {
+      await updateDoc(doc(db, "reports", report.id), {
+        status: "Resolve",
+        adminAction: "warning_removed",
+        adminNote: note,
+        decisionMessage: note,
+        adminNeedsReview: false,
+        updatedAt: serverTimestamp(),
+        resolvedAt: serverTimestamp(),
+        actionHistory: arrayUnion({
+          actorType: "admin",
+          actorName: "Admin",
+          action: "remove_warning",
+          status: "Resolve",
+          message: note,
+          createdAt: Timestamp.now(),
+        }),
+      });
+
+      await notifyReportedUser(
+        report,
+        "resolve",
+        note || "Admin reviewed your response and removed the warning on this report.",
+        { openPopup: false },
+      );
+      setNotice({ type: "success", text: `Warning removed for ${reportedUserName(report)}.` });
+    } catch (error) {
+      console.error("Error removing warning:", error);
+      setNotice({ type: "error", text: "Could not remove the warning." });
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const rejectResponse = async (report: ReportRecord) => {
+    const note = notes[report.id]?.trim() || report.adminNote || "";
+    setBusyKey(`${report.id}-reject-response`);
+    setNotice(null);
+
+    try {
+      await updateDoc(doc(db, "reports", report.id), {
+        status: "Reject",
+        adminAction: "response_rejected",
+        adminNote: note,
+        decisionMessage: note,
+        adminNeedsReview: false,
+        updatedAt: serverTimestamp(),
+        actionHistory: arrayUnion({
+          actorType: "admin",
+          actorName: "Admin",
+          action: "reject_response",
+          status: "Reject",
+          message: note,
+          createdAt: Timestamp.now(),
+        }),
+      });
+
+      await notifyReportedUser(
+        report,
+        "reject",
+        note || "Admin reviewed your response and rejected it.",
+        { openPopup: false },
+      );
+      setNotice({ type: "success", text: `Response rejected for ${reportedUserName(report)}.` });
+    } catch (error) {
+      console.error("Error rejecting response:", error);
+      setNotice({ type: "error", text: "Could not reject the user response." });
     } finally {
       setBusyKey("");
     }
@@ -362,7 +523,7 @@ export default function AdminIssueResolution() {
                     key={report.id}
                     className="grid grid-cols-[0.8fr_1fr_1fr_0.9fr_1.5fr_0.8fr_0.7fr_0.5fr] items-start gap-3 border-b border-slate-200 px-4 py-4 text-sm last:border-b-0"
                   >
-                    <span className="pt-2 font-medium text-slate-600">{formatReportId(report.id)}</span>
+                    <span className="pt-2 font-medium text-slate-600">{formatReportId(report.reportCode || report.id)}</span>
                     <ReportedUser
                       name={report.reporterName || "Reporter"}
                       detail={report.reporterEmail}
@@ -396,7 +557,7 @@ export default function AdminIssueResolution() {
                                 key={`${file.url}-${index}`}
                                 onClick={() =>
                                   setPreviewFile({
-                                    title: `${formatReportId(report.id)} Evidence ${index + 1}`,
+                                    title: `${formatReportId(report.reportCode || report.id)} Evidence ${index + 1}`,
                                     url: file.url as string,
                                     contentType: file.type,
                                     fileName: file.name,
@@ -422,7 +583,7 @@ export default function AdminIssueResolution() {
                         type="button"
                         onClick={() => setSelectedReport(report)}
                         className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900"
-                        aria-label={`Manage report ${formatReportId(report.id)}`}
+                        aria-label={`Manage report ${formatReportId(report.reportCode || report.id)}`}
                         title="Manage report"
                       >
                         <MoreActionsIcon />
@@ -470,6 +631,7 @@ export default function AdminIssueResolution() {
             setNotes((current) => ({ ...current, [selectedReport.id]: value }))
           }
           busyKey={busyKey}
+          onPreviewFile={setPreviewFile}
           onClose={() => setSelectedReport(null)}
           onWarn={async () => {
             await warnUser(selectedReport);
@@ -480,11 +642,26 @@ export default function AdminIssueResolution() {
             setSelectedReport(null);
           }}
           onResolve={async () => {
-            await updateReportStatus(selectedReport, "Resolved");
+            await updateReportStatus(selectedReport, "Resolve");
             setSelectedReport(null);
           }}
           onReject={async () => {
-            await updateReportStatus(selectedReport, "Rejected");
+            if (
+              normalizeModerationStatus(selectedReport.status || "") === "warn" &&
+              (selectedReport.reportedUserResponses || []).length > 0
+            ) {
+              await rejectResponse(selectedReport);
+            } else {
+              await updateReportStatus(selectedReport, "Reject");
+            }
+            setSelectedReport(null);
+          }}
+          onKeepWarning={async () => {
+            await keepWarning(selectedReport);
+            setSelectedReport(null);
+          }}
+          onRemoveWarning={async () => {
+            await removeWarning(selectedReport);
             setSelectedReport(null);
           }}
         />
@@ -553,13 +730,17 @@ function ReportedUser({
 }
 
 function StatusPill({ status }: { status: string }) {
-  const normalized = normalizeStatus(status);
+  const normalized = normalizeModerationStatus(status);
   const styles =
     normalized === "pending"
       ? "bg-orange-100 text-orange-700"
-      : normalized === "resolved"
+      : normalized === "warn"
+        ? "bg-blue-100 text-blue-700"
+        : normalized === "suspend"
+          ? "bg-rose-100 text-rose-700"
+          : normalized === "resolve"
         ? "bg-teal-100 text-teal-700"
-        : "bg-red-100 text-red-700";
+        : "bg-slate-200 text-slate-700";
 
   return (
     <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${styles}`}>
@@ -634,33 +815,49 @@ function ReportActionModal({
   note,
   onNoteChange,
   busyKey,
+  onPreviewFile,
   onClose,
   onWarn,
   onSuspend,
   onResolve,
   onReject,
+  onKeepWarning,
+  onRemoveWarning,
 }: {
   report: ReportRecord;
   note: string;
   onNoteChange: (value: string) => void;
   busyKey: string;
+  onPreviewFile: (file: {
+    title: string;
+    url: string;
+    contentType?: string;
+    fileName?: string;
+  } | null) => void;
   onClose: () => void;
   onWarn: () => Promise<void>;
   onSuspend: () => Promise<void>;
   onResolve: () => Promise<void>;
   onReject: () => Promise<void>;
+  onKeepWarning: () => Promise<void>;
+  onRemoveWarning: () => Promise<void>;
 }) {
+  const responseHistory = report.reportedUserResponses || [];
+  const actionHistory = report.actionHistory || [];
+  const reviewMode =
+    normalizeModerationStatus(report.status || "") === "warn" && responseHistory.length > 0;
+
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md">
-        <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
+        <div className="scrollbar-none max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
                 Report Actions
               </p>
               <h3 className="mt-2 text-xl font-bold text-slate-900">
-                {formatReportId(report.id)} - {report.issueType || report.category || "Issue"}
+                {formatReportId(report.reportCode || report.id)} - {report.issueType || report.category || "Issue"}
               </h3>
               <p className="mt-2 text-sm text-slate-500">
                 Reporter: {report.reporterName || "Reporter"} | Reported user: {reportedUserName(report)}
@@ -677,54 +874,216 @@ function ReportActionModal({
           </div>
 
           <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm leading-6 text-slate-700">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <InfoRow label="Report ID" value={formatReportId(report.reportCode || report.id)} />
+              <InfoRow label="Issue Type" value={report.issueType || report.category || "Issue"} />
+              <InfoRow label="Reporter" value={report.reporterName || report.reporterEmail || "Reporter"} />
+              <InfoRow label="Reported User" value={reportedUserName(report)} />
+              <InfoRow label="Current Status" value={report.status || "Pending"} />
+              <InfoRow label="Latest Action" value={humanizeAdminAction(report.adminAction)} />
+            </div>
+            <p className="mt-4 text-sm leading-6 text-slate-700">
               {report.description || "No description provided."}
             </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {(report.evidenceFiles || []).length ? (
+                (report.evidenceFiles || []).map((file, index) =>
+                  file.url ? (
+                    <a
+                      key={`${file.url}-${index}`}
+                      href={file.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-[#2563eb] hover:bg-blue-50"
+                    >
+                      {file.name || `Evidence ${index + 1}`}
+                    </a>
+                  ) : null,
+                )
+              ) : (
+                <p className="text-xs text-slate-400">No evidence attached</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                User Responses
+              </p>
+              {responseHistory.length ? (
+                <div className="mt-3 space-y-3">
+                  {responseHistory
+                    .slice()
+                    .reverse()
+                    .map((response, index) => (
+                      <div
+                        key={`${response.userName || "user"}-${toMillis(response.submittedAt)}-${index}`}
+                        className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-slate-800">
+                            {response.userName || "Reported user"}
+                          </p>
+                          <span className="text-xs text-slate-500">
+                            {formatDate(response.submittedAt)}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm leading-6 text-slate-700">
+                          {response.message || "No message provided."}
+                        </p>
+                        {(response.evidenceFiles || []).length ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {(response.evidenceFiles || []).map((file, fileIndex) =>
+                              file.url ? (
+                                <button
+                                  type="button"
+                                  key={`${file.url}-${fileIndex}`}
+                                  onClick={() =>
+                                    onPreviewFile({
+                                      title: `${reportedUserName(report)} response evidence`,
+                                      url: file.url || "",
+                                      contentType: file.type,
+                                      fileName: file.name,
+                                    })
+                                  }
+                                  className="inline-flex rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-[#2563eb] hover:bg-blue-50"
+                                >
+                                  {file.name || `Response evidence ${fileIndex + 1}`}
+                                </button>
+                              ) : null,
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-slate-500">No user response submitted yet.</p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                Action History
+              </p>
+              {actionHistory.length ? (
+                <div className="mt-3 space-y-3">
+                  {actionHistory
+                    .slice()
+                    .reverse()
+                    .map((entry, index) => (
+                      <div
+                        key={`${entry.action || "action"}-${toMillis(entry.createdAt)}-${index}`}
+                        className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-slate-800">
+                            {humanizeAdminAction(entry.action)}
+                          </p>
+                          <span className="text-xs text-slate-500">
+                            {formatDate(entry.createdAt)}
+                          </span>
+                        </div>
+                        {entry.message ? (
+                          <p className="mt-2 text-sm leading-6 text-slate-700">{entry.message}</p>
+                        ) : null}
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-slate-500">No previous admin action recorded yet.</p>
+              )}
+            </div>
           </div>
 
           <div className="mt-5">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">Admin Note</label>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">Message to Reported User</label>
             <textarea
               value={note}
               onChange={(event) => onNoteChange(event.target.value)}
-              placeholder="Add the action summary or review note here..."
+              placeholder="Explain the warning, suspension, rejection, or resolution decision..."
               className="h-28 w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
             />
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <ActionButton
-              busy={busyKey === `${report.id}-warn`}
-              disabled={busyKey !== ""}
-              onClick={() => void onWarn()}
-            >
-              Warn User
-            </ActionButton>
-            <ActionButton
-              tone="danger"
-              busy={busyKey === `${report.id}-suspend`}
-              disabled={busyKey !== ""}
-              onClick={() => void onSuspend()}
-            >
-              Suspend Account
-            </ActionButton>
-            <ActionButton
-              tone="success"
-              busy={busyKey === `${report.id}-Resolved`}
-              disabled={busyKey !== ""}
-              onClick={() => void onResolve()}
-            >
-              Resolve Report
-            </ActionButton>
-            <ActionButton
-              tone="muted"
-              busy={busyKey === `${report.id}-Rejected`}
-              disabled={busyKey !== ""}
-              onClick={() => void onReject()}
-            >
-              Reject Report
-            </ActionButton>
-          </div>
+          {reviewMode ? (
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <ActionButton
+                busy={busyKey === `${report.id}-keep-warning`}
+                disabled={busyKey !== ""}
+                onClick={() => void onKeepWarning()}
+              >
+                Keep Warning
+              </ActionButton>
+              <ActionButton
+                tone="muted"
+                busy={busyKey === `${report.id}-remove-warning`}
+                disabled={busyKey !== ""}
+                onClick={() => void onRemoveWarning()}
+              >
+                Remove Warning
+              </ActionButton>
+              <ActionButton
+                tone="danger"
+                busy={busyKey === `${report.id}-suspend`}
+                disabled={busyKey !== ""}
+                onClick={() => void onSuspend()}
+              >
+                Suspend User
+              </ActionButton>
+              <ActionButton
+                tone="muted"
+                busy={busyKey === `${report.id}-Reject`}
+                disabled={busyKey !== ""}
+                onClick={() => void onReject()}
+              >
+                Reject Response
+              </ActionButton>
+              <ActionButton
+                tone="success"
+                busy={busyKey === `${report.id}-Resolve`}
+                disabled={busyKey !== ""}
+                onClick={() => void onResolve()}
+              >
+                Resolve & Close
+              </ActionButton>
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <ActionButton
+                busy={busyKey === `${report.id}-warn`}
+                disabled={busyKey !== ""}
+                onClick={() => void onWarn()}
+              >
+                Warn User
+              </ActionButton>
+              <ActionButton
+                tone="danger"
+                busy={busyKey === `${report.id}-suspend`}
+                disabled={busyKey !== ""}
+                onClick={() => void onSuspend()}
+              >
+                Suspend Account
+              </ActionButton>
+              <ActionButton
+                tone="success"
+                busy={busyKey === `${report.id}-Resolve`}
+                disabled={busyKey !== ""}
+                onClick={() => void onResolve()}
+              >
+                Resolve Report
+              </ActionButton>
+              <ActionButton
+                tone="muted"
+                busy={busyKey === `${report.id}-Reject`}
+                disabled={busyKey !== ""}
+                onClick={() => void onReject()}
+              >
+                Reject Report
+              </ActionButton>
+            </div>
+          )}
         </div>
       </div>
     </ModalPortal>
@@ -739,23 +1098,6 @@ function reportedUserName(report: ReportRecord) {
   return report.targetUserName || report.reportedUserName || report.reportedUser || "Reported user";
 }
 
-function normalizeStatus(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
-}
-
-function toMillis(value: TimestampLike) {
-  if (!value) return 0;
-  if (typeof value === "object" && "toMillis" in value && typeof value.toMillis === "function") {
-    return value.toMillis();
-  }
-  if (typeof value === "object" && "toDate" in value && typeof value.toDate === "function") {
-    return value.toDate().getTime();
-  }
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === "object") return 0;
-  return new Date(value).getTime() || 0;
-}
-
 function formatDate(value: TimestampLike) {
   const millis = toMillis(value);
   if (!millis) return "Not recorded";
@@ -764,6 +1106,141 @@ function formatDate(value: TimestampLike) {
     day: "numeric",
     year: "numeric",
   }).format(new Date(millis));
+}
+
+async function notifyReportedUser(
+  report: ReportRecord,
+  action: ModerationAction,
+  decisionMessage: string,
+  options?: {
+    openPopup?: boolean;
+  },
+) {
+  const targetUserId = reportedUserId(report);
+  if (!targetUserId) {
+    return;
+  }
+
+  const reportReference = formatReportId(report.reportCode || report.id);
+  const actionLabel = moderationActionLabel(action);
+  const summary = decisionMessage.trim() || `${actionLabel} applied by admin after reviewing this report.`;
+  const reportedUserTitle =
+    action === "warn"
+      ? `${reportReference} - Warning issued by admin`
+      : `${reportReference} - Admin action: ${actionLabel}`;
+  const reportedUserDescription =
+    `A report has been filed against your account. Report ID: ${reportReference}. ` +
+    `Admin action: ${actionLabel}. ${summary}`;
+
+  await createNotification({
+    userId: targetUserId,
+    title: reportedUserTitle,
+    description: reportedUserDescription,
+    type: "system",
+    icon: action === "resolve" ? "check-circle" : action === "reject" ? "x-circle" : "alert-triangle",
+    tone: action === "resolve" ? "emerald" : action === "reject" ? "red" : "red",
+    href: notificationHrefForRole(report.targetUserRole),
+    destination: notificationHrefForRole(report.targetUserRole),
+    metadata: {
+      kind: "report_action",
+      reportId: report.id,
+      action,
+      decisionMessage: summary,
+      contactEmail: ADMIN_CONTACT_EMAIL,
+      openPopup: options?.openPopup ?? action === "warn",
+    },
+  });
+
+  if (report.reporterId) {
+    await createNotification({
+      userId: report.reporterId,
+      title: `${reportReference} - Admin update`,
+      description: `Admin has taken action on your report. Report ID: ${reportReference}. Action: ${actionLabel}.`,
+      type: "system",
+      icon: action === "resolve" ? "check-circle" : "alert-triangle",
+      tone: action === "resolve" ? "emerald" : "blue",
+      href: notificationHrefForRole(report.reporterRole),
+      destination: notificationHrefForRole(report.reporterRole),
+    });
+  }
+
+  const targetUserDoc = await getDoc(doc(db, "users", targetUserId));
+  const targetUserData = targetUserDoc.exists()
+    ? (targetUserDoc.data() as { email?: string; name?: string })
+    : null;
+  const targetUserEmail =
+    typeof targetUserData?.email === "string" ? targetUserData.email.trim() : "";
+
+  if (targetUserEmail) {
+    await queueEmail({
+      to: targetUserEmail,
+      subject: `${reportReference} report action update`,
+      text: [
+        `Hi ${reportedUserName(report) || targetUserData?.name || "there"},`,
+        "",
+        `A report has been filed against your account.`,
+        `Report ID: ${reportReference}`,
+        `Admin action: ${actionLabel}`,
+        summary,
+        "",
+        `If you need help, contact admin: ${ADMIN_CONTACT_EMAIL}`,
+      ].join("\n"),
+      html: `<div style="font-family: Arial, sans-serif; line-height:1.6; color:#0f172a;">
+        <h2 style="color:#1d4ed8;">${reportReference} report action update</h2>
+        <p>A report has been filed against your account.</p>
+        <p><strong>Report ID:</strong> ${reportReference}</p>
+        <p><strong>Admin action:</strong> ${actionLabel}</p>
+        <p>${escapeHtml(summary)}</p>
+        <p>If you need help, contact admin: <a href="mailto:${ADMIN_CONTACT_EMAIL}">${ADMIN_CONTACT_EMAIL}</a></p>
+      </div>`,
+      metadata: {
+        type: "report_admin_update",
+        reportId: report.id,
+      },
+    });
+  }
+}
+
+function humanizeAdminAction(action?: string) {
+  if (!action) return "No action recorded";
+
+  const labels: Record<string, string> = {
+    warning_sent: "Warning Sent",
+    warning_kept: "Keep Warning",
+    warning_removed: "Remove Warning",
+    account_suspended: "Suspend User",
+    response_rejected: "Reject Response",
+    report_resolved: "Resolve & Close",
+    report_rejected: "Reject Report",
+    resolve_and_close: "Resolve & Close",
+    reject_response: "Reject Response",
+    warn: "Warn User",
+    suspend: "Suspend User",
+    keep_warning: "Keep Warning",
+    remove_warning: "Remove Warning",
+  };
+
+  return labels[action] || action.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-slate-800">{value}</p>
+    </div>
+  );
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function isToday(value: TimestampLike) {
@@ -776,10 +1253,6 @@ function isToday(value: TimestampLike) {
     date.getMonth() === today.getMonth() &&
     date.getDate() === today.getDate()
   );
-}
-
-function formatReportId(id: string) {
-  return `#ISS-${id.slice(-5).toUpperCase()}`;
 }
 
 function InfoIcon() {

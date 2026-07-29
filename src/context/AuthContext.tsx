@@ -11,6 +11,7 @@ import {
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { getUserProfile, type UserProfile } from "@/lib/auth";
+import { runReviewComplianceAuditForUser } from "@/lib/review-compliance";
 
 interface AuthContextValue {
   firebaseUser: User | null;
@@ -38,7 +39,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setFirebaseUser(user);
       if (user) {
         const profile = await getUserProfile(user.uid);
-        setUserProfile(profile);
+        if (profile) {
+          await runReviewComplianceAuditForUser({
+            uid: profile.uid,
+            name: profile.name,
+            email: profile.email,
+            role: profile.role,
+            accountStatus: profile.accountStatus,
+          });
+        }
+        const refreshedProfile = await getUserProfile(user.uid);
+        setUserProfile(refreshedProfile);
       } else {
         setUserProfile(null);
       }
@@ -53,7 +64,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const user = auth.currentUser;
     if (!user) return;
     const profile = await getUserProfile(user.uid);
-    setUserProfile(profile);
+    if (profile) {
+      await runReviewComplianceAuditForUser({
+        uid: profile.uid,
+        name: profile.name,
+        email: profile.email,
+        role: profile.role,
+        accountStatus: profile.accountStatus,
+      });
+    }
+    const refreshedProfile = await getUserProfile(user.uid);
+    setUserProfile(refreshedProfile);
   }, []);
 
   // One provider gives every client page the same live authentication state.

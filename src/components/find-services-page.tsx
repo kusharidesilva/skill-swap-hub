@@ -7,6 +7,8 @@ import { useSearchParams } from "next/navigation";
 import { collection, doc, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
+import { buildGigRatingSummary } from "@/lib/gig-ratings";
+import { ensureGigTitlePrefix } from "@/lib/gig-titles";
 import { formatRatingLabel } from "@/lib/ratings";
 import { type Role } from "@/lib/role-routes";
 import type { ProviderGig, UserProfile } from "@/lib/auth";
@@ -16,6 +18,7 @@ import { useLookupOptions } from "@/lib/lookups";
 import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
 import ModalPortal from "@/components/ui/modal-portal";
+import { getGigCoverForCategory } from "@/lib/gig-covers";
 
 type GigCardData = {
   id: string;
@@ -40,17 +43,6 @@ type GigCardData = {
   tags: string[];
   serviceType: string;
 };
-
-const gigImages = [
-  "/img/package%201.jpg",
-  "/img/package%202.jpg",
-  "/img/package%203.jpg",
-  "/img/package%204.jpg",
-  "/img/favorites/web-development.jpg",
-  "/img/favorites/ui-ux-design.jpg",
-  "/img/favorites/data-science.jpg",
-  "/img/favorites/mathematics.jpg",
-];
 
 type FindServicesPageContentProps = {
   role?: Role;
@@ -94,16 +86,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
           query(collection(db, "requests"), where("status", "==", "completed")),
         );
 
-        const ratingsMap: Record<string, { totalStars: number; count: number }> = {};
-        requestsSnapshot.forEach((reqDoc) => {
-          const req = reqDoc.data();
-          const providerId = req.providerId;
-          if (providerId && req.review && typeof req.review.rating === "number") {
-            ratingsMap[providerId] ??= { totalStars: 0, count: 0 };
-            ratingsMap[providerId].totalStars += req.review.rating;
-            ratingsMap[providerId].count += 1;
-          }
-        });
+        const completedRequests = requestsSnapshot.docs.map((reqDoc) => reqDoc.data());
 
         const dbGigs: GigCardData[] = [];
 
@@ -124,10 +107,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
           const storedGigs = (profile.gigs || []).filter(
             (gig) => (gig.status || "active") === "active",
           );
-          const ratingData = ratingsMap[user.uid];
-          const rating = ratingData
-            ? Number((ratingData.totalStars / ratingData.count).toFixed(1))
-            : 0;
+          const providerRequests = completedRequests.filter((request) => request.providerId === user.uid);
 
           const gigEntries: Array<{
             title: string;
@@ -138,7 +118,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
             image: string;
           }> = storedGigs.length
             ? storedGigs.map((gig: ProviderGig, skillIndex) => ({
-                title: gig.title || `I will do ${skills[skillIndex] || "Student Support"}`,
+                title: ensureGigTitlePrefix(gig.title || skills[skillIndex] || "Student Support"),
                 category: gig.category || inferCategory(skills[skillIndex] || gig.title || "Support"),
                 price: gig.price || "",
                 summary: gig.summary || gig.description || `Practical support from a verified student.`,
@@ -146,23 +126,38 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
                 image:
                   gig.image ||
                   (profile.gigImages && profile.gigImages[skillIndex]) ||
-                  gigImages[skillIndex % gigImages.length],
+                  getGigCoverForCategory(
+                    gig.category || skills[skillIndex] || gig.title,
+                    gig.title || skills[skillIndex],
+                    skillIndex,
+                  ),
               }))
             : skills.map((skill, skillIndex) => ({
-                title: `I will do ${skill}`,
+                title: ensureGigTitlePrefix(skill),
                 category: inferCategory(skill),
                 price: "",
                 summary: profile.bio || `Practical ${skill.toLowerCase()} support from a verified student skill swap provider.`,
                 description: profile.bio || "",
                 image:
                   (profile.gigImages && profile.gigImages[skillIndex]) ||
-                  gigImages[skillIndex % gigImages.length],
+                  getGigCoverForCategory(inferCategory(skill), skill, skillIndex),
               }));
 
           gigEntries.forEach((gigEntry, skillIndex) => {
+            const gigId = storedGigs[skillIndex]?.id;
+            const ratingSummary = buildGigRatingSummary(
+              {
+                id: gigId || `${user.uid}-${slugify(gigEntry.title)}-${skillIndex}`,
+                gigId,
+                title: gigEntry.title,
+                category: gigEntry.category,
+              },
+              providerRequests,
+            );
+
             dbGigs.push({
-              id: storedGigs[skillIndex]?.id || `${user.uid}-${slugify(gigEntry.title)}-${skillIndex}`,
-              gigId: storedGigs[skillIndex]?.id,
+              id: gigId || `${user.uid}-${slugify(gigEntry.title)}-${skillIndex}`,
+              gigId,
               providerId: user.uid,
               skillIndex,
               providerName: user.name || "Anonymous Member",
@@ -175,8 +170,8 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
               summary: gigEntry.summary,
               description: gigEntry.description,
               availability: profile.availability || "Flexible",
-              rating,
-              reviews: ratingData?.count || 0,
+              rating: ratingSummary.rating,
+              reviews: ratingSummary.count,
               match: 95,
               image: gigEntry.image,
               points: 20 + (skillIndex % 3) * 5,
@@ -248,7 +243,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
   }, [availabilityFilter, categoryFilter, gigs, hideOwnGigInMarketplace, ratingFilter, searchQuery, universityFilter, userProfile]);
 
   // Pagination happens after filtering so page counts always match the results.
-  const cardsPerPage = 4;
+  const cardsPerPage = 6;
   const totalPages = Math.ceil(filteredGigs.length / cardsPerPage);
   const currentGigs = filteredGigs.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage);
 
@@ -258,14 +253,14 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
       : "/get-started";
 
   return (
-    <div className="flex w-full flex-col gap-8 pb-10 lg:flex-row">
-      <div className="min-w-0 flex-1 order-2 lg:order-1">
+    <div className="grid w-full gap-8 pb-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+      <div className="order-2 min-w-0 lg:order-1">
         {loading ? (
           <LoadingCard />
         ) : (
-          <div className="space-y-6">
+          <div className="flex min-h-[calc(100dvh-11rem)] flex-col">
             {/* Filtered service results */}
-            <section className="grid gap-4 md:grid-cols-2">
+            <section className="grid flex-1 content-start gap-4 md:grid-cols-2 xl:grid-cols-3">
               {currentGigs.length > 0 ? (
                 currentGigs.map((gig) => (
                   <GigCard
@@ -298,11 +293,13 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
             </section>
 
             {totalPages > 1 && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                setCurrentPage={setCurrentPage}
-              />
+              <div className="mt-6 flex justify-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  setCurrentPage={setCurrentPage}
+                />
+              </div>
             )}
           </div>
         )}
@@ -383,9 +380,11 @@ function GigCard({
             avatar:
               gig.providerImage ||
               `https://ui-avatars.com/api/?name=${encodeURIComponent(gig.providerName)}&background=2f66e7&color=fff&size=400`,
-            level: gig.providerDegree,
             savedAt: `Saved ${now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
             description: gig.summary,
+            university: gig.university,
+            price: gig.price,
+            availability: gig.availability,
           },
         ];
       }
@@ -439,8 +438,10 @@ function GigCard({
             )}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-[13px] font-semibold leading-5 text-slate-700">{gig.providerName}</p>
-            <p className="truncate text-[12px] leading-4 text-slate-500">{gig.university}</p>
+            <p className="truncate text-[13px] font-semibold leading-5 text-slate-700">
+              {gig.providerName} <span className="font-medium text-slate-400">|</span>{" "}
+              <span className="font-medium text-slate-500">{gig.university}</span>
+            </p>
           </div>
         </div>
 
@@ -499,7 +500,7 @@ function GigDetailsModal({
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md">
-        <article className="relative grid max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl md:grid-cols-[0.95fr_1.05fr]">
+        <article className="relative grid max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl md:grid-cols-[0.9fr_1.1fr]">
           <button
             type="button"
             onClick={onClose}
@@ -508,24 +509,27 @@ function GigDetailsModal({
           >
             <CloseIcon className="h-4 w-4" />
           </button>
-          <div className="relative min-h-64 bg-slate-100">
-            <Image src={gig.image} alt={gig.title} fill className="object-cover" sizes="(min-width: 768px) 360px, 100vw" />
+          <div className="relative min-h-[220px] bg-slate-100 p-4 md:min-h-[400px]">
+            <Image src={gig.image} alt={gig.title} fill className="object-contain p-4" sizes="(min-width: 768px) 340px, 100vw" />
           </div>
-          <div className="min-w-0 overflow-y-auto p-6">
+          <div className="min-w-0 overflow-y-auto p-5 md:p-6">
             <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#1453c4]">
               {gig.category}
             </span>
-            <h2 className="mt-3 text-xl font-bold leading-7 text-slate-900">{gig.title}</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">{gig.description || gig.summary}</p>
+            <h2 className="mt-3 break-words text-xl font-bold leading-7 text-slate-900">{gig.title}</h2>
+            <p className="mt-3 break-words text-sm leading-6 text-slate-600">{gig.description || gig.summary}</p>
 
-            <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
               <InfoItem label="Price" value={formatPrice(gig.price)} />
               <InfoItem label="Availability" value={availability || "Flexible"} />
               <InfoItem label="Provider" value={gig.providerName} />
-              <InfoItem label="Rating" value={`${formatRatingLabel(gig.rating)} (${gig.reviews} reviews)`} />
+              <InfoItem
+                label="Rating"
+                value={gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} (${gig.reviews} reviews)` : "New"}
+              />
             </dl>
 
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-5 flex flex-wrap gap-3">
               <Link
                 href={previewHref}
                 className="inline-flex h-10 items-center justify-center rounded-lg bg-[#2f66e7] px-5 text-sm font-semibold text-white transition hover:bg-[#2557cf]"
@@ -594,9 +598,9 @@ function FiltersSidebar(props: {
   ];
 
   return (
-    <aside className="w-full shrink-0 order-1 lg:order-2 lg:w-72">
+    <aside className="order-1 w-full shrink-0 lg:order-2 lg:w-[320px]">
       {/* Search and matching filters */}
-      <div className="sticky top-24 space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_26px_rgba(15,23,42,0.03)]">
+      <div className="sticky top-24 flex max-h-[calc(100dvh-7rem)] min-h-[calc(100dvh-7rem)] flex-col overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_26px_rgba(15,23,42,0.03)] scrollbar-none">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Find Gig Profiles</h1>
           <p className="mt-1 text-xs leading-normal text-slate-500">
@@ -615,7 +619,7 @@ function FiltersSidebar(props: {
           />
         </div>
 
-        <div className="space-y-4 border-t border-slate-100 pt-1">
+        <div className="mt-5 flex-1 space-y-4 border-t border-slate-100 pt-4">
           {filterConfig.map((filter) => {
             const selectValue =
               filter.label === "Category"
@@ -675,14 +679,14 @@ function Pagination({
   setCurrentPage: (updater: (prev: number) => number) => void;
 }) {
   return (
-    <div className="flex items-center justify-center gap-1.5 pt-4">
+    <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
       <button
         type="button"
         onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
         disabled={currentPage === 1}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+        className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
       >
-        &lsaquo;
+        Previous
       </button>
       {Array.from({ length: totalPages }).map((_, index) => {
         const pageNum = index + 1;
@@ -691,7 +695,7 @@ function Pagination({
             type="button"
             key={pageNum}
             onClick={() => setCurrentPage(() => pageNum)}
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold transition ${
+            className={`inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-xs font-bold transition ${
               currentPage === pageNum
                 ? "bg-[#2f66e7] text-white"
                 : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
@@ -705,9 +709,9 @@ function Pagination({
         type="button"
         onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
         disabled={currentPage === totalPages}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+        className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
       >
-        &rsaquo;
+        Next
       </button>
     </div>
   );

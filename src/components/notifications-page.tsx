@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
+import ReportActionModal from "@/components/report-action-modal";
+import { dashboardHref, resolveRole, scopedHref } from "@/lib/role-routes";
 import {
   collection,
   query,
@@ -14,6 +16,7 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
+import type { ModerationAction } from "@/lib/moderation";
 
 interface NotificationItem {
   id: string;
@@ -26,6 +29,7 @@ interface NotificationItem {
   type?: string;
   href?: string;
   destination?: string;
+  metadata?: Record<string, unknown>;
 }
 
 const toneStyles: Record<string, { badge: string; dot: string }> = {
@@ -60,6 +64,9 @@ export default function NotificationsPage() {
   const router = useRouter();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeReportNotification, setActiveReportNotification] = useState<NotificationItem | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(8);
 
   useEffect(() => {
     if (!userProfile) return;
@@ -88,6 +95,10 @@ export default function NotificationsPage() {
             type: data.type || "",
             href: data.href || "",
             destination: data.destination || "",
+            metadata:
+              data.metadata && typeof data.metadata === "object"
+                ? (data.metadata as Record<string, unknown>)
+                : undefined,
           });
         });
         setItems(notifications);
@@ -101,6 +112,31 @@ export default function NotificationsPage() {
 
     return () => unsubscribe();
   }, [userProfile]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [items.length]);
+
+  useEffect(() => {
+    const updateItemsPerPage = () => {
+      if (typeof window === "undefined") return;
+
+      // Reserve space for the page chrome, header, actions, and pagination.
+      const availableHeight = window.innerHeight - 320;
+      const estimatedCardHeight = 124;
+      const nextItemsPerPage = Math.max(
+        4,
+        Math.min(12, Math.floor(availableHeight / estimatedCardHeight)),
+      );
+
+      setItemsPerPage(nextItemsPerPage);
+    };
+
+    updateItemsPerPage();
+    window.addEventListener("resize", updateItemsPerPage);
+
+    return () => window.removeEventListener("resize", updateItemsPerPage);
+  }, []);
 
   const handleMarkAllRead = async () => {
     if (!userProfile) return;
@@ -130,6 +166,10 @@ export default function NotificationsPage() {
   };
 
   const handleNotificationClick = async (item: NotificationItem) => {
+    if (!isNotificationInteractive(item)) {
+      return;
+    }
+
     // Mark the item as read before deciding where it should open.
     if (!item.read) {
       try {
@@ -140,7 +180,20 @@ export default function NotificationsPage() {
     }
 
     if (!userProfile) return;
-    const role = userProfile.role || "buyer";
+    const role = resolveRole(userProfile.role, "buyer");
+    const metadata = item.metadata || {};
+    const notificationKind =
+      typeof metadata.kind === "string" ? metadata.kind : "";
+
+    if (
+      notificationKind === "report_action" &&
+      typeof metadata.reportId === "string" &&
+      typeof metadata.action === "string" &&
+      (metadata.openPopup === true || metadata.action === "warn")
+    ) {
+      setActiveReportNotification(item);
+      return;
+    }
     
     // A stored path is the most accurate destination for newer notifications.
     const targetPath = item.href || item.destination;
@@ -149,17 +202,25 @@ export default function NotificationsPage() {
       return;
     }
 
+    if (
+      notificationKind === "review_compliance" ||
+      notificationKind === "review_suspension"
+    ) {
+      router.push(targetPath || dashboardHref(role));
+      return;
+    }
+
     const lowerTitle = item.title.toLowerCase();
     const type = item.type || "";
 
     // Older records are routed by their type or title for backward compatibility.
     if (type === "message" || lowerTitle.includes("message") || lowerTitle.includes("chat")) {
-      router.push(role === "both" ? "/chats/both" : role === "provider" ? "/chats/provider" : "/chats/buyer");
+      router.push(scopedHref("/chats", role));
       return;
     }
 
     if (type === "review" || lowerTitle.includes("review") || lowerTitle.includes("rated") || lowerTitle.includes("completed & rated")) {
-      router.push(role === "both" ? "/ratings/both" : "/ratings/provider");
+      router.push(scopedHref("/ratings", role));
       return;
     }
 
@@ -172,16 +233,28 @@ export default function NotificationsPage() {
         lowerTitle.includes("session finished");
 
       if (isBuyerFocused) {
-        router.push(role === "both" ? "/request-service/both" : "/request-service/buyer");
+        router.push(scopedHref("/request-service", role));
       } else {
-        router.push(role === "both" ? "/incoming-requests/both" : "/incoming-requests/provider");
+        router.push(scopedHref("/incoming-requests", role === "buyer" ? "provider" : role));
       }
       return;
     }
 
     // Unknown notification types safely return to the user's dashboard.
-    router.push(`/dashboard/${role}`);
+    router.push(dashboardHref(role));
   };
+
+  const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
+  const paginatedItems = items.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   if (loading) {
     return (
@@ -195,7 +268,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="flex min-h-[560px] flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       {/* Header actions and live notification list */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -224,53 +297,301 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-6">
         {items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
             No notifications right now.
           </div>
         ) : (
-          items.map((item) => {
-            const styles = toneStyles[item.tone] ?? toneStyles.blue;
+          <div className="space-y-4">
+            {paginatedItems.map((item) => {
+              const styles = toneStyles[item.tone] ?? toneStyles.blue;
+              const isInteractive = isNotificationInteractive(item);
 
-            return (
-              <div
-                key={item.id}
-                onClick={() => handleNotificationClick(item)}
-                className={`flex cursor-pointer items-start gap-4 rounded-2xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md ${
-                  item.read
-                    ? "border-slate-100 bg-white"
-                    : "border-blue-100 bg-blue-50/40"
-                }`}
-              >
-                <div className="relative">
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full ${styles.badge}`}
-                  >
-                    <span className="text-sm font-semibold">{item.icon}</span>
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    if (isInteractive) {
+                      void handleNotificationClick(item);
+                    }
+                  }}
+                  className={`flex items-start gap-4 rounded-2xl border p-4 shadow-sm transition ${
+                    isInteractive
+                      ? "cursor-pointer hover:border-slate-300 hover:shadow-[0_14px_32px_-24px_rgba(37,99,235,0.42)]"
+                      : "cursor-default"
+                  } ${
+                    item.read
+                      ? "border-slate-100 bg-white"
+                      : "border-blue-100 bg-blue-50/40"
+                  }`}
+                  role={isInteractive ? "button" : undefined}
+                  tabIndex={isInteractive ? 0 : undefined}
+                  onKeyDown={(event) => {
+                    if (
+                      isInteractive &&
+                      (event.key === "Enter" || event.key === " ")
+                    ) {
+                      event.preventDefault();
+                      void handleNotificationClick(item);
+                    }
+                  }}
+                >
+                  <div className="relative">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-full ${styles.badge}`}
+                    >
+                      <NotificationIcon icon={item.icon} className="h-4.5 w-4.5" />
+                    </div>
+                    {!item.read ? (
+                      <span
+                        className={`absolute -left-2 top-1 h-2.5 w-2.5 rounded-full ${styles.dot}`}
+                      />
+                    ) : null}
                   </div>
-                  {!item.read ? (
-                    <span
-                      className={`absolute -left-2 top-1 h-2.5 w-2.5 rounded-full ${styles.dot}`}
-                    />
-                  ) : null}
-                </div>
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-slate-900">
-                      {item.title}
-                    </h3>
-                    <span className="text-xs text-slate-400">{item.time}</span>
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-slate-900">
+                        {item.title}
+                      </h3>
+                      <span className="text-xs text-slate-400">{item.time}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-600">
+                      {item.description}
+                    </p>
                   </div>
-                  <p className="mt-2 text-sm text-slate-600">
-                    {item.description}
-                  </p>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
       </div>
+      {items.length > itemsPerPage ? (
+        <div className="mt-6 flex flex-col items-center justify-between gap-4 border-t border-slate-100 pt-5 text-sm text-slate-500 sm:flex-row">
+          <p>
+            Showing {paginatedItems.length} of {items.length} notifications
+          </p>
+          <div className="flex items-center gap-2">
+            <PagerButton
+              label="Previous"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            />
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+              <PagerButton
+                key={page}
+                label={String(page)}
+                active={currentPage === page}
+                onClick={() => setCurrentPage(page)}
+              />
+            ))}
+            <PagerButton
+              label="Next"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            />
+          </div>
+        </div>
+      ) : null}
+      {activeReportNotification && userProfile ? (
+        <ReportActionModal
+          open
+          reportId={String(activeReportNotification.metadata?.reportId || "")}
+          action={String(activeReportNotification.metadata?.action || "warn") as ModerationAction}
+          decisionMessage={
+            typeof activeReportNotification.metadata?.decisionMessage === "string"
+              ? activeReportNotification.metadata?.decisionMessage
+              : activeReportNotification.description
+          }
+          userId={userProfile.uid}
+          userName={userProfile.name}
+          onClose={() => setActiveReportNotification(null)}
+        />
+      ) : null}
     </section>
+  );
+}
+
+function isNotificationInteractive(item: NotificationItem) {
+  const metadata = item.metadata || {};
+  const notificationKind =
+    typeof metadata.kind === "string" ? metadata.kind : "";
+  const targetPath = item.href || item.destination;
+  const lowerTitle = item.title.toLowerCase();
+  const type = item.type || "";
+
+  if (
+    notificationKind === "report_action" &&
+    typeof metadata.reportId === "string" &&
+    typeof metadata.action === "string" &&
+    (metadata.openPopup === true || metadata.action === "warn")
+  ) {
+    return true;
+  }
+
+  if (notificationKind === "review_compliance") return true;
+  if (notificationKind === "review_suspension") return true;
+  if (notificationKind === "report_response") return true;
+  if (targetPath) return true;
+
+  if (type === "message" || lowerTitle.includes("message") || lowerTitle.includes("chat")) {
+    return true;
+  }
+
+  if (type === "review" || lowerTitle.includes("review") || lowerTitle.includes("rated") || lowerTitle.includes("completed & rated")) {
+    return true;
+  }
+
+  if (type === "request" || type === "match" || lowerTitle.includes("request")) {
+    return true;
+  }
+
+  return false;
+}
+
+function PagerButton({
+  label,
+  active = false,
+  disabled = false,
+  onClick,
+}: {
+  label: string;
+  active?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex h-10 min-w-[42px] items-center justify-center rounded-xl border px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 ${
+        active
+          ? "border-[#2f66e7] bg-[#2f66e7] text-white shadow-sm"
+          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function NotificationIcon({
+  icon,
+  className,
+}: {
+  icon?: string;
+  className?: string;
+}) {
+  const normalized = (icon || "").trim().toLowerCase();
+
+  if (normalized === "alert-triangle") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+      >
+        <path d="m10.3 3.9-8.1 14A1.9 1.9 0 0 0 3.8 21h16.4a1.9 1.9 0 0 0 1.6-3.1l-8.1-14a1.9 1.9 0 0 0-3.4 0Z" />
+        <path d="M12 9v4" />
+        <path d="M12 17h.01" />
+      </svg>
+    );
+  }
+
+  if (normalized === "check-circle") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="m8.8 12.3 2.2 2.2 4.6-4.8" />
+      </svg>
+    );
+  }
+
+  if (normalized === "x-circle") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="m9 9 6 6" />
+        <path d="m15 9-6 6" />
+      </svg>
+    );
+  }
+
+  if (normalized === "flag") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+      >
+        <path d="M5 21V5" />
+        <path d="M5 5c4-3 6 3 10 0l1 8c-4 3-6-3-10 0" />
+      </svg>
+    );
+  }
+
+  if (normalized === "star") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        className={className}
+      >
+        <path d="m12 3.8 2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8 2.5-5Z" />
+      </svg>
+    );
+  }
+
+  if (normalized === "message") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+      >
+        <path d="M7 10h10" />
+        <path d="M7 14h6" />
+        <path d="M5 19l-1-4V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9z" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+    >
+      <circle cx="12" cy="12" r="5" />
+    </svg>
   );
 }

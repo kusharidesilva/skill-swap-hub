@@ -17,13 +17,17 @@ export default function PendingVerificationPage({ searchParams }: Props) {
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState("");
   const contactEmail = firebaseUser?.email || userProfile?.email || "your email";
+  const hardRedirect = (href: string) => {
+    if (typeof window === "undefined") return;
+    window.location.replace(href);
+  };
 
   useEffect(() => {
     if (loading || !firebaseUser || !userProfile) return;
 
     if (userProfile.providerVerificationStatus === "rejected") {
       void signOut().finally(() => {
-        router.replace("/login?reason=verification-rejected");
+        hardRedirect("/login?reason=verification-rejected");
       });
       return;
     }
@@ -33,10 +37,10 @@ export default function PendingVerificationPage({ searchParams }: Props) {
       userProfile.providerVerificationStatus !== "pending"
     ) {
       getPostLoginRedirect(userProfile, firebaseUser.uid)
-        .then((redirectPath) => router.replace(redirectPath))
+        .then((redirectPath) => hardRedirect(redirectPath))
         .catch(() => {});
     }
-  }, [firebaseUser, loading, router, userProfile]);
+  }, [firebaseUser, loading, userProfile]);
 
   const handleCheckStatus = async () => {
     if (!firebaseUser) {
@@ -67,7 +71,7 @@ export default function PendingVerificationPage({ searchParams }: Props) {
 
       if (profile.providerVerificationStatus === "rejected") {
         await signOut();
-        router.replace("/login?reason=verification-rejected");
+        hardRedirect("/login?reason=verification-rejected");
         return;
       }
 

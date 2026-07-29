@@ -8,10 +8,13 @@ import { collection, doc, getDoc, getDocs, query, updateDoc, where } from "fireb
 
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
+import { buildGigRatingSummary } from "@/lib/gig-ratings";
+import { ensureGigTitlePrefix } from "@/lib/gig-titles";
 import { formatRatingLabel } from "@/lib/ratings";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import type { ProviderGig } from "@/lib/auth";
 import { getRoleBadge, getVerificationBadge } from "@/lib/identity-badges";
+import { getGigCoverForCategory } from "@/lib/gig-covers";
 
 type ProviderProfilePublicPageProps = {
   providerId: string;
@@ -495,13 +498,22 @@ export default function ProviderProfilePublicPage({
                       {gig.title}
                     </h3>
 
+                    <p className="mt-2 truncate text-[13px] font-semibold leading-5 text-slate-700">
+                      {profile.name} <span className="font-medium text-slate-400">|</span>{" "}
+                      <span className="font-medium text-slate-500">
+                        {profile.university || "Sri Lankan University"}
+                      </span>
+                    </p>
+
                     <p className="mt-3 line-clamp-2 text-[12.5px] leading-5 text-slate-600">
                       Practical {gig.category.toLowerCase()} support from a verified university student.
                     </p>
 
                     <div className="mt-auto border-t border-slate-200 pt-3">
                       <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
-                        <span className="truncate">{gig.reviews} completed reviews</span>
+                        <span className="truncate">
+                          {gig.reviews > 0 ? `${gig.reviews} reviews` : "New"}
+                        </span>
                         <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-sm ring-1 ring-slate-200">
                           <StarIcon className="h-3.5 w-3.5 text-amber-400" />
                           {formatRatingLabel(gig.rating)}
@@ -633,7 +645,7 @@ function buildProviderProfile(
       ? parseFloat(
           (ratings.reduce((total, rating) => total + rating, 0) / ratings.length).toFixed(1),
         )
-      : 5;
+      : 0;
 
   const totalRejected = completedRequests.filter((request) => request.status === "rejected").length;
   const trustScore =
@@ -654,24 +666,50 @@ function buildProviderProfile(
   );
   const gigs: PublicGig[] = (
     storedGigs.length > 0
-      ? storedGigs.map((gig, index) => ({
-          id: gig.id || `${providerId}-${index}`,
-          gigId: gig.id,
-          title: gig.title || `I will do ${skills[index] || "Student Support"}`,
-          rating: avgRating.toFixed(1),
-          reviews: completedRequests.length,
-          category: gig.category || skills[index] || "General",
-          image: gig.image || customImages[index] || fallbackGigImage(index),
-        }))
-      : skills.map((skill, index) => ({
-          id: `${providerId}-${index}`,
-          gigId: undefined,
-          title: `I will do ${skill}`,
-          rating: avgRating.toFixed(1),
-          reviews: completedRequests.length,
-          category: skill,
-          image: customImages[index] || fallbackGigImage(index),
-        }))
+      ? storedGigs.map((gig, index) => {
+          const title = ensureGigTitlePrefix(gig.title || skills[index] || "Student Support");
+          const category = gig.category || skills[index] || "General";
+          const ratingSummary = buildGigRatingSummary(
+            {
+              id: gig.id || `${providerId}-${index}`,
+              gigId: gig.id,
+              title,
+              category,
+            },
+            completedRequests,
+          );
+
+          return {
+            id: gig.id || `${providerId}-${index}`,
+            gigId: gig.id,
+            title,
+            rating: ratingSummary.rating.toFixed(1),
+            reviews: ratingSummary.count,
+            category,
+            image: gig.image || customImages[index] || fallbackGigImage(index),
+          };
+        })
+      : skills.map((skill, index) => {
+          const title = ensureGigTitlePrefix(skill);
+          const ratingSummary = buildGigRatingSummary(
+            {
+              id: `${providerId}-${index}`,
+              title,
+              category: skill,
+            },
+            completedRequests,
+          );
+
+          return {
+            id: `${providerId}-${index}`,
+            gigId: undefined,
+            title,
+            rating: ratingSummary.rating.toFixed(1),
+            reviews: ratingSummary.count,
+            category: skill,
+            image: customImages[index] || fallbackGigImage(index),
+          };
+        })
   );
 
   const reviews: PublicReview[] = completedRequests
@@ -696,7 +734,7 @@ function buildProviderProfile(
     yearOfStudy: member.yearOfStudy || "",
     image: member.profileImageUrl || "",
     verified: member.verifiedStudentProvider === true,
-    topRated: avgRating >= 4.8 && completedRequests.length >= 2,
+    topRated: avgRating >= 4.8 && ratings.length >= 2,
     trustScore,
     totalSwaps: String(completedRequests.length),
     avgRating: avgRating.toFixed(1),
@@ -716,9 +754,7 @@ function buildInitials(name: string) {
 }
 
 function fallbackGigImage(index: number) {
-  if (index % 3 === 1) return "/img/package%202.jpg";
-  if (index % 3 === 2) return "/img/package%203.jpg";
-  return "/img/package%201.jpg";
+  return getGigCoverForCategory("", "", index);
 }
 
 function formatDateLabel(value: FirebaseRequestDoc["createdAt"]) {

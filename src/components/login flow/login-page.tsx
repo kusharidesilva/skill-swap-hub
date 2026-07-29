@@ -12,6 +12,7 @@ import {
   RejectedVerificationError, 
   resubmitStudentVerificationProof,
   signOut,
+  SuspendedAccountError,
   type UserProfile,
 } from "@/lib/auth";
 import {
@@ -61,6 +62,12 @@ export default function LoginPage() {
   );
   const [resubmitError, setResubmitError] = useState("");
   const [resubmitting, setResubmitting] = useState(false);
+  const [suspendedProfile, setSuspendedProfile] = useState<UserProfile | null>(null);
+
+  const hardRedirect = (href: string) => {
+    if (typeof window === "undefined") return;
+    window.location.replace(href);
+  };
 
   const {
     register,
@@ -103,6 +110,12 @@ export default function LoginPage() {
         return;
       }
 
+      if (err instanceof SuspendedAccountError) {
+        setSuspendedProfile(err.profile);
+        setServerError("");
+        return;
+      }
+
       const msg = err instanceof Error ? err.message : "Login failed.";
       if (
         msg.includes("user-not-found") ||
@@ -132,7 +145,7 @@ export default function LoginPage() {
       setRejectedUserId("");
       setProofFile(null);
       setResubmitError("");
-      router.replace("/login");
+      hardRedirect("/login");
     });
   };
 
@@ -398,7 +411,87 @@ export default function LoginPage() {
           onSubmit={handleResubmitProof}
         />
       ) : null}
+      {suspendedProfile ? (
+        <SuspendedAccountModal
+          profile={suspendedProfile}
+          onClose={() => setSuspendedProfile(null)}
+        />
+      ) : null}
     </main>
+  );
+}
+
+function SuspendedAccountModal({
+  profile,
+  onClose,
+}: {
+  profile: UserProfile;
+  onClose: () => void;
+}) {
+  const title =
+    profile.suspensionTitle?.trim() || "This account has been suspended";
+  const reason =
+    profile.suspensionReason?.trim() ||
+    profile.adminSuspensionReason?.trim() ||
+    "An admin suspended this account. Please contact support for more information.";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/35 px-4 py-8 backdrop-blur-md">
+      <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-white/70 bg-white/95 p-6 text-slate-900 shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
+        <div className="absolute -right-16 -top-20 h-44 w-44 rounded-full bg-red-100/80 blur-2xl" aria-hidden="true" />
+        <div className="absolute -bottom-20 -left-16 h-44 w-44 rounded-full bg-amber-100/80 blur-2xl" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-5 top-5 z-10 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+          aria-label="Close suspended account popup"
+        >
+          <CloseIcon className="h-4 w-4" />
+        </button>
+
+        <div className="relative">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600 ring-8 ring-red-50/60">
+            <WarningIcon className="h-6 w-6" />
+          </span>
+          <p className="mt-5 text-xs font-bold uppercase tracking-[0.28em] text-red-600">
+            Account suspended
+          </p>
+          <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+            {title}
+          </h3>
+          <p className="mt-3 text-sm leading-6 text-slate-600">{reason}</p>
+
+          {profile.suspensionReportId || profile.suspensionRequestId ? (
+            <div className="mt-5 rounded-2xl border border-red-100 bg-red-50/80 p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-600">
+                Reference
+              </p>
+              <p className="mt-2 text-sm leading-6 text-red-900">
+                {profile.suspensionReportId
+                  ? `Report ID: ${profile.suspensionReportId}`
+                  : `Request ID: ${profile.suspensionRequestId}`}
+              </p>
+            </div>
+          ) : null}
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <a
+              href="mailto:admin@skillswaphub.lk"
+              className="inline-flex h-12 flex-1 items-center justify-center rounded-xl bg-[#2b62e6] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+            >
+              Contact Admin
+            </a>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-12 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

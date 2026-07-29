@@ -259,7 +259,7 @@ export default function AdminAddAndManageGroupPage({
             ) : items.length === 0 ? (
               <EmptyState>No records yet.</EmptyState>
             ) : (
-              <div className="max-h-[420px] divide-y divide-slate-100 overflow-y-auto">
+              <div className="scrollbar-none max-h-[420px] divide-y divide-slate-100 overflow-y-auto">
                 {items.map((item) => {
                   const active = item.active !== false;
 

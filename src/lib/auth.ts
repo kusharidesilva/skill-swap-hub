@@ -42,6 +42,7 @@ import {
   type StudentProofType,
   isPendingAdminVerificationStatus,
 } from "./platform";
+import { runReviewComplianceAuditForUser } from "./review-compliance";
 
 const STUDENT_PROOF_CONTENT_TYPES: Record<
   (typeof STUDENT_PROOF_EXTENSIONS)[number],
@@ -108,6 +109,13 @@ export interface UserProfile {
     profileVisibility: boolean;
   };
   favorites?: Record<string, unknown>[];
+  suspensionCode?: string;
+  suspensionTitle?: string;
+  suspensionReason?: string;
+  suspensionRequestId?: string;
+  suspensionReportId?: string;
+  adminSuspensionReason?: string;
+  suspendedAt?: Date | null;
 }
 
 export interface ProviderGig {
@@ -173,6 +181,17 @@ export class RejectedVerificationError extends Error {
     this.user = user;
     this.profile = profile;
     Object.setPrototypeOf(this, RejectedVerificationError.prototype);
+  }
+}
+
+export class SuspendedAccountError extends Error {
+  readonly profile: UserProfile;
+
+  constructor(profile: UserProfile) {
+    super(profile.suspensionReason || "This account is suspended.");
+    this.name = "SuspendedAccountError";
+    this.profile = profile;
+    Object.setPrototypeOf(this, SuspendedAccountError.prototype);
   }
 }
 
@@ -538,6 +557,20 @@ export async function loginUser(
     throw new RejectedVerificationError(user, profile);
   }
 
+  await runReviewComplianceAuditForUser({
+    uid: user.uid,
+    name: profile.name,
+    email: profile.email,
+    role: profile.role,
+    accountStatus: profile.accountStatus,
+  });
+
+  const refreshedUserDoc = await getDoc(doc(db, "users", user.uid));
+  if (!refreshedUserDoc.exists()) {
+    throw new Error("User profile not found. Please contact support.");
+  }
+  profile = refreshedUserDoc.data() as UserProfile;
+
   if (
     accountNeedsEmailVerification(profile.accountType) &&
     user.emailVerified
@@ -643,7 +676,7 @@ export async function getPostLoginRedirect(
   }
 
   if (profile.accountStatus === "suspended") {
-    throw new Error("This account is suspended. Please contact support.");
+    throw new SuspendedAccountError(profile);
   }
 
   if (profile.role === "admin") {

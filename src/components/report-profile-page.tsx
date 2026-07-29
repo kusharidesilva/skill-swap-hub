@@ -25,6 +25,8 @@ import {
   where,
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { formatReportId, generateReportCode } from "@/lib/moderation";
+import { isRole, scopedHref } from "@/lib/role-routes";
 
 type ReportProfilePageProps = {
   providerId?: string;
@@ -47,6 +49,7 @@ type CompletedExchangeDoc = {
 
 type ReportHistoryItem = {
   id: string;
+  reportCode?: string;
   targetName: string;
   category: string;
   status: string;
@@ -61,6 +64,10 @@ const ALLOWED_FILE_TYPES = new Set([
   "image/webp",
   "application/pdf",
 ]);
+
+function notificationHrefForRole(role?: string) {
+  return isRole(role) ? scopedHref("/notifications", role) : "/notifications";
+}
 
 export default function ReportProfilePage({ providerId }: ReportProfilePageProps) {
   const { userProfile } = useAuth();
@@ -313,6 +320,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
 
           items.push({
             id: entry.id,
+            reportCode: typeof data.reportCode === "string" ? data.reportCode : "",
             targetName:
               typeof data.targetUserName === "string" && data.targetUserName.trim()
                 ? data.targetUserName
@@ -473,6 +481,13 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
     setFeedback(null);
 
     try {
+      const targetUserSnapshot = await getDoc(doc(db, "users", targetUserId));
+      const targetUserData = targetUserSnapshot.exists()
+        ? (targetUserSnapshot.data() as { role?: string })
+        : null;
+      const targetUserRole =
+        typeof targetUserData?.role === "string" ? targetUserData.role : undefined;
+
       // Upload evidence first so the report stores permanent download URLs.
       const uploadedEvidence = await Promise.all(
         selectedFiles.map(async (file) => {
@@ -493,14 +508,18 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
         })
       );
 
+      const reportCode = generateReportCode();
       const reportRef = await addDoc(collection(db, "reports"), {
         type: "profile",
+        reportCode,
         reportSource: providerId ? "report-issue-targeted" : "report-issue-general",
         reporterId: userProfile.uid,
         reporterName: userProfile.name || "Reporter",
         reporterEmail: userProfile.email || "",
+        reporterRole: userProfile.role || "buyer",
         targetUserId,
         targetUserName: targetName || "Community Member",
+        targetUserRole: targetUserRole || "",
         category,
         issueType: category,
         description: description.trim(),
@@ -511,31 +530,31 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
 
       await createNotification({
         userId: userProfile.uid,
-        title: "Report submitted",
+        title: `${formatReportId(reportCode)} submitted`,
         description: `Your report about ${targetName || "this user"} has been sent for admin review.`,
         type: "system",
         icon: "flag",
         tone: "blue",
-        href: "/notifications",
-        destination: "/notifications",
+        href: notificationHrefForRole(userProfile.role),
+        destination: notificationHrefForRole(userProfile.role),
       });
 
       if (targetUserId && targetUserId !== userProfile.uid) {
         await createNotification({
           userId: targetUserId,
           title: "New report received",
-          description: `A report related to your account was submitted and is now under admin review. Reference: ${reportRef.id.slice(-5).toUpperCase()}.`,
+          description: `A report related to your account was submitted and is now under admin review. Reference: ${formatReportId(reportCode)}.`,
           type: "system",
           icon: "alert-triangle",
           tone: "red",
-          href: "/notifications",
-          destination: "/notifications",
+          href: notificationHrefForRole(targetUserRole),
+          destination: notificationHrefForRole(targetUserRole),
         });
       }
 
       setFeedback({
         type: "success",
-        msg: "Your report has been submitted successfully. Trust & Safety will review it soon.",
+        msg: `Your report ${formatReportId(reportCode)} has been submitted successfully. Trust & Safety will review it soon.`,
       });
       setCategory("");
       setDescription("");
@@ -863,7 +882,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
                     className="grid grid-cols-[1fr_1.15fr_0.95fr] items-center gap-3 px-6 py-5 text-[14px] text-slate-600 md:grid-cols-[0.9fr_1fr_1fr_0.9fr]"
                   >
                     <p className="hidden text-[12px] text-[#95a6c8] md:block">
-                      {formatReportId(row.id)}
+                      {formatReportId(row.reportCode || row.id)}
                     </p>
                     <p className="text-[15px] font-medium leading-7 text-[#24324b]">
                       {row.targetName}
@@ -949,10 +968,6 @@ function TipItem({ children }: { children: ReactNode }) {
       <span className="leading-6">{children}</span>
     </li>
   );
-}
-
-function formatReportId(id: string) {
-  return `#TR-${id.slice(-4).toUpperCase()}`;
 }
 
 function formatBytes(bytes: number) {

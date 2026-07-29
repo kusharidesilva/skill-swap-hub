@@ -93,6 +93,34 @@ service cloud.firestore {
         ]);
     }
 
+    function isReportTarget() {
+      return isAuthenticated() && (
+        resource.data.targetUserId == request.auth.uid ||
+        resource.data.reportedUserId == request.auth.uid ||
+        resource.data.reportedUser == request.auth.uid
+      );
+    }
+
+    function reportResponseCount(data) {
+      return data.reportedUserResponses is list
+        ? data.reportedUserResponses.size()
+        : 0;
+    }
+
+    function canReportedUserReplyToReport() {
+      return hasActiveAccount() &&
+        isReportTarget() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'reportedUserResponses',
+          'adminNeedsReview',
+          'lastResponseAt',
+          'updatedAt'
+        ]) &&
+        request.resource.data.reportedUserResponses is list &&
+        request.resource.data.adminNeedsReview == true &&
+        reportResponseCount(request.resource.data) == reportResponseCount(resource.data) + 1;
+    }
+
     function protectedUserFields() {
       return [
         'role',
@@ -325,10 +353,11 @@ service cloud.firestore {
       allow read: if hasActiveAccount() && (
         isAdmin() ||
         resource.data.reporterId == request.auth.uid ||
+        resource.data.targetUserId == request.auth.uid ||
         resource.data.reportedUserId == request.auth.uid ||
         resource.data.reportedUser == request.auth.uid
       );
-      allow update: if isAdmin();
+      allow update: if isAdmin() || canReportedUserReplyToReport();
       allow delete: if false;
     }
 

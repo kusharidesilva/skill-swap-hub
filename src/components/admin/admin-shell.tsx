@@ -105,7 +105,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         setPendingReportCount(
           snapshot.docs.filter((docSnap) => {
             const data = docSnap.data();
-            return normalizeAdminStatus(data.status || "Pending") === "pending";
+            return (
+              normalizeAdminStatus(data.status || "Pending") === "pending" ||
+              data.adminNeedsReview === true
+            );
           }).length,
         );
       },
