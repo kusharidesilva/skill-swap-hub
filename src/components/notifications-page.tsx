@@ -103,6 +103,10 @@ export default function NotificationsPage() {
           });
         });
         setItems(notifications);
+        setCurrentPage((page) => {
+          const nextTotalPages = Math.max(1, Math.ceil(notifications.length / itemsPerPage));
+          return Math.min(page, nextTotalPages);
+        });
         setLoading(false);
       },
       (err) => {
@@ -113,10 +117,6 @@ export default function NotificationsPage() {
 
     return () => unsubscribe();
   }, [userProfile]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [items.length]);
 
   useEffect(() => {
     const updateItemsPerPage = () => {
@@ -265,16 +265,12 @@ export default function NotificationsPage() {
   };
 
   const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
+  const visiblePage = Math.min(currentPage, totalPages);
   const paginatedItems = items.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
+    (visiblePage - 1) * itemsPerPage,
+    visiblePage * itemsPerPage,
   );
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+  const paginationItems = buildPaginationItems(totalPages, visiblePage);
 
   if (loading) {
     return (
@@ -394,20 +390,29 @@ export default function NotificationsPage() {
           <div className="flex items-center gap-2">
             <PagerButton
               label="Previous"
-              disabled={currentPage === 1}
+              disabled={visiblePage === 1}
               onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
             />
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-              <PagerButton
-                key={page}
-                label={String(page)}
-                active={currentPage === page}
-                onClick={() => setCurrentPage(page)}
-              />
-            ))}
+            {paginationItems.map((item, index) =>
+              item === "..." ? (
+                <span
+                  key={`ellipsis-${index}`}
+                  className="inline-flex h-10 min-w-[42px] items-center justify-center px-1 text-sm font-semibold text-slate-400"
+                >
+                  ...
+                </span>
+              ) : (
+                <PagerButton
+                  key={item}
+                  label={String(item)}
+                  active={visiblePage === item}
+                  onClick={() => setCurrentPage(item)}
+                />
+              ),
+            )}
             <PagerButton
               label="Next"
-              disabled={currentPage === totalPages}
+              disabled={visiblePage === totalPages}
               onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
             />
           </div>
@@ -494,6 +499,22 @@ function PagerButton({
       {label}
     </button>
   );
+}
+
+function buildPaginationItems(totalPages: number, currentPage: number) {
+  if (totalPages <= 3) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 1) {
+    return [1, "...", totalPages] as const;
+  }
+
+  if (currentPage >= totalPages) {
+    return [1, "...", totalPages] as const;
+  }
+
+  return [1, "...", currentPage, "...", totalPages] as const;
 }
 
 function NotificationIcon({

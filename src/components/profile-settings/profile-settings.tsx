@@ -12,7 +12,11 @@ import {
 import { changeSignedInEmail, type UserProfile } from "@/lib/auth";
 import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
 import { useLookupOptions } from "@/lib/lookups";
-import { getRoleBadge, getVerificationBadge } from "@/lib/identity-badges";
+import {
+  getRoleBadge,
+  getVerificationBadge,
+  type IdentityRole,
+} from "@/lib/identity-badges";
 
 export type Role = "buyer" | "provider" | "both";
 
@@ -193,9 +197,10 @@ function ProfileSettingsForm({
   const [emailNotice, setEmailNotice] = useState<"success" | "error" | "">("");
   const [emailNoticeMessage, setEmailNoticeMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const roleBadge = getRoleBadge(role);
+  const badgeRole: IdentityRole = role === "admin" ? "buyer" : role;
+  const roleBadge = getRoleBadge(badgeRole);
   const verificationBadge = getVerificationBadge(
-    role,
+    badgeRole,
     Boolean(userProfile.verifiedStudentProvider),
   );
   const profileSubline = isNonStudentBuyer

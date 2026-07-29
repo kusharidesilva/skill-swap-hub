@@ -4,7 +4,11 @@ import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getRoleBadge, getVerificationBadge } from "@/lib/identity-badges";
+import {
+  getRoleBadge,
+  getVerificationBadge,
+  type IdentityRole,
+} from "@/lib/identity-badges";
 
 export type Role = "buyer" | "provider" | "both";
 
@@ -130,9 +134,11 @@ export default function Profile({ role: propRole }: { role: Role }) {
         ? `Hey there! I'm a student at ${university} studying ${degree}. I joined Skill Swap Hub to collaborate with other students, exchange knowledge, and learn new skills.`
         : `Hey there! I'm a ${degree} student passionate about sharing knowledge. I believe the best way to learn is to teach someone else.`);
 
-  const roleBadge = getRoleBadge(displayRole);
+  const badgeRole: IdentityRole =
+    displayRole === "admin" ? "buyer" : displayRole;
+  const roleBadge = getRoleBadge(badgeRole);
   const verificationBadge = getVerificationBadge(
-    displayRole,
+    badgeRole,
     Boolean(userProfile.verifiedStudentProvider),
   );
 
