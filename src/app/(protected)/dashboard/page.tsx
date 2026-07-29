@@ -1,35 +1,25 @@
-import Link from "next/link"; 
+"use client";
 
-export default function DashboardPage() { 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { dashboardHref } from "@/lib/role-routes";
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const { userProfile, loading } = useAuth();
+
+  useEffect(() => {
+    if (loading || !userProfile || userProfile.role === "admin") return;
+    router.replace(dashboardHref(userProfile.role));
+  }, [loading, router, userProfile]);
+
   return (
-    <main className="min-h-screen bg-[#f5f7ff] px-6 py-16 text-slate-900"> 
-      <section className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"> 
-        <h1 className="text-2xl font-semibold">Choose Dashboard</h1> 
-        <p className="mt-2 text-sm text-slate-600"> 
-          Open the dashboard that matches the user account type. 
-        </p>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-3"> 
-          <Link 
-            href="/dashboard/buyer" 
-            className="rounded-xl border border-slate-200 p-4 font-semibold text-slate-700 transition hover:border-[#2f66e7] hover:text-[#2f66e7]" 
-          > 
-            Buyer 
-          </Link> 
-          <Link 
-            href="/dashboard/provider"  
-            className="rounded-xl border border-slate-200 p-4 font-semibold text-slate-700 transition hover:border-[#2f66e7] hover:text-[#2f66e7]" 
-          > 
-            Provider 
-          </Link> 
-          <Link 
-            href="/dashboard/both" 
-            className="rounded-xl border border-slate-200 p-4 font-semibold text-slate-700 transition hover:border-[#2f66e7] hover:text-[#2f66e7]" 
-          > 
-            Both 
-          </Link> 
-        </div> 
-      </section> 
-    </main> 
+    <div className="flex min-h-screen items-center justify-center bg-[#f5f7ff]">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
+        <p className="text-sm text-slate-500">Opening your dashboard...</p>
+      </div>
+    </div>
   );
 }

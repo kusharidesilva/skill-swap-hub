@@ -13,6 +13,7 @@ import {
   orderBy,
   onSnapshot,
   doc,
+  getDoc,
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
@@ -191,6 +192,25 @@ export default function NotificationsPage() {
       typeof metadata.action === "string" &&
       (metadata.openPopup === true || metadata.action === "warn")
     ) {
+      const reportSnapshot = await getDoc(doc(db, "reports", metadata.reportId));
+      if (!reportSnapshot.exists()) {
+        return;
+      }
+
+      const reportData = reportSnapshot.data() as {
+        targetUserId?: string;
+        reportedUserId?: string;
+        reportedUser?: string;
+      };
+      const isReportedUser =
+        reportData.targetUserId === userProfile.uid ||
+        reportData.reportedUserId === userProfile.uid ||
+        reportData.reportedUser === userProfile.uid;
+
+      if (!isReportedUser) {
+        return;
+      }
+
       setActiveReportNotification(item);
       return;
     }

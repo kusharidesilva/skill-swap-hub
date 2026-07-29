@@ -101,12 +101,6 @@ service cloud.firestore {
       );
     }
 
-    function reportResponseCount(data) {
-      return data.reportedUserResponses is list
-        ? data.reportedUserResponses.size()
-        : 0;
-    }
-
     function canReportedUserReplyToReport() {
       return hasActiveAccount() &&
         isReportTarget() &&
@@ -115,10 +109,7 @@ service cloud.firestore {
           'adminNeedsReview',
           'lastResponseAt',
           'updatedAt'
-        ]) &&
-        request.resource.data.reportedUserResponses is list &&
-        request.resource.data.adminNeedsReview == true &&
-        reportResponseCount(request.resource.data) == reportResponseCount(resource.data) + 1;
+        ]);
     }
 
     function protectedUserFields() {

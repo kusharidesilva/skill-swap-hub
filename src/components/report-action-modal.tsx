@@ -30,6 +30,9 @@ type ReportActionModalProps = {
 type ReportRecord = {
   reportCode?: string;
   adminNote?: string;
+  targetUserId?: string;
+  reportedUserId?: string;
+  reportedUser?: string;
   reportedUserResponses?: Array<{
     userId?: string;
     message?: string;
@@ -88,6 +91,13 @@ export default function ReportActionModal({
     return responses.length ? responses[responses.length - 1] : null;
   }, [report?.reportedUserResponses]);
 
+  const canReplyToReport =
+    report?.targetUserId === userId ||
+    report?.reportedUserId === userId ||
+    report?.reportedUser === userId;
+  const expectedReplyUserId =
+    report?.targetUserId || report?.reportedUserId || report?.reportedUser || "";
+
   if (!open) return null;
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,63 +125,91 @@ export default function ReportActionModal({
   };
 
   const handleSubmit = async () => {
+    if (!canReplyToReport) {
+      setNotice(
+        expectedReplyUserId
+          ? `Only the reported user can submit a reply to this report. Current user: ${userId}. Expected reported user: ${expectedReplyUserId}.`
+          : "Only the reported user can submit a reply to this report. This report is missing the expected target user ID.",
+      );
+      return;
+    }
+
     setBusy(true);
     setNotice("");
 
     try {
-      const evidenceFiles = selectedFile
-        ? [await uploadModerationEvidence(userId, selectedFile)]
-        : [];
+      let evidenceFiles: ModerationEvidenceFile[] = [];
 
-      await updateDoc(doc(db, "reports", reportId), {
-        reportedUserResponses: arrayUnion({
-          userId,
-          userName: userName || "Reported user",
-          message: replyMessage.trim(),
-          evidenceFiles,
-          submittedAt: Timestamp.now(),
-        }),
-        adminNeedsReview: true,
-        lastResponseAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      if (selectedFile) {
+        try {
+          evidenceFiles = [await uploadModerationEvidence(userId, selectedFile)];
+        } catch (error) {
+          console.error("Error uploading moderation evidence:", error);
+          setNotice(
+            error instanceof Error
+              ? error.message
+              : "Could not upload the supporting file. Please try again.",
+          );
+          return;
+        }
+      }
 
-      const adminSnapshot = await getDocs(
-        query(collection(db, "users"), where("role", "==", "admin")),
-      );
-
-      await Promise.all(
-        adminSnapshot.docs.map((adminDoc) =>
-          createNotification({
-            userId: adminDoc.id,
-            title: `${formatReportId(report?.reportCode || reportId)} - User response received`,
-            description:
-              `${userName || "The reported user"} submitted a response to this report. ` +
-              "Review the new explanation and evidence in Report Handling.",
-            type: "system",
-            icon: "alert-triangle",
-            tone: "blue",
-            href: "/admin/issue-resolution",
-            destination: "/admin/issue-resolution",
-            metadata: {
-              kind: "report_response",
-              reportId,
-            },
+      try {
+        await updateDoc(doc(db, "reports", reportId), {
+          reportedUserResponses: arrayUnion({
+            userId,
+            userName: userName || "Reported user",
+            message: replyMessage.trim(),
+            evidenceFiles,
+            submittedAt: Timestamp.now(),
           }),
-        ),
-      );
+          adminNeedsReview: true,
+          lastResponseAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (error) {
+        console.error("Error updating report reply:", error);
+        setNotice(
+          expectedReplyUserId
+            ? `Reply permission failed for this report. Current user: ${userId}. Expected reported user: ${expectedReplyUserId}.`
+            : "Reply permission failed because this report does not contain the required reported-user ID fields.",
+        );
+        return;
+      }
+
+      try {
+        const adminSnapshot = await getDocs(
+          query(collection(db, "users"), where("role", "==", "admin")),
+        );
+
+        await Promise.all(
+          adminSnapshot.docs.map((adminDoc) =>
+            createNotification({
+              userId: adminDoc.id,
+              title: `${formatReportId(report?.reportCode || reportId)} - User response received`,
+              description:
+                `${userName || "The reported user"} submitted a response to this report. ` +
+                "Review the new explanation and evidence in Report Handling.",
+              type: "system",
+              icon: "alert-triangle",
+              tone: "blue",
+              href: "/admin/issue-resolution",
+              destination: "/admin/issue-resolution",
+              metadata: {
+                kind: "report_response",
+                reportId,
+              },
+            }),
+          ),
+        );
+      } catch {
+        // A saved user response matters more than the follow-up admin notification.
+      }
 
       setReplyMessage("");
       setSelectedFile(null);
       setFileError("");
       setNotice("Your response and supporting evidence were submitted to admin.");
-    } catch (error) {
-      console.error("Error submitting report response:", error);
-      setNotice(
-        error instanceof Error
-          ? error.message
-          : "We could not submit your response right now.",
-      );
     } finally {
       setBusy(false);
     }
@@ -254,65 +292,75 @@ export default function ReportActionModal({
                     <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
                       Your Reply
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
-                      Add your clarification and, if needed, attach one supporting file for admin review.
-                    </p>
-                    <textarea
-                      value={replyMessage}
-                      onChange={(event) => setReplyMessage(event.target.value)}
-                      placeholder="Add clarification, explain your side, or attach supporting details for admin review."
-                      className="mt-4 min-h-32 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
-                    />
-                    <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white p-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-700">Supporting File</p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            Upload only 1 file. Allowed: JPG, PNG, DOC, DOCX. Max size: 1MB.
-                          </p>
-                        </div>
-                        <label className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl bg-[#1454cc] px-5 text-sm font-semibold text-white transition hover:bg-[#1146ab] whitespace-nowrap text-center">
-                          Choose File
-                          <input
-                            type="file"
-                            accept={MODERATION_EVIDENCE_ACCEPT}
-                            onChange={handleFileChange}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-
-                      {selectedFile ? (
-                        <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-700">
-                              {selectedFile.name}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {(selectedFile.size / 1024).toFixed(0)} KB
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={handleRemoveFile}
-                            className="ml-3 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-                            aria-label="Remove selected file"
-                            title="Remove file"
-                          >
-                            <CloseIcon />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                          No file selected yet.
-                        </div>
-                      )}
-                      {fileError ? (
-                        <p className="mt-3 text-xs font-medium text-red-500">
-                          {fileError}
+                    {canReplyToReport ? (
+                      <>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                          Add your clarification and, if needed, attach one supporting file for admin review.
                         </p>
-                      ) : null}
-                    </div>
+                        <textarea
+                          value={replyMessage}
+                          onChange={(event) => setReplyMessage(event.target.value)}
+                          placeholder="Add clarification, explain your side, or attach supporting details for admin review."
+                          className="mt-4 min-h-32 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+                        />
+                        <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white p-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-700">Supporting File</p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                Upload only 1 file. Allowed: JPG, PNG, DOC, DOCX. Max size: 1MB.
+                              </p>
+                            </div>
+                            <label className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl bg-[#1454cc] px-5 text-sm font-semibold text-white transition hover:bg-[#1146ab] whitespace-nowrap text-center">
+                              Choose File
+                              <input
+                                type="file"
+                                accept={MODERATION_EVIDENCE_ACCEPT}
+                                onChange={handleFileChange}
+                                className="sr-only"
+                              />
+                            </label>
+                          </div>
+
+                          {selectedFile ? (
+                            <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-700">
+                                  {selectedFile.name}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  {(selectedFile.size / 1024).toFixed(0)} KB
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleRemoveFile}
+                                className="ml-3 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                                aria-label="Remove selected file"
+                                title="Remove file"
+                              >
+                                <CloseIcon />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                              No file selected yet.
+                            </div>
+                          )}
+                          {fileError ? (
+                            <p className="mt-3 text-xs font-medium text-red-500">
+                              {fileError}
+                            </p>
+                          ) : null}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+                        {expectedReplyUserId
+                          ? `Only the reported user can reply here. Current user: ${userId}. Expected reported user: ${expectedReplyUserId}.`
+                          : "This report is missing the expected reported-user ID, so reply access cannot be confirmed."}
+                      </div>
+                    )}
                     {latestResponse?.message || (latestResponse?.evidenceFiles || []).length ? (
                       <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-xs text-emerald-800">
                         <p className="font-bold">Latest reply on file</p>
@@ -350,7 +398,7 @@ export default function ReportActionModal({
             <button
               type="button"
               onClick={() => void handleSubmit()}
-              disabled={busy}
+              disabled={busy || !canReplyToReport}
               className="inline-flex h-11 min-w-[190px] items-center justify-center rounded-xl bg-[#1454cc] px-5 text-sm font-semibold text-white transition hover:bg-[#1146ab] disabled:opacity-60"
             >
               {busy ? "Submitting..." : "Submit Response"}

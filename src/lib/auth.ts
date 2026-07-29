@@ -667,8 +667,10 @@ export async function loginAdmin(
 
 export async function getPostLoginRedirect(
   profile: UserProfile,
-  uid: string,
+  _uid: string,
 ): Promise<string> {
+  void _uid;
+
   if (profile.providerVerificationStatus === "rejected") {
     throw new Error(
       "Your account verification was rejected. Please log in again after contacting support.",
@@ -691,12 +693,11 @@ export async function getPostLoginRedirect(
   }
 
   if (profile.role === "both") {
-    const hasBuyerHistory = await checkBuyerHistory(uid);
-    return hasBuyerHistory ? dashboardHref("both") : homeHref("provider");
+    return dashboardHref("both");
   }
 
   return profile.role === "provider"
-    ? homeHref("provider")
+    ? dashboardHref("provider")
     : dashboardHref(profile.role as Role);
 }
 
