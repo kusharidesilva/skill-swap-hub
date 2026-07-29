@@ -32,6 +32,7 @@ type IncomingRequestsPageContentProps = {
 
 interface RequestData {
   id: string;
+  sourceCollection?: "requests" | "directServiceRequests";
   buyerId: string;
   buyerName: string;
   buyerProfileImageUrl?: string;
@@ -92,46 +93,44 @@ export default function IncomingRequestsPageContent({
       where("providerId", "==", "general"),
     );
 
-    const mergedRequests: Map<string, RequestData> = new Map();
-
-    // Each listener updates its own list, then the page merges them below.
-    const unsubscribeSpecific = onSnapshot(
-      specificProviderQuery,
-      (snapshot) => {
-        snapshot.forEach((docSnap) => {
-          mergedRequests.set(
-            docSnap.id,
-            { id: docSnap.id, ...docSnap.data() } as RequestData,
-          );
-        });
-        void updateMergedRequests();
-      },
-      (err) => {
-        console.error("Error subscribing to specific requests:", err);
-        setFetching(false);
-      },
+    const directRequestsQuery = query(
+      collection(db, "directServiceRequests"),
+      where("providerId", "==", userProfile.uid),
     );
 
-    // The second listener follows the shared request board.
-    const unsubscribeGeneral = onSnapshot(
-      generalRequestsQuery,
-      (snapshot) => {
-        snapshot.forEach((docSnap) => {
-          mergedRequests.set(
-            docSnap.id,
-            { id: docSnap.id, ...docSnap.data() } as RequestData,
-          );
-        });
-        void updateMergedRequests();
-      },
-      (err) => {
-        console.error("Error subscribing to general requests:", err);
-        setFetching(false);
-      },
-    );
+    const specificRequests = new Map<string, RequestData>();
+    const generalRequests = new Map<string, RequestData>();
+    const directRequests = new Map<string, RequestData>();
+
+    const normalizeDirectRequestStatus = (status?: string) => {
+      switch ((status || "").toLowerCase()) {
+        case "active":
+        case "pending":
+          return "pending";
+        case "working":
+        case "accepted":
+        case "in_progress":
+          return "working";
+        case "done":
+          return "done";
+        case "review_pending":
+          return "review_pending";
+        case "completed":
+          return "completed";
+        case "rejected":
+        case "declined":
+          return "rejected";
+        default:
+          return "pending";
+      }
+    };
 
     const updateMergedRequests = async () => {
-      const docs = Array.from(mergedRequests.values()).filter(
+      const docs = [
+        ...specificRequests.values(),
+        ...generalRequests.values(),
+        ...directRequests.values(),
+      ].filter(
         (request) =>
           !(
             request.providerId === "general" &&
@@ -213,9 +212,82 @@ export default function IncomingRequestsPageContent({
       setFetching(false);
     };
 
+    // Each listener updates its own list, then the page merges them below.
+    const unsubscribeSpecific = onSnapshot(
+      specificProviderQuery,
+      (snapshot) => {
+        specificRequests.clear();
+        snapshot.forEach((docSnap) => {
+          specificRequests.set(
+            docSnap.id,
+            { id: docSnap.id, sourceCollection: "requests", ...docSnap.data() } as RequestData,
+          );
+        });
+        void updateMergedRequests();
+      },
+      (err) => {
+        console.error("Error subscribing to specific requests:", err);
+        setFetching(false);
+      },
+    );
+
+    // The second listener follows the shared request board.
+    const unsubscribeGeneral = onSnapshot(
+      generalRequestsQuery,
+      (snapshot) => {
+        generalRequests.clear();
+        snapshot.forEach((docSnap) => {
+          generalRequests.set(
+            docSnap.id,
+            { id: docSnap.id, sourceCollection: "requests", ...docSnap.data() } as RequestData,
+          );
+        });
+        void updateMergedRequests();
+      },
+      (err) => {
+        console.error("Error subscribing to general requests:", err);
+        setFetching(false);
+      },
+    );
+
+    const unsubscribeDirect = onSnapshot(
+      directRequestsQuery,
+      (snapshot) => {
+        directRequests.clear();
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          directRequests.set(docSnap.id, {
+            id: docSnap.id,
+            sourceCollection: "directServiceRequests",
+            buyerId: data.buyerUserId || "",
+            buyerName: data.buyerName || "Buyer",
+            buyerUniversity: "",
+            buyerDegree: "",
+            buyerYearOfStudy: "",
+            title: data.serviceTitle || "Direct Service Request",
+            category: data.serviceCategory || "General",
+            description: data.message || `Direct request for "${data.serviceTitle || "this gig"}".`,
+            level: "Discuss in chat",
+            serviceType: "Direct Gig Request",
+            time: data.delivery || "Discuss in chat",
+            budget: data.price ? `LKR ${data.price}` : "Discuss in chat",
+            status: normalizeDirectRequestStatus(data.requestStatus),
+            providerId: data.providerId,
+            providerName: data.providerName,
+          });
+        });
+        void updateMergedRequests();
+      },
+      (err) => {
+        console.error("Error subscribing to direct requests:", err);
+        setFetching(false);
+      },
+    );
+
     return () => {
       unsubscribeSpecific();
       unsubscribeGeneral();
+      unsubscribeDirect();
     };
   }, [userProfile]);
 
@@ -425,20 +497,27 @@ function NewRequestsView({
   ) => {
     try {
       const reqObj = requests.find((r) => r.id === reqId);
+      const collectionName = reqObj?.sourceCollection || "requests";
       const updateData: {
         status: string;
         updatedAt: unknown;
         providerId?: string;
         providerName?: string;
+        requestStatus?: string;
       } = {
         status,
         updatedAt: serverTimestamp(),
       };
+
+      if (collectionName === "directServiceRequests") {
+        updateData.requestStatus = status;
+      }
+
       if (status === "working" && userProfile) {
         updateData.providerId = userProfile.uid;
         updateData.providerName = userProfile.name || "Provider Partner";
       }
-      await updateDoc(doc(db, "requests", reqId), updateData);
+      await updateDoc(doc(db, collectionName, reqId), updateData);
 
       if (reqObj) {
         const actionText = status === "working" ? "accepted" : "declined";
@@ -688,11 +767,18 @@ function AcceptedView({
   const handleMarkDone = async (reqId: string) => {
     try {
       const reqObj = requests.find((r) => r.id === reqId);
-      await updateDoc(doc(db, "requests", reqId), {
+      const collectionName = reqObj?.sourceCollection || "requests";
+      const updateData: Record<string, unknown> = {
         status: "done",
         deliveredAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      if (collectionName === "directServiceRequests") {
+        updateData.requestStatus = "done";
+      }
+
+      await updateDoc(doc(db, collectionName, reqId), updateData);
 
       if (reqObj) {
         await createNotification({
@@ -714,7 +800,8 @@ function AcceptedView({
     setSubmitting(true);
     try {
       const reqObj = requests.find((r) => r.id === reqId);
-      await updateDoc(doc(db, "requests", reqId), {
+      const collectionName = reqObj?.sourceCollection || "requests";
+      const updateData: Record<string, unknown> = {
         status: "completed",
         providerReview: {
           rating: providerRating,
@@ -722,7 +809,13 @@ function AcceptedView({
         },
         providerReviewedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      if (collectionName === "directServiceRequests") {
+        updateData.requestStatus = "completed";
+      }
+
+      await updateDoc(doc(db, collectionName, reqId), updateData);
 
       if (reqObj) {
         await createNotification({
@@ -934,7 +1027,8 @@ function CompletedView({ requests }: { requests: RequestData[] }) {
     setSubmitting(true);
     try {
       const reqObj = requests.find((r) => r.id === reqId);
-      await updateDoc(doc(db, "requests", reqId), {
+      const collectionName = reqObj?.sourceCollection || "requests";
+      await updateDoc(doc(db, collectionName, reqId), {
         providerReview: {
           rating: providerRating,
           comment: providerComment.trim(),

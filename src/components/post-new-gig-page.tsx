@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
+import { doc, serverTimestamp, updateDoc, writeBatch } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import ModalPortal from "@/components/ui/modal-portal";
 import SelectField from "@/components/ui/select-field";
 import { useAuth } from "@/context/AuthContext";
 import type { ProviderGig } from "@/lib/auth";
@@ -12,13 +13,11 @@ import { db, storage } from "@/lib/firebase";
 import { GIG_COVER_PRESETS, getGigCoverForCategory, isPresetGigCover } from "@/lib/gig-covers";
 import { ensureGigTitlePrefix } from "@/lib/gig-titles";
 import { useLookupOptions } from "@/lib/lookups";
-import { AVAILABILITY_DAYS } from "@/lib/platform";
+import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
 
 const DELIVERY_OPTIONS = ["1 Day", "2 Days", "3 Days", "5 Days", "7 Days", "14 Days"];
 const MAX_SAMPLE_IMAGE_BYTES = 2 * 1024 * 1024;
 const SAMPLE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const AVAILABILITY_PERIODS = ["Morning", "Afternoon", "Evening", "Night"] as const;
-
 type PostNewGigPageProps = {
   role: "provider" | "both";
   mode?: "create" | "edit";
@@ -30,6 +29,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   const { userProfile, refreshProfile } = useAuth();
   const isEditMode = mode === "edit";
   const serviceCategories = useLookupOptions("serviceCategories");
+  const timeSlotOptions = useLookupOptions("availabilityTimeSlots");
 
   const skillIndex = isEditMode && gigId ? parseInt(gigId.replace("gig-", ""), 10) : -1;
 
@@ -49,11 +49,30 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [didAttemptSubmit, setDidAttemptSubmit] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   const backHref = role === "both" ? "/my-gigs/both?tab=manage" : "/my-gigs/provider?tab=manage";
   const selectedCategory = category.trim();
+  const availabilityPeriods = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...(timeSlotOptions.length ? timeSlotOptions : [...AVAILABILITY_TIME_SLOTS]),
+          ...selectedPeriods,
+          ...availability
+            .map((slot) => {
+              const normalizedSlot = slot.trim();
+              const matchingDay = AVAILABILITY_DAYS.find((day) => normalizedSlot.startsWith(`${day} `));
+              return matchingDay ? normalizedSlot.slice(matchingDay.length).trim() : "";
+            })
+            .filter(Boolean),
+        ]),
+      ),
+    [availability, selectedPeriods, timeSlotOptions],
+  );
 
   useEffect(() => {
     if (!isEditMode || !userProfile || skillIndex < 0) return;
@@ -122,14 +141,21 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
       const period = normalizedSlot.slice(matchingDay.length).trim();
       nextDays.add(matchingDay);
 
-      if (AVAILABILITY_PERIODS.includes(period as (typeof AVAILABILITY_PERIODS)[number])) {
+      if (availabilityPeriods.includes(period)) {
         nextPeriods.add(period);
       }
     });
 
-    setSelectedDays(Array.from(nextDays));
-    setSelectedPeriods(Array.from(nextPeriods));
-  }, [availability]);
+    const nextDaysList = Array.from(nextDays);
+    const nextPeriodsList = Array.from(nextPeriods);
+
+    setSelectedDays((current) =>
+      areSameSelections(current, nextDaysList) ? current : nextDaysList,
+    );
+    setSelectedPeriods((current) =>
+      areSameSelections(current, nextPeriodsList) ? current : nextPeriodsList,
+    );
+  }, [availability, availabilityPeriods]);
 
   const addTag = () => {
     const trimmed = tagInput.trim();
@@ -346,6 +372,50 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
     }
   };
 
+  const handleDeleteGig = async () => {
+    if (!userProfile || skillIndex < 0) return;
+
+    setShowDeleteConfirm(false);
+    setIsDeleting(true);
+    setFeedback(null);
+
+    try {
+      const userRef = doc(db, "users", userProfile.uid);
+      const existingSkills = [...(userProfile.providerProfile?.skills || [])];
+      const existingImages = [...(userProfile.providerProfile?.gigImages || [])];
+      const existingGigs: ProviderGig[] = [...(userProfile.providerProfile?.gigs || [])];
+      const removedGigId = existingGigs[skillIndex]?.id;
+      const updatedSkills = existingSkills.filter((_, index) => index !== skillIndex);
+      const updatedImages = existingImages.filter((_, index) => index !== skillIndex);
+      const updatedGigs = existingGigs.filter((_, index) => index !== skillIndex);
+
+      await updateDoc(userRef, {
+        "providerProfile.skills": updatedSkills,
+        "providerProfile.gigImages": updatedImages,
+        "providerProfile.gigs": updatedGigs,
+      });
+
+      if (removedGigId) {
+        await updateDoc(doc(db, "gigs", removedGigId), {
+          status: "removed",
+          gigStatus: "removed",
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      await refreshProfile();
+      router.push(backHref);
+    } catch (error) {
+      console.error("Error deleting gig:", error);
+      setFeedback({
+        type: "error",
+        msg: "Failed to delete the gig. Please try again.",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <section className="space-y-6 pb-8">
       <div className="mx-auto max-w-3xl">
@@ -552,7 +622,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                     Time Periods *
                   </p>
                   <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-                    {AVAILABILITY_PERIODS.map((period) => {
+                    {availabilityPeriods.map((period) => {
                       const active = selectedPeriods.includes(period);
                       return (
                         <label
@@ -697,17 +767,29 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
             )}
           </div>
 
-          <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-5">
-            <Link
-              href={backHref}
-              className="rounded-lg border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Cancel
-            </Link>
+          <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href={backHref}
+                className="rounded-lg border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Cancel
+              </Link>
+              {isEditMode ? (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isSaving || isDeleting}
+                  className="rounded-lg border border-red-200 bg-red-50 px-5 py-2 text-sm font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-100 disabled:opacity-60"
+                >
+                  Delete Gig
+                </button>
+              ) : null}
+            </div>
             <button
               type="button"
               onClick={handlePublish}
-              disabled={isSaving}
+              disabled={isSaving || isDeleting}
               className="rounded-lg bg-[#1453c4] px-7 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0e3f9e] disabled:opacity-60"
             >
               {isSaving ? (isEditMode ? "Saving..." : "Publishing...") : isEditMode ? "Save Changes" : "Publish Gig"}
@@ -715,6 +797,47 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
           </div>
         </article>
       </div>
+
+      {showDeleteConfirm ? (
+        <ModalPortal>
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md">
+            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.55)]">
+              <div className="flex items-start gap-3">
+                <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500">
+                  <DeleteIcon className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-red-500">Delete Gig</p>
+                  <h2 className="text-base font-semibold text-slate-900">
+                    Delete this gig from your profile?
+                  </h2>
+                </div>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-500">
+                This will remove <span className="font-semibold text-slate-700">{title.trim() || "this gig"}</span> from your public gigs list.
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                  className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteGig}
+                  disabled={isDeleting}
+                  className="rounded-xl bg-red-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-60"
+                >
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      ) : null}
     </section>
   );
 }
@@ -763,4 +886,32 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
+}
+
+function areSameSelections(current: string[], next: string[]) {
+  return (
+    current.length === next.length &&
+    current.every((value, index) => value === next[index])
+  );
+}
+
+function DeleteIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.9}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4.75A1.75 1.75 0 0 1 9.75 3h4.5A1.75 1.75 0 0 1 16 4.75V6" />
+      <path d="M6.75 6l.7 11.16A2 2 0 0 0 9.45 19h5.1a2 2 0 0 0 2-1.84L17.25 6" />
+      <path d="M10 10.25v5.5" />
+      <path d="M14 10.25v5.5" />
+    </svg>
+  );
 }

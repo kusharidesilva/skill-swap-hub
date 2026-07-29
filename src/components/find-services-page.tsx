@@ -452,7 +452,7 @@ function GigCard({
         <div className="mt-auto border-t border-slate-200 pt-3">
           <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
             <span className="truncate">{availability}</span>
-            <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-[#dff2f4] px-2 py-0.5 text-[10px] font-semibold leading-none text-teal-800">
+            <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold leading-none text-emerald-800 shadow-sm">
               {formatPrice(gig.price)}
             </span>
           </div>

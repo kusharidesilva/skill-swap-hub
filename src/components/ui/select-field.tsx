@@ -198,7 +198,7 @@ export default function SelectField({
   return (
     <div
       ref={rootRef}
-      className={`grid min-w-0 max-w-full gap-1.5 ${wrapperClassName}`}
+      className={`grid min-w-0 max-w-full gap-1.5 ${isOpen ? "relative z-[120]" : ""} ${wrapperClassName}`}
     >
       <label
         htmlFor={selectId}
@@ -207,7 +207,7 @@ export default function SelectField({
         {label}
       </label>
 
-      <div className="relative z-20 min-w-0">
+      <div className={`relative min-w-0 ${isOpen ? "z-[120]" : "z-20"}`}>
         <button
           ref={buttonRef}
           type="button"
@@ -253,7 +253,7 @@ export default function SelectField({
             id={menuId}
             role="listbox"
             aria-labelledby={selectId}
-            className="absolute z-[90] mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl"
+            className="absolute z-[140] mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl"
           >
             <div
               className="max-h-60 overflow-y-auto py-1"

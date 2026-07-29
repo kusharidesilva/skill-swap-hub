@@ -471,7 +471,7 @@ export default function GigPreviewPage({
         senderId: buyerId,
         senderName: userProfile.name || "Buyer",
         senderRole: "buyer",
-        text: `Hi ${gig.providerName}, I'm interested in your "${gig.title}" gig. Could you share more details about how this service works, what you need from me, and the next steps to get started?`,
+        text: `Hi ${gig.providerName}, I'm interested in your "${gig.title}" gig. Could you share more details about this.`,
         serviceContext,
         attachments: [],
         createdAt: serverTimestamp(),
@@ -537,38 +537,62 @@ export default function GigPreviewPage({
         </div>
       ) : null}
 
-      <p className="break-words text-[11px] font-semibold text-slate-500">
-        {gig.category} <span className="px-1 text-slate-400">&gt;</span> {gig.skill}{" "}
-        <span className="px-1 text-slate-400">&gt;</span> Student Skill Swap
-      </p>
+      <div className="rounded-[28px] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(241,246,255,0.92))] p-4 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-sm lg:p-5">
+        <p className="break-words text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          {gig.category} <span className="px-1 text-slate-300">&gt;</span> {gig.skill}{" "}
+          <span className="px-1 text-slate-300">&gt;</span> Student Skill Swap
+        </p>
 
-      <div className="mt-3 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <h1 className="break-words text-[2rem] font-black leading-[1.08] tracking-tight text-slate-950 lg:text-[2.5rem]">
+              {gig.title}
+            </h1>
+            <p className="mt-3 max-w-2xl text-[15px] leading-7 text-slate-600">
+              {gig.summary}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3.5 py-2 text-xs font-bold text-[#1453c4]">
+              <StarIcon className="h-3.5 w-3.5 text-amber-400" />
+              {gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} from ${gig.reviews} reviews` : "New listing"}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-700">
+              <ClockIcon className="h-3.5 w-3.5" />
+              {gig.delivery}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <main className="min-w-0 space-y-4">
-          {/* Gig cover and overview */}
-          <h1 className="break-words text-2xl font-bold leading-tight text-slate-900 lg:text-[1.8rem]">{gig.title}</h1>
-
-          <section className="overflow-hidden rounded-lg border border-slate-200 bg-[#9d6a2e] shadow-sm">
-            <div className="relative h-[280px] w-full md:h-[320px] lg:h-[280px] xl:h-[320px]">
+          <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
+            <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(63,94,251,0.18),transparent_38%),linear-gradient(135deg,#eef4ff_0%,#f8fbff_40%,#edf8f6_100%)] px-5 py-5 md:px-7 md:py-6">
+              <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
+              <div className="relative h-[280px] w-full overflow-hidden rounded-[24px] border border-white/80 bg-white shadow-[0_24px_40px_rgba(15,23,42,0.08)] md:h-[360px]">
               <Image
                 src={gig.image}
                 alt={gig.title}
                 fill
                 priority
-                className="object-contain p-4 md:p-6"
+                className="object-contain p-5 md:p-8"
                 sizes="(min-width: 1280px) 620px, 100vw"
               />
-              <div className="absolute right-4 top-4 flex flex-col items-end gap-2">
+              </div>
+              <div className="absolute right-6 top-6 flex flex-col items-end gap-2">
                 <button
                   type="button"
                   onClick={handleToggleFavorite}
                   aria-label={isFavorited ? "Remove from favorites" : "Save to favorites"}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${
+                  className={`flex h-11 w-11 items-center justify-center rounded-full shadow-[0_12px_24px_rgba(15,23,42,0.12)] transition ${
                     isFavorited ? "bg-red-500 text-white" : "bg-white/95 text-slate-700 hover:bg-red-50 hover:text-red-600"
                   }`}
                 >
                   <HeartIcon className="h-5 w-5" filled={isFavorited} />
                 </button>
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
                   <StarIcon className="h-3.5 w-3.5 text-amber-400" />
                   {formatRatingLabel(gig.rating)}
                 </span>
@@ -576,10 +600,11 @@ export default function GigPreviewPage({
             </div>
           </section>
 
-          <div className="-mt-2">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
             <ProviderCard gig={gig} role={role} />
+            <QuickFactsCard gig={gig} />
           </div>
-          <div className="-mt-3 space-y-3">
+          <div className="space-y-3">
             <AboutCard summary={gig.summary} />
 
             <div className="grid gap-3 md:grid-cols-2">
@@ -638,22 +663,22 @@ function ProviderCard({ gig, role }: { gig: GigPreviewData; role: string }) {
 
   return (
     <Link href={href}>
-      <article className="cursor-pointer rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:border-[#1453c4]/45 hover:shadow-md lg:p-3.5">
+      <article className="cursor-pointer rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.05)] transition hover:border-[#1453c4]/45 hover:shadow-md lg:p-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-sm font-bold text-white ring-2 ring-[#2f66e7]/20">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#2f66e7,#5c86ff)] text-sm font-bold text-white shadow-[0_14px_28px_rgba(47,102,231,0.22)]">
             {getInitials(gig.providerName)}
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-sm font-bold text-[#1453c4] hover:underline">{gig.providerName}</h2>
-              <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[9px] font-bold uppercase text-teal-700">
+              <h2 className="text-base font-bold text-[#1453c4] hover:underline">{gig.providerName}</h2>
+              <span className="rounded-full bg-teal-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-teal-700">
                 {gig.proficiency}
               </span>
             </div>
-            <p className="mt-0.5 break-words text-xs text-slate-600">
-              {gig.university} - {gig.providerDegree}
+            <p className="mt-1 break-words text-sm text-slate-600">
+              {gig.university} <span className="px-1.5 text-slate-300">|</span> {gig.providerDegree}
             </p>
-            <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-teal-700">
+            <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-teal-700">
               <StarIcon className="h-3.5 w-3.5" />{" "}
               {gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} (${gig.reviews} reviews)` : "New"}
             </p>
@@ -684,22 +709,30 @@ function PackageCard({
   onMessageProvider: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   return (
-    <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-      <div className="bg-[#1453c4] px-4 py-2.5">
-        <p className="text-sm font-bold text-white">Premium Student Swap</p>
+    <article className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+      <div className="bg-[linear-gradient(135deg,#1453c4,#2f66e7)] px-5 py-4">
+        <p className="text-lg font-bold text-white">Premium Student Swap</p>
+        <p className="mt-1 text-xs font-medium text-blue-100">
+          Clear pricing, quick communication, and focused student-to-student support.
+        </p>
       </div>
 
-      <div className="space-y-3 p-3 lg:p-3.5">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xl font-bold text-slate-900">{formatPrice(gig.price)}</p>
-          <p className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700">
-            <ClockIcon className="h-3.5 w-3.5" /> {gig.delivery}
-          </p>
+      <div className="space-y-4 p-4 lg:p-5">
+        <div className="rounded-2xl border border-slate-100 bg-slate-50/90 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Price</p>
+              <p className="mt-1 text-[2rem] font-black leading-none text-slate-950">{formatPrice(gig.price)}</p>
+            </div>
+            <p className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-teal-700 shadow-sm">
+              <ClockIcon className="h-3.5 w-3.5" /> {gig.delivery}
+            </p>
+          </div>
+
+          <p className="mt-3 break-words text-sm leading-6 text-slate-600">{gig.summary}</p>
         </div>
 
-        <p className="break-words text-xs leading-5 text-slate-600">{gig.summary}</p>
-
-        <ul className="space-y-1.5 border-y border-slate-200 py-2.5 text-xs text-slate-700">
+        <ul className="space-y-2 border-y border-slate-200 py-3 text-sm text-slate-700">
           {packageItems.map((item) => (
             <li key={item} className="flex items-center gap-2">
               <CheckCircleIcon className="h-4 w-4 shrink-0 text-teal-700" />
@@ -711,7 +744,7 @@ function PackageCard({
         {isOwnGig ? (
           <Link
             href={editHref}
-            className="inline-flex h-9 w-full items-center justify-center rounded-md bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
+            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
           >
             Edit Gig Settings
           </Link>
@@ -721,14 +754,14 @@ function PackageCard({
               type="button"
               onClick={onRequestNow}
               disabled={requesting}
-              className="inline-flex h-9 w-full items-center justify-center rounded-md bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
+              className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
             >
               {requesting ? "Opening Chat..." : "Request Now"}
             </button>
             <Link
               href={chatHref}
               onClick={onMessageProvider}
-              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               <MailIcon className="h-4 w-4" />
               Message Provider
@@ -737,7 +770,7 @@ function PackageCard({
         )}
       </div>
 
-      <div className="bg-[#f1f4ff] px-4 py-2.5 text-center text-[11px] font-semibold text-slate-500">
+      <div className="bg-[#f1f4ff] px-4 py-3 text-center text-[11px] font-semibold text-slate-500">
         SkillSwap Quality Guarantee
       </div>
     </article>
@@ -746,11 +779,11 @@ function PackageCard({
 
 function AboutCard({ summary }: { summary: string }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:p-3.5">
-      <h2 className="text-xl font-bold text-slate-900">About this Gig</h2>
+    <article className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.05)] lg:p-5">
+      <h2 className="text-[1.35rem] font-bold text-slate-900">About this Gig</h2>
       <div className="my-3 border-t border-slate-200" />
-      <p className="overflow-hidden break-words text-sm italic leading-6 text-slate-700">
-        &quot;{summary}&quot;
+      <p className="overflow-hidden break-words text-[15px] leading-7 text-slate-700">
+        {summary}
       </p>
     </article>
   );
@@ -768,12 +801,12 @@ function InfoCard({
   items: string[];
 }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:p-3.5">
-      <h3 className={`flex items-center gap-2 text-sm font-bold ${titleClass}`}>
+    <article className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.05)] lg:p-5">
+      <h3 className={`flex items-center gap-2 text-base font-bold ${titleClass}`}>
         {icon}
         {title}
       </h3>
-      <ul className="mt-2.5 space-y-1.5 text-xs leading-5 text-slate-700">
+      <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
         {items.map((item) => (
           <li key={item} className="flex gap-2">
             <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-current" />
@@ -787,8 +820,8 @@ function InfoCard({
 
 function RequirementsCard({ skill }: { skill: string }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-[#f0efff] p-3 shadow-sm lg:p-3.5">
-      <h2 className="text-xl font-bold text-slate-900">Requirements</h2>
+    <article className="rounded-[24px] border border-violet-100 bg-[linear-gradient(135deg,#f4f1ff,#eef7ff)] p-4 shadow-[0_14px_34px_rgba(15,23,42,0.05)] lg:p-5">
+      <h2 className="text-[1.35rem] font-bold text-slate-900">Requirements</h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <Requirement title="Task Brief" detail={`What you need help with in ${skill}.`} />
         <Requirement title="Deadline & Level" detail="When you need it and your current skill level." />
@@ -811,8 +844,8 @@ function ReviewsSection({ reviews }: { reviews: ReviewData[] }) {
   if (reviews.length === 0) {
     return (
       <section className="space-y-2.5">
-        <h2 className="text-xl font-bold text-slate-900">What people say about this swap</h2>
-        <div className="rounded-2xl border border-slate-200 bg-white px-5 py-8 text-sm text-slate-500 shadow-sm">
+        <h2 className="text-[1.35rem] font-bold text-slate-900">What people say about this swap</h2>
+        <div className="rounded-[24px] border border-slate-200 bg-white px-5 py-8 text-sm text-slate-500 shadow-[0_14px_34px_rgba(15,23,42,0.05)]">
           No ratings or reviews yet.
         </div>
       </section>
@@ -821,7 +854,7 @@ function ReviewsSection({ reviews }: { reviews: ReviewData[] }) {
 
   return (
       <section className="space-y-2.5">
-        <h2 className="text-xl font-bold text-slate-900">What people say about this swap</h2>
+        <h2 className="text-[1.35rem] font-bold text-slate-900">What people say about this swap</h2>
         <div className="grid gap-3 md:grid-cols-2">
         {reviews.slice(0, 2).map((review, index) => (
             <ReviewCard
@@ -843,10 +876,10 @@ function ReviewCard({
   accent?: "blue" | "teal";
 }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:p-3.5">
+    <article className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.05)] lg:p-5">
       <div className="flex items-center gap-3">
         <span
-          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white ${
+          className={`flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-bold text-white ${
             accent === "teal" ? "bg-teal-600" : "bg-[#2f66e7]"
           }`}
         >
@@ -859,7 +892,30 @@ function ReviewCard({
           </p>
         </div>
       </div>
-      <p className="mt-3 break-words text-xs leading-5 text-slate-700">&quot;{review.quote}&quot;</p>
+      <p className="mt-3 break-words text-sm leading-6 text-slate-700">&quot;{review.quote}&quot;</p>
+    </article>
+  );
+}
+
+function QuickFactsCard({ gig }: { gig: GigPreviewData }) {
+  const facts = [
+    { label: "Category", value: gig.category },
+    { label: "Availability", value: gig.availability },
+    { label: "Delivery", value: gig.delivery },
+    { label: "Price", value: formatPrice(gig.price) },
+  ];
+
+  return (
+    <article className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.05)] lg:p-5">
+      <h2 className="text-base font-bold text-slate-900">Quick Facts</h2>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {facts.map((fact) => (
+          <div key={fact.label} className="rounded-2xl border border-slate-100 bg-slate-50/80 px-3.5 py-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{fact.label}</p>
+            <p className="mt-1 text-sm font-semibold leading-6 text-slate-800">{fact.value}</p>
+          </div>
+        ))}
+      </div>
     </article>
   );
 }

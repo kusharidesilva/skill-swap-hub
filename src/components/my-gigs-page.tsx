@@ -237,6 +237,8 @@ export default function MyGigsPageContent({
   const handleDeleteGig = async (rawIndex: number) => {
     if (!userProfile) return;
 
+    setDeleteTarget(null);
+
     try {
       const userRef = doc(db, "users", userProfile.uid);
       const existingSkills = (userProfile.providerProfile?.skills || []) as string[];
@@ -263,7 +265,6 @@ export default function MyGigsPageContent({
       }
 
       await refreshProfile();
-      setDeleteTarget(null);
       setDeleteNotice("Gig deleted successfully.");
     } catch (err) {
       console.error("Error removing skill gig:", err);
