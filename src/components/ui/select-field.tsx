@@ -207,7 +207,7 @@ export default function SelectField({
         {label}
       </label>
 
-      <div className="relative min-w-0">
+      <div className="relative z-20 min-w-0">
         <button
           ref={buttonRef}
           type="button"
@@ -253,7 +253,7 @@ export default function SelectField({
             id={menuId}
             role="listbox"
             aria-labelledby={selectId}
-            className="absolute z-40 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl"
+            className="absolute z-[90] mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl"
           >
             <div
               className="max-h-60 overflow-y-auto py-1"

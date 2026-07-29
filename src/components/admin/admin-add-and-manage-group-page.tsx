@@ -76,6 +76,7 @@ export default function AdminAddAndManageGroupPage({
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState("");
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [formNotice, setFormNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -104,12 +105,28 @@ export default function AdminAddAndManageGroupPage({
   const addAddAndManageItem = async () => {
     const name = inputValue.trim();
     if (!name) {
-      setNotice({ type: "error", text: `Enter a ${group.singular} name first.` });
+      setFormNotice({ type: "error", text: `Enter a ${group.singular} name first.` });
+      return;
+    }
+
+    const normalizedInput = normalizeLookupValue(name);
+    const nextSlug = slugify(name);
+    const alreadyExists = items.some((item) => {
+      const normalizedName = normalizeLookupValue(itemName(item));
+      return normalizedName === normalizedInput || item.id === nextSlug;
+    });
+
+    if (alreadyExists) {
+      setFormNotice({
+        type: "error",
+        text: `This ${group.singular} already exists. Try a different name.`,
+      });
       return;
     }
 
     setBusyKey(`${group.key}-add`);
     setNotice(null);
+    setFormNotice(null);
 
     try {
       await setDoc(
@@ -124,10 +141,10 @@ export default function AdminAddAndManageGroupPage({
       );
 
       setInputValue("");
-      setNotice({ type: "success", text: `${name} saved.` });
+      setFormNotice({ type: "success", text: `${name} added successfully.` });
     } catch (error) {
       console.error(`Error saving ${group.key}:`, error);
-      setNotice({ type: "error", text: `Could not save this ${group.singular}.` });
+      setFormNotice({ type: "error", text: `Could not save this ${group.singular}.` });
     } finally {
       setBusyKey("");
     }
@@ -136,10 +153,28 @@ export default function AdminAddAndManageGroupPage({
   const seedDefaults = async () => {
     setBusyKey(`${group.key}-seed`);
     setNotice(null);
+    setFormNotice(null);
 
     try {
+      const existingIds = new Set(items.map((item) => item.id));
+      const existingNames = new Set(
+        items.map((item) => normalizeLookupValue(itemName(item))),
+      );
+      const missingDefaults = group.defaults.filter((name) => {
+        const normalizedName = normalizeLookupValue(name);
+        return !existingIds.has(slugify(name)) && !existingNames.has(normalizedName);
+      });
+
+      if (missingDefaults.length === 0) {
+        setFormNotice({
+          type: "error",
+          text: `All default ${group.title.toLowerCase()} already exist.`,
+        });
+        return;
+      }
+
       await Promise.all(
-        group.defaults.map((name) =>
+        missingDefaults.map((name) =>
           setDoc(
             doc(db, group.key, slugify(name)),
             {
@@ -153,10 +188,13 @@ export default function AdminAddAndManageGroupPage({
         ),
       );
 
-      setNotice({ type: "success", text: `${group.title} defaults saved.` });
+      setFormNotice({
+        type: "success",
+        text: `${missingDefaults.length} default ${missingDefaults.length === 1 ? group.singular : group.title.toLowerCase()} added.`,
+      });
     } catch (error) {
       console.error(`Error seeding ${group.key}:`, error);
-      setNotice({ type: "error", text: `Could not seed ${group.title}.` });
+      setFormNotice({ type: "error", text: `Could not seed ${group.title}.` });
     } finally {
       setBusyKey("");
     }
@@ -225,8 +263,17 @@ export default function AdminAddAndManageGroupPage({
               <input
                 type="text"
                 value={inputValue}
-                onChange={(event) => setInputValue(event.target.value)}
-                className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+                onChange={(event) => {
+                  setInputValue(event.target.value);
+                  if (formNotice) {
+                    setFormNotice(null);
+                  }
+                }}
+                className={`h-11 w-full rounded-lg border px-3 text-sm text-slate-700 outline-none transition focus:ring-4 ${
+                  formNotice?.type === "error"
+                    ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100"
+                    : "border-slate-200 focus:border-[#2f66e7] focus:ring-blue-100"
+                }`}
                 placeholder={`Add ${group.singular}`}
               />
             </label>
@@ -238,15 +285,17 @@ export default function AdminAddAndManageGroupPage({
             >
               {busyKey === `${group.key}-add` ? "Saving..." : "Add"}
             </button>
-            <button
-              type="button"
-              onClick={seedDefaults}
-              disabled={busyKey !== ""}
-              className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {busyKey === `${group.key}-seed` ? "Saving..." : "Seed Defaults"}
-            </button>
           </div>
+
+          {formNotice ? (
+            <p
+              className={`mt-3 text-sm font-medium ${
+                formNotice.type === "success" ? "text-emerald-700" : "text-red-600"
+              }`}
+            >
+              {formNotice.text}
+            </p>
+          ) : null}
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-500">
             <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">{activeCount} Active</span>
@@ -322,4 +371,8 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
+}
+
+function normalizeLookupValue(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
 }

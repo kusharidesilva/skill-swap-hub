@@ -153,7 +153,7 @@ export default function UniversityCombobox({
         {label}
       </label>
 
-      <div className="relative">
+      <div className="relative z-20">
         <div
           className={`flex min-h-10 items-center gap-2 rounded-lg border bg-white px-3 py-2 shadow-sm transition focus-within:ring-4 ${
             error
@@ -255,7 +255,7 @@ export default function UniversityCombobox({
           <div
             id={menuId}
             role="listbox"
-            className="absolute z-30 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl"
+            className="absolute z-[90] mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl"
           >
             <div
               className="max-h-60 overflow-y-auto py-1"

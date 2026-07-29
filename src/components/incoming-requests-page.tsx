@@ -1,23 +1,23 @@
-"use client";
+"use client"; 
 
 import Link from "next/link";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react"; 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  doc,
-  getDoc,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useAuth } from "@/context/AuthContext";
-import { type UserProfile } from "@/lib/auth";
-import { scopedHref } from "@/lib/role-routes";
-import { UNIVERSITIES } from "@/lib/universities";
+import { 
+  collection, 
+  query, 
+  where, 
+  onSnapshot, 
+  doc, 
+  getDoc, 
+  updateDoc, 
+  serverTimestamp, 
+} from "firebase/firestore"; 
+import { db } from "@/lib/firebase"; 
+import { useAuth } from "@/context/AuthContext"; 
+import { type UserProfile } from "@/lib/auth"; 
+import { scopedHref } from "@/lib/role-routes"; 
+import { UNIVERSITIES } from "@/lib/universities"; 
 import { createNotification } from "@/lib/notifications";
 import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
@@ -341,6 +341,16 @@ function TabLink({
   );
 }
 
+function formatBudgetLabel(value: string | undefined) {
+  const normalized = (value || "").trim().toLowerCase();
+
+  if (!normalized || normalized === "open budget") {
+    return "Discuss in chat";
+  }
+
+  return value as string;
+}
+
 function NewRequestsView({
   requests,
   role,
@@ -448,27 +458,62 @@ function NewRequestsView({
 
   return (
     <div className="space-y-5">
-      <article className="rounded-2xl border border-slate-200 bg-[#f7f8ff] p-4 shadow-sm sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-center">
-          <div className="grid w-full gap-4 md:grid-cols-2 xl:max-w-3xl">
-            <Field
-              label="Category"
-              value={category}
-              options={categoryOptions}
-              fieldClassName="min-h-10 text-sm font-medium"
-              onChange={(nextCategory) => {
-                updateFilters(nextCategory, university);
-              }}
-            />
-            <Field
-              label="University"
-              value={university}
-              options={universityOptions}
-              fieldClassName="min-h-10 text-sm font-medium"
-              onChange={(nextUniversity) => {
-                updateFilters(category, nextUniversity);
-              }}
-            />
+      <article className="relative z-20 overflow-visible rounded-[22px] border border-slate-200 bg-white shadow-[0_14px_32px_rgba(15,23,42,0.05)]">
+        <div className="border-b border-slate-100 bg-[linear-gradient(135deg,rgba(47,102,231,0.08),rgba(20,83,196,0.02))] px-4 py-3 sm:px-5">
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#1453c4]">
+                Request Filters
+              </p>
+              <h2 className="mt-1 text-base font-bold text-slate-900 sm:text-[1.05rem]">
+                Browse skill requests with focus
+              </h2>
+              <p className="mt-1 text-[13px] leading-5 text-slate-500">
+                Filter by category and university to find the requests that fit your expertise best.
+              </p>
+            </div>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={() => updateFilters("All Categories", "Any University")}
+                className="inline-flex h-9 items-center justify-center self-start rounded-full border border-[#c9d7fb] bg-white px-3.5 text-xs font-semibold text-[#1453c4] transition hover:border-[#1453c4] hover:bg-blue-50 lg:self-auto"
+              >
+                Clear filters
+              </button>
+            ) : (
+              <span className="inline-flex h-9 items-center self-start rounded-full bg-emerald-50 px-3.5 text-xs font-semibold text-emerald-700 lg:self-auto">
+                Showing all requests
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="p-4 sm:px-5 sm:py-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
+              <Field
+                label="Category"
+                value={category}
+                options={categoryOptions}
+                wrapperClassName="gap-1"
+                fieldClassName="min-h-10 rounded-xl border-slate-200 bg-white text-sm font-medium"
+                onChange={(nextCategory) => {
+                  updateFilters(nextCategory, university);
+                }}
+              />
+            </div>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
+              <Field
+                label="University"
+                value={university}
+                options={universityOptions}
+                wrapperClassName="gap-1"
+                fieldClassName="min-h-10 rounded-xl border-slate-200 bg-white text-sm font-medium"
+                onChange={(nextUniversity) => {
+                  updateFilters(category, nextUniversity);
+                }}
+              />
+            </div>
           </div>
         </div>
       </article>
@@ -548,44 +593,44 @@ function NewRequestsView({
                   <div className="relative mt-3 min-h-0 flex-1 overflow-hidden">
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-5 bg-gradient-to-t from-white via-white/85 to-transparent" />
                     <div className="min-h-0 flex h-full flex-col space-y-3 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    <p className="line-clamp-3 text-sm leading-6 text-slate-600">
-                      {request.description}
-                    </p>
+                      <p className="line-clamp-3 text-sm leading-6 text-slate-600">
+                        {request.description}
+                      </p>
 
-                    <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#f7f8ff] p-2.5 text-[11px] text-slate-600">
-                      <div className="min-w-0 rounded-lg bg-white/70 px-2.5 py-2">
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                          Time
-                        </p>
-                        <p className="mt-1 truncate font-semibold text-slate-700">
-                          {request.time}
-                        </p>
+                      <div className="grid grid-cols-2 gap-2 rounded-2xl bg-[#f7f8ff] p-2.5 text-[11px] text-slate-600">
+                        <div className="min-w-0 rounded-xl border border-white/70 bg-white/85 px-2.5 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                            Time
+                          </p>
+                          <p className="mt-1 truncate font-semibold text-slate-700">
+                            {request.time}
+                          </p>
+                        </div>
+                        <div className="min-w-0 rounded-xl border border-white/70 bg-white/85 px-2.5 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                            Type
+                          </p>
+                          <p className="mt-1 truncate font-semibold text-slate-700">
+                            {request.serviceType}
+                          </p>
+                        </div>
+                        <div className="min-w-0 rounded-xl border border-white/70 bg-white/85 px-2.5 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                            Budget
+                          </p>
+                          <p className="mt-1 truncate font-semibold text-slate-700">
+                            {formatBudgetLabel(request.budget)}
+                          </p>
+                        </div>
+                        <div className="min-w-0 rounded-xl border border-white/70 bg-white/85 px-2.5 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                            Level
+                          </p>
+                          <p className="mt-1 truncate font-semibold text-slate-700">
+                            {request.level}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0 rounded-lg bg-white/70 px-2.5 py-2">
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                          Type
-                        </p>
-                        <p className="mt-1 truncate font-semibold text-slate-700">
-                          {request.serviceType}
-                        </p>
-                      </div>
-                      <div className="min-w-0 rounded-lg bg-white/70 px-2.5 py-2">
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                          Budget
-                        </p>
-                        <p className="mt-1 truncate font-semibold text-slate-700">
-                          {request.budget}
-                        </p>
-                      </div>
-                      <div className="min-w-0 rounded-lg bg-white/70 px-2.5 py-2">
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                          Level
-                        </p>
-                        <p className="mt-1 truncate font-semibold text-slate-700">
-                          {request.level}
-                        </p>
-                      </div>
-                    </div>
                     </div>
                   </div>
 
@@ -621,7 +666,7 @@ function NewRequestsView({
           })}
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500 shadow-sm">
+        <div className="relative z-0 rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500 shadow-sm">
           No incoming skill swap requests match the current filters.
         </div>
       )}
@@ -783,7 +828,7 @@ function AcceptedView({
               )}
 
               <div className="mt-3 rounded-lg bg-[#f3f4ff] p-2.5 text-xs text-slate-600">
-                <span className="font-semibold">Budget: {item.budget}</span>
+                <span className="font-semibold">Budget: {formatBudgetLabel(item.budget)}</span>
                 <span className="mx-2">|</span>
                 <span className="font-semibold">Preferred: {item.time}</span>
               </div>
@@ -1097,12 +1142,14 @@ function Field({
   options,
   onChange,
   fieldClassName = "",
+  wrapperClassName = "",
 }: {
   label: string;
   value: string;
   options: string[];
   onChange: (value: string) => void;
   fieldClassName?: string;
+  wrapperClassName?: string;
 }) {
   const isUniversity = label.toLowerCase() === "university";
 
@@ -1114,7 +1161,8 @@ function Field({
         onSelect={onChange}
         emptyValue="Any University"
         placeholder="Any University"
-        labelClassName="block text-[11px] font-bold uppercase tracking-wider text-slate-500"
+        labelClassName="block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500"
+        wrapperClassName={wrapperClassName}
         className={fieldClassName}
       />
     );
@@ -1126,8 +1174,9 @@ function Field({
       value={value}
       onChange={onChange}
       options={options}
-      labelClassName="text-[11px] font-bold uppercase tracking-wider text-slate-500"
-      className={`h-10 px-2.5 text-xs font-semibold text-slate-700 ${fieldClassName}`}
+      labelClassName="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500"
+      wrapperClassName={wrapperClassName}
+      className={`h-11 px-3 text-sm font-semibold text-slate-700 ${fieldClassName}`}
     />
   );
 }
