@@ -38,6 +38,10 @@ body {
   overflow-x: hidden; 
 } 
 
+body {
+  min-width: 320px;
+}
+
 body { 
   background: var(--background);
   color: var(--foreground);
@@ -59,10 +63,40 @@ body {
   --ssh-border: rgb(117 139 178 / 24%);
   --ssh-shadow: 0 22px 54px -34px rgb(15 23 42 / 45%);
   --ssh-brand-shadow: 0 18px 42px -22px rgb(47 102 231 / 65%);
-  font-size: 16px;
+  font-size: clamp(15px, 0.94rem + 0.16vw, 16px);
   line-height: 1.5;
   text-rendering: optimizeLegibility;
   color: var(--ssh-ink);
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.ssh-mobile-nav,
+.ssh-mobile-rail {
+  scrollbar-width: none;
+}
+
+.ssh-mobile-nav::-webkit-scrollbar,
+.ssh-mobile-rail::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .ssh-navbar {
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  }
+
+  .user-motion-scope {
+    line-height: 1.45;
+  }
 }
 
 .user-motion-scope ::selection {

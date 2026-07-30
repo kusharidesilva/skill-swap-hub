@@ -163,7 +163,7 @@ export default function MobileNav({ role }: { role: Role }) {
         key={item.label}
         href={item.href}
         aria-current={isActive ? "page" : undefined}
-        className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer ${
+        className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold transition-all duration-200 cursor-pointer sm:gap-1.5 sm:px-3 sm:text-xs ${
           isActive
             ? "bg-[#2f66e7]/10 text-[#2f66e7] shadow-xs ring-1 ring-[#2f66e7]/15"
             : isSignOut
@@ -185,20 +185,20 @@ export default function MobileNav({ role }: { role: Role }) {
 
   return (
     <nav
-      className="ssh-mobile-nav flex items-center gap-4 overflow-x-auto px-4 py-3.5 bg-white/80 backdrop-blur-md scrollbar-none"
+      className="ssh-mobile-nav flex items-center gap-2 overflow-x-auto px-3 py-2.5 bg-white/80 backdrop-blur-md scrollbar-none sm:gap-3 sm:px-4 sm:py-3"
       aria-label="Mobile navigation"
     >
       {/* General/Default group */}
       {defaultItems.length > 0 && (
-        <div className="flex items-center gap-1.5 bg-slate-100/70 border border-slate-200/50 rounded-2xl p-1 shrink-0">
+        <div className="flex shrink-0 items-center gap-1 rounded-2xl border border-slate-200/50 bg-slate-100/70 p-1">
           {defaultItems.map(renderItem)}
         </div>
       )}
 
       {/* Provide Skills group */}
       {provideItems.length > 0 && (
-        <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-2xl p-1 shrink-0">
-          <span className="text-[9px] uppercase font-extrabold text-emerald-700 pl-2 pr-0.5 shrink-0 select-none">
+        <div className="flex shrink-0 items-center gap-1 rounded-2xl border border-emerald-100 bg-emerald-50 p-1">
+          <span className="hidden shrink-0 select-none pl-2 pr-0.5 text-[9px] font-extrabold uppercase text-emerald-700 sm:inline">
             Provide:
           </span>
           {provideItems.map(renderItem)}
@@ -207,8 +207,8 @@ export default function MobileNav({ role }: { role: Role }) {
 
       {/* Find Skills group */}
       {findItems.length > 0 && (
-        <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-2xl p-1 shrink-0">
-          <span className="text-[9px] uppercase font-extrabold text-blue-700 pl-2 pr-0.5 shrink-0 select-none">
+        <div className="flex shrink-0 items-center gap-1 rounded-2xl border border-blue-100 bg-blue-50 p-1">
+          <span className="hidden shrink-0 select-none pl-2 pr-0.5 text-[9px] font-extrabold uppercase text-blue-700 sm:inline">
             Find:
           </span>
           {findItems.map(renderItem)}
@@ -217,14 +217,14 @@ export default function MobileNav({ role }: { role: Role }) {
 
       {/* Community group */}
       {communityItems.length > 0 && (
-        <div className="flex items-center gap-1.5 bg-slate-100/70 border border-slate-200/50 rounded-2xl p-1 shrink-0">
+        <div className="flex shrink-0 items-center gap-1 rounded-2xl border border-slate-200/50 bg-slate-100/70 p-1">
           {communityItems.map(renderItem)}
         </div>
       )}
 
       {/* Footer actions (e.g. Sign Out) */}
       {footerItems.length > 0 && (
-        <div className="flex items-center gap-1.5 bg-rose-50/40 border border-rose-100/50 rounded-2xl p-1 shrink-0">
+        <div className="flex shrink-0 items-center gap-1 rounded-2xl border border-rose-100/50 bg-rose-50/40 p-1">
           {footerItems.map(renderItem)}
         </div>
       )}

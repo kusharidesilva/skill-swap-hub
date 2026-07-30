@@ -13,7 +13,7 @@ import { ensureGigTitlePrefix } from "@/lib/gig-titles";
 import { formatRatingLabel } from "@/lib/ratings";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import type { ProviderGig } from "@/lib/auth";
-import { getRoleBadge, getVerificationBadge } from "@/lib/identity-badges";
+import { getVerificationBadge } from "@/lib/identity-badges";
 import { getGigCoverForCategory } from "@/lib/gig-covers";
 
 type ProviderProfilePublicPageProps = {
@@ -343,7 +343,6 @@ export default function ProviderProfilePublicPage({
     );
   }
 
-  const roleBadge = getRoleBadge("provider");
   const verificationBadge = getVerificationBadge("provider", profile.verified);
 
   return (
@@ -363,11 +362,7 @@ export default function ProviderProfilePublicPage({
                   <VerifiedBadgeIcon className={`h-3.5 w-3.5 ${verificationBadge.iconClassName}`} />
                   {verificationBadge.label}
                 </span>
-              ) : (
-                <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${roleBadge.className}`}>
-                  {roleBadge.label}
-                </span>
-              )}
+              ) : null}
               {profile.topRated ? (
                 <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
                   Top Rated

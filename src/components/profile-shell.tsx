@@ -17,10 +17,10 @@ export default function ProfileShell({ role, children }: ProfileShellProps) {
       <Navbar role={role} />
 
       {/* Mobile and tablet navigation */}
-      <div className="ssh-mobile-rail fixed inset-x-0 top-[72px] z-40 border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm xl:hidden">
+      <div className="ssh-mobile-rail fixed inset-x-0 top-[68px] z-40 border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm sm:top-[72px] xl:hidden">
         <MobileNav role={role} />
       </div>
-      <div className="h-[61px] shrink-0 xl:hidden" aria-hidden="true" />
+      <div className="h-[70px] shrink-0 sm:h-[74px] xl:hidden" aria-hidden="true" />
 
       <div className="user-content-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="grid min-h-full xl:grid-cols-[255px_minmax(0,1fr)]">
@@ -28,8 +28,8 @@ export default function ProfileShell({ role, children }: ProfileShellProps) {
           <div className="hidden xl:sticky xl:top-0 xl:block xl:h-[calc(100vh-72px)]">
             <SideNav role={role} />
           </div>
-          <main className="ssh-user-main min-w-0 px-5 py-6 sm:px-6 lg:px-8 xl:px-10">
-            <div className="app-route-stage mx-auto flex w-full max-w-[1220px] flex-col gap-8">
+          <main className="ssh-user-main min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-10">
+            <div className="app-route-stage mx-auto flex w-full max-w-[1220px] flex-col gap-6 sm:gap-8">
               {children}
             </div>
           </main>

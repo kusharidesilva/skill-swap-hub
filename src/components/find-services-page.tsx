@@ -253,14 +253,14 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
       : "/get-started";
 
   return (
-    <div className="grid w-full gap-8 pb-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+    <div className="grid w-full gap-6 pb-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-8">
       <div className="order-2 min-w-0 lg:order-1">
         {loading ? (
           <LoadingCard />
         ) : (
           <div className="flex min-h-[calc(100dvh-11rem)] flex-col">
             {/* Filtered service results */}
-            <section className="grid flex-1 content-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <section className="grid flex-1 content-start gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
               {currentGigs.length > 0 ? (
                 currentGigs.map((gig) => (
                   <GigCard
@@ -429,7 +429,7 @@ function GigCard({
           {gig.title}
         </h2>
 
-        <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+        <div className="mt-2 flex items-start gap-2 text-xs text-slate-500">
           <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#2f66e7] text-[10px] font-bold text-white ring-2 ring-white">
             {gig.providerImage && gig.providerImage.startsWith("/") ? (
               <Image src={gig.providerImage} alt={gig.providerName} width={32} height={32} className="h-full w-full object-cover" />
@@ -438,7 +438,7 @@ function GigCard({
             )}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-[13px] font-semibold leading-5 text-slate-700">
+            <p className="line-clamp-2 text-[13px] font-semibold leading-5 text-slate-700">
               {gig.providerName} <span className="font-medium text-slate-400">|</span>{" "}
               <span className="font-medium text-slate-500">{gig.university}</span>
             </p>
@@ -450,8 +450,8 @@ function GigCard({
         </p>
 
         <div className="mt-auto border-t border-slate-200 pt-3">
-          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
-            <span className="truncate">{availability}</span>
+          <div className="flex flex-col gap-2 text-[11px] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <span className="line-clamp-2 min-w-0">{availability}</span>
             <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold leading-none text-emerald-800 shadow-sm">
               {formatPrice(gig.price)}
             </span>
@@ -600,7 +600,7 @@ function FiltersSidebar(props: {
   return (
     <aside className="order-1 w-full shrink-0 lg:order-2 lg:w-[320px]">
       {/* Search and matching filters */}
-      <div className="sticky top-24 flex max-h-[calc(100dvh-7rem)] min-h-[calc(100dvh-7rem)] flex-col overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_26px_rgba(15,23,42,0.03)] scrollbar-none">
+      <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_26px_rgba(15,23,42,0.03)] scrollbar-none sm:p-5 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:min-h-[calc(100dvh-7rem)] lg:overflow-y-auto">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Find Gig Profiles</h1>
           <p className="mt-1 text-xs leading-normal text-slate-500">
@@ -679,12 +679,12 @@ function Pagination({
   setCurrentPage: (updater: (prev: number) => number) => void;
 }) {
   return (
-    <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+    <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-4">
       <button
         type="button"
         onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
         disabled={currentPage === 1}
-        className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+        className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 sm:text-xs"
       >
         Previous
       </button>
@@ -695,7 +695,7 @@ function Pagination({
             type="button"
             key={pageNum}
             onClick={() => setCurrentPage(() => pageNum)}
-            className={`inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-xs font-bold transition ${
+            className={`inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-[11px] font-bold transition sm:text-xs ${
               currentPage === pageNum
                 ? "bg-[#2f66e7] text-white"
                 : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
@@ -709,7 +709,7 @@ function Pagination({
         type="button"
         onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
         disabled={currentPage === totalPages}
-        className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+        className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 sm:text-xs"
       >
         Next
       </button>

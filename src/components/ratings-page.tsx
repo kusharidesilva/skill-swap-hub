@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { getRoleBadge, getVerificationBadge, type IdentityRole } from "@/lib/identity-badges";
+import { getVerificationBadge, type IdentityRole } from "@/lib/identity-badges";
 
 type Role = "buyer" | "provider" | "both";
 type ReviewsTab = "received" | "given";
@@ -262,9 +262,6 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-bold text-slate-900">{review.partnerName}</p>
-                      <span className={`rounded-full px-2 py-0.25 text-[9px] font-extrabold ${getRoleBadge(review.partnerRole).className}`}>
-                        {getRoleBadge(review.partnerRole).label}
-                      </span>
                       {getVerificationBadge(review.partnerRole, review.partnerRole !== "buyer") ? (
                         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.25 text-[9px] font-extrabold ${getVerificationBadge(review.partnerRole, review.partnerRole !== "buyer")?.className}`}>
                           <VerifiedBadgeIcon className={`h-3 w-3 ${getVerificationBadge(review.partnerRole, review.partnerRole !== "buyer")?.iconClassName}`} />

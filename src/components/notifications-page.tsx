@@ -284,16 +284,16 @@ export default function NotificationsPage() {
   }
 
   return (
-    <section className="flex min-h-[560px] flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="flex min-h-[560px] flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
       {/* Header actions and live notification list */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Notifications</h1>
           <p className="mt-1 text-sm text-slate-500">
             Stay updated with your skill swapping journey.
           </p>
         </div>
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex flex-wrap items-center gap-2 text-sm sm:justify-end">
           {items.some((item) => !item.read) && (
             <button
               onClick={handleMarkAllRead}
@@ -332,7 +332,7 @@ export default function NotificationsPage() {
                       void handleNotificationClick(item);
                     }
                   }}
-                  className={`flex items-start gap-4 rounded-2xl border p-4 shadow-sm transition ${
+                  className={`flex flex-col gap-3 rounded-2xl border p-4 shadow-sm transition sm:flex-row sm:items-start sm:gap-4 ${
                     isInteractive
                       ? "cursor-pointer hover:border-slate-300 hover:shadow-[0_14px_32px_-24px_rgba(37,99,235,0.42)]"
                       : "cursor-default"
@@ -353,7 +353,7 @@ export default function NotificationsPage() {
                     }
                   }}
                 >
-                  <div className="relative">
+                  <div className="relative self-start">
                     <div
                       className={`flex h-10 w-10 items-center justify-center rounded-full ${styles.badge}`}
                     >
@@ -365,8 +365,8 @@ export default function NotificationsPage() {
                       />
                     ) : null}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2">
                       <h3 className="text-sm font-semibold text-slate-900">
                         {item.title}
                       </h3>
@@ -383,11 +383,11 @@ export default function NotificationsPage() {
         )}
       </div>
       {items.length > itemsPerPage ? (
-        <div className="mt-6 flex flex-col items-center justify-between gap-4 border-t border-slate-100 pt-5 text-sm text-slate-500 sm:flex-row">
-          <p>
+        <div className="mt-6 flex flex-col gap-4 border-t border-slate-100 pt-5 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-center sm:text-left">
             Showing {paginatedItems.length} of {items.length} notifications
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
             <PagerButton
               label="Previous"
               disabled={visiblePage === 1}

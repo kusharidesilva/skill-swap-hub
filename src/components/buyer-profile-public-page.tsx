@@ -7,7 +7,7 @@ import { collection, doc, getDoc, getDocs, query, where } from "firebase/firesto
 import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import { useAuth } from "@/context/AuthContext";
-import { getRoleBadge, getVerificationBadge } from "@/lib/identity-badges";
+import { getVerificationBadge } from "@/lib/identity-badges";
 
 type BuyerProfilePublicPageProps = {
   buyerId: string;
@@ -218,8 +218,7 @@ export default function BuyerProfilePublicPage({
     );
   }
 
-  const roleBadge = getRoleBadge("buyer");
-  const verificationBadge = getVerificationBadge("buyer", false);
+  const verificationBadge = getVerificationBadge("buyer", false, profile.accountType);
 
   return (
     <div className="flex w-full flex-col gap-4 pb-6">
@@ -238,11 +237,7 @@ export default function BuyerProfilePublicPage({
                   <VerifiedBadgeIcon className={`h-3.5 w-3.5 ${verificationBadge.iconClassName}`} />
                   {verificationBadge.label}
                 </span>
-              ) : (
-                <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${roleBadge.className}`}>
-                  {roleBadge.label}
-                </span>
-              )}
+              ) : null}
             </div>
 
             <p className="mt-1 break-words text-sm font-semibold text-slate-700 sm:text-base">

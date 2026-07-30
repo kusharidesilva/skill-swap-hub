@@ -198,7 +198,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
           aria-label="Toggle navigation menu"
           aria-controls="mobile-nav"
         />
-        <div className="mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between px-6 sm:px-8 lg:px-10">
+        <div className="mx-auto flex h-[68px] w-full max-w-6xl items-center justify-between px-4 sm:h-[72px] sm:px-8 lg:px-10">
           <Link href={homeLinkHref} className="flex items-center gap-3">
             <Image
               src="/img/Skill%20Swap%20Hub%20Logo%20icon-no%20bg.svg"
@@ -211,7 +211,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
           </Link>
 
           {/* Desktop navigation links */}
-          <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
+          <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 lg:flex">
             {navLinks.map((link) => {
               const isActive = currentActiveSection === link.name;
               return (
@@ -231,7 +231,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
           </nav>
 
           {/* Desktop Actions */}
-          <div className="hidden items-center gap-4 md:flex">
+          <div className="hidden items-center gap-4 lg:flex">
             {role === "guest" ? (
               <>
                 <Link
@@ -333,7 +333,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
         {/* Hamburger Toggle Label (Mobile) */}
         <label
           htmlFor="nav-toggle"
-          className="absolute right-5 top-4 inline-flex items-center rounded-md p-2 text-slate-700 transition-colors hover:text-slate-900 md:hidden cursor-pointer"
+          className="absolute right-3 top-3 inline-flex cursor-pointer items-center rounded-md p-2 text-slate-700 transition-colors hover:text-slate-900 sm:right-5 sm:top-4 lg:hidden"
         >
           <svg
             className="h-6 w-6"
@@ -351,10 +351,10 @@ export default function Navbar({ role: propRole }: NavbarProps) {
         </label>
 
         {/* Mobile Menu */}
-        <div className="ssh-menu max-h-0 overflow-hidden border-b border-slate-200 bg-white/95 opacity-0 transition-[max-height,opacity] duration-300 ease-out peer-checked:max-h-96 peer-checked:opacity-100 md:hidden">
+        <div className="ssh-menu max-h-0 overflow-hidden border-b border-slate-200 bg-white/95 opacity-0 transition-[max-height,opacity] duration-300 ease-out peer-checked:max-h-[calc(100dvh-68px)] peer-checked:opacity-100 lg:hidden">
           <nav
             id="mobile-nav"
-            className="flex flex-col gap-4 px-6 pb-6 pt-4 text-sm font-medium"
+            className="flex max-h-[calc(100dvh-68px)] flex-col gap-4 overflow-y-auto px-4 pb-5 pt-3 text-sm font-medium sm:px-6 sm:pb-6 sm:pt-4"
           >
             {navLinks.map((link) => {
               const isActive = currentActiveSection === link.name;
@@ -378,13 +378,13 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                 <>
                   <Link
                     href="/login"
-                    className="text-slate-600 hover:text-slate-900"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-600 hover:text-slate-900"
                   >
                     Login
                   </Link>
                   <Link
                     href="/get-started"
-                    className="ssh-primary-action rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
+                    className="ssh-primary-action rounded-xl bg-[#0f4cbf] px-5 py-3 text-center text-sm font-semibold text-white shadow-sm"
                   >
                     Get Started
                   </Link>
@@ -393,7 +393,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                 <>
                   <Link
                     href={notificationsHref}
-                    className="flex items-center gap-2 text-slate-600 hover:text-slate-900"
+                    className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-600 hover:text-slate-900"
                   >
                     Notifications
                     {showUnreadNotifications ? (
@@ -402,31 +402,31 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                   </Link>
                   <Link
                     href={favoritesHref}
-                    className="text-slate-600 hover:text-slate-900"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-600 hover:text-slate-900"
                   >
                     Favorites
                   </Link>
                   <Link
                     href={profileHref}
-                    className="ssh-primary-action rounded-full bg-[#0f4cbf] px-5 py-2 text-center text-sm font-semibold text-white shadow-sm"
+                    className="ssh-primary-action rounded-xl bg-[#0f4cbf] px-5 py-3 text-center text-sm font-semibold text-white shadow-sm"
                   >
                     Profile
                   </Link>
                   <Link
                     href={settingsHref}
-                    className="text-slate-600 hover:text-slate-900"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-600 hover:text-slate-900"
                   >
                     Settings
                   </Link>
                   <Link
                     href={helpHref(accountRole)}
-                    className="text-slate-600 hover:text-slate-900"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-600 hover:text-slate-900"
                   >
                     Help & Support
                   </Link>
                   <Link
                     href="/sign-out"
-                    className="text-slate-600 hover:text-red-500"
+                    className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-rose-600 hover:text-rose-700"
                   >
                     Sign Out
                   </Link>
@@ -436,7 +436,7 @@ export default function Navbar({ role: propRole }: NavbarProps) {
           </nav>
         </div>
       </header>
-      <div className="h-[72px] shrink-0" aria-hidden="true" />
+      <div className="h-[68px] shrink-0 sm:h-[72px]" aria-hidden="true" />
     </>
   );
 }

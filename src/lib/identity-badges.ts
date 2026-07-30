@@ -24,8 +24,13 @@ export function getRoleBadge(role: IdentityRole) {
 export function getVerificationBadge(
   role: IdentityRole,
   verifiedStudentProvider: boolean,
+  accountType?: string,
 ) {
   if (role === "buyer") {
+    if (accountType === "student") {
+      return null;
+    }
+
     return {
       label: "Verified Buyer",
       className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
@@ -13,7 +13,6 @@ import { changeSignedInEmail, type UserProfile } from "@/lib/auth";
 import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
 import { useLookupOptions } from "@/lib/lookups";
 import {
-  getRoleBadge,
   getVerificationBadge,
   type IdentityRole,
 } from "@/lib/identity-badges";
@@ -78,6 +77,11 @@ function compressImageToBase64(
 
     reader.readAsDataURL(file);
   });
+}
+
+function areSameSelections(current: string[], next: string[]) {
+  if (current.length !== next.length) return false;
+  return current.every((value) => next.includes(value));
 }
 
 export default function ProfileSettings({ role }: { role: Role }) {
@@ -177,6 +181,8 @@ function ProfileSettingsForm({
   const [availability, setAvailability] = useState<string[]>(
     userProfile.providerProfile?.availability || [],
   );
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
 
   // These switches map directly to the nested Firestore settings object.
   const [emailNotifications, setEmailNotifications] = useState(
@@ -198,14 +204,69 @@ function ProfileSettingsForm({
   const [emailNoticeMessage, setEmailNoticeMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const badgeRole: IdentityRole = role === "admin" ? "buyer" : role;
-  const roleBadge = getRoleBadge(badgeRole);
   const verificationBadge = getVerificationBadge(
     badgeRole,
     Boolean(userProfile.verifiedStudentProvider),
+    userProfile.accountType,
   );
   const profileSubline = isNonStudentBuyer
     ? userProfile.email || "Non-student buyer"
     : [degree, university].filter(Boolean).join(" - ");
+  const availabilityPeriods = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...(timeSlotOptions.length ? timeSlotOptions : [...AVAILABILITY_TIME_SLOTS]),
+          ...selectedPeriods,
+          ...availability
+            .map((slot) => {
+              const normalizedSlot = slot.trim();
+              const matchingDay = AVAILABILITY_DAYS.find((day) =>
+                normalizedSlot.startsWith(`${day} `),
+              );
+              return matchingDay ? normalizedSlot.slice(matchingDay.length).trim() : "";
+            })
+            .filter(Boolean),
+        ]),
+      ),
+    [availability, selectedPeriods, timeSlotOptions],
+  );
+
+  useEffect(() => {
+    if (!availability.length) {
+      setSelectedDays([]);
+      setSelectedPeriods([]);
+      return;
+    }
+
+    const nextDays = new Set<string>();
+    const nextPeriods = new Set<string>();
+
+    availability.forEach((slot) => {
+      const normalizedSlot = slot.trim();
+      const matchingDay = AVAILABILITY_DAYS.find((day) =>
+        normalizedSlot.startsWith(`${day} `),
+      );
+      if (!matchingDay) return;
+
+      const period = normalizedSlot.slice(matchingDay.length).trim();
+      nextDays.add(matchingDay);
+
+      if (availabilityPeriods.includes(period)) {
+        nextPeriods.add(period);
+      }
+    });
+
+    const nextDaysList = Array.from(nextDays);
+    const nextPeriodsList = Array.from(nextPeriods);
+
+    setSelectedDays((current) =>
+      areSameSelections(current, nextDaysList) ? current : nextDaysList,
+    );
+    setSelectedPeriods((current) =>
+      areSameSelections(current, nextPeriodsList) ? current : nextPeriodsList,
+    );
+  }, [availability, availabilityPeriods]);
 
   // Build one update payload so Firestore receives an atomic profile change.
   const handleSaveProfile = async () => {
@@ -362,12 +423,29 @@ function ProfileSettingsForm({
     setNewNeededSkill("");
   };
 
-  const toggleAvailability = (slot: string) => {
-    if (availability.includes(slot)) {
-      setAvailability(availability.filter((s) => s !== slot));
-    } else {
-      setAvailability([...availability, slot]);
-    }
+  const syncAvailability = (days: string[], periods: string[]) => {
+    const combinations = days.flatMap((day) =>
+      periods.map((period) => `${day} ${period}`),
+    );
+    setAvailability(combinations);
+  };
+
+  const toggleDay = (day: string) => {
+    const nextDays = selectedDays.includes(day)
+      ? selectedDays.filter((value) => value !== day)
+      : [...selectedDays, day];
+
+    setSelectedDays(nextDays);
+    syncAvailability(nextDays, selectedPeriods);
+  };
+
+  const togglePeriod = (period: string) => {
+    const nextPeriods = selectedPeriods.includes(period)
+      ? selectedPeriods.filter((value) => value !== period)
+      : [...selectedPeriods, period];
+
+    setSelectedPeriods(nextPeriods);
+    syncAvailability(selectedDays, nextPeriods);
   };
 
   return (
@@ -375,10 +453,10 @@ function ProfileSettingsForm({
       {/* Page title and save feedback */}
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Profile Settings
           </h1>
-          <p className="mt-1 text-xs text-slate-500">{description}</p>
+          <p className="mt-1 text-sm text-slate-500">{description}</p>
         </div>
 
         {saveStatus === "success" && (
@@ -431,10 +509,7 @@ function ProfileSettingsForm({
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900">{name}</h2>
-                <span className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${roleBadge.className}`}>
-                  {roleBadge.label}
-                </span>
+                <h2 className="text-lg font-bold text-slate-900">{name}</h2>
                 {verificationBadge ? (
                   <span className={`inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${verificationBadge.className}`}>
                     <BadgeCheckIcon className={`h-3.5 w-3.5 ${verificationBadge.iconClassName}`} />
@@ -442,7 +517,7 @@ function ProfileSettingsForm({
                   </span>
                 ) : null}
               </div>
-              <p className="mt-1 text-xs font-semibold text-slate-500">
+              <p className="mt-1 text-sm font-semibold text-slate-500">
                 {profileSubline || "Profile details not added yet"}
               </p>
             </div>
@@ -452,7 +527,7 @@ function ProfileSettingsForm({
             type="button"
             onClick={handleSaveProfile}
             disabled={isSaving}
-            className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-2 rounded-md bg-[#0758d8] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#0648b4] disabled:opacity-60 sm:w-auto"
+            className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[#0758d8] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0648b4] disabled:opacity-60 sm:w-auto"
           >
             <SaveIcon className="h-4 w-4" />
             {isSaving ? "Saving..." : "Save Profile"}
@@ -472,55 +547,55 @@ function ProfileSettingsForm({
 
             <div className="mt-5 grid gap-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+                <label className="grid gap-2 text-sm font-semibold text-slate-700">
                   Full Name
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="h-9 min-w-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+                    className="h-11 min-w-0 rounded-lg border border-slate-300 px-4 text-sm font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
                   />
                 </label>
 
-                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+                <label className="grid gap-2 text-sm font-semibold text-slate-700">
                   Current Email
                   <input
                     type="email"
                     value={userProfile.email}
                     disabled
-                    className="h-9 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-400 outline-none cursor-not-allowed"
+                    className="h-11 min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-400 outline-none cursor-not-allowed"
                   />
                 </label>
 
                 {isStudentAccount ? (
                   <>
-                    <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+                    <label className="grid gap-2 text-sm font-semibold text-slate-700">
                       University
                       <input
                         type="text"
                         value={university}
                         disabled
-                        className="h-9 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-500 outline-none cursor-not-allowed"
+                        className="h-11 min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500 outline-none cursor-not-allowed"
                       />
                     </label>
 
-                    <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+                    <label className="grid gap-2 text-sm font-semibold text-slate-700">
                       Degree Program
                       <input
                         type="text"
                         value={degree}
                         disabled
-                        className="h-9 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-500 outline-none cursor-not-allowed"
+                        className="h-11 min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500 outline-none cursor-not-allowed"
                       />
                     </label>
 
-                    <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+                    <label className="grid gap-2 text-sm font-semibold text-slate-700">
                       Year of Study
                       <input
                         type="text"
                         value={yearOfStudy}
                         disabled
-                        className="h-9 min-w-0 rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-500 outline-none cursor-not-allowed"
+                        className="h-11 min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-500 outline-none cursor-not-allowed"
                       />
                     </label>
                   </>
@@ -528,14 +603,14 @@ function ProfileSettingsForm({
               </div>
 
               {showOffered && (
-                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+                <label className="grid gap-2 text-sm font-semibold text-slate-700">
                   Bio / Expertise Statement
                   <textarea
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
                     rows={3}
                     placeholder="Describe your skills, what courses you have completed, and what you can help other students learn."
-                    className="resize-none rounded-md border border-slate-300 px-3 py-2 text-xs font-medium leading-relaxed text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+                    className="resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm font-medium leading-relaxed text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
                   />
                 </label>
               )}
@@ -549,35 +624,95 @@ function ProfileSettingsForm({
                 title="Weekly Availability"
               />
 
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {availabilityOptions.map((slot) => {
-                  const isChecked = availability.includes(slot);
-                  return (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => toggleAvailability(slot)}
-                      className={`relative flex h-10 cursor-pointer items-center justify-center overflow-hidden rounded-xl border px-3 py-1.5 shadow-xs transition ${
-                        isChecked
-                          ? "border-[#0758d8] bg-blue-50/50 text-[#0758d8]"
-                          : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
-                      }`}
-                    >
-                      <span
-                        className={`absolute right-2 top-2.5 flex h-3.5 w-3.5 items-center justify-center rounded border text-white ${
-                          isChecked
-                            ? "border-[#0758d8] bg-[#0758d8]"
-                            : "border-slate-300 bg-white"
-                        }`}
-                      >
-                        {isChecked && <CheckIcon className="h-2.5 w-2.5" />}
-                      </span>
-                      <span className="text-xs font-bold tracking-wide">
-                        {slot}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-slate-500">
+                    Select your available days and time periods for your profile.
+                  </p>
+                  <span className="text-xs font-semibold text-slate-400">
+                    {availability.length} slot{availability.length === 1 ? "" : "s"} selected
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-5">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                      Weekly Availability
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
+                      {AVAILABILITY_DAYS.map((day) => {
+                        const active = selectedDays.includes(day);
+                        return (
+                          <label
+                            key={day}
+                            className={`flex min-h-[78px] cursor-pointer flex-col items-center justify-center rounded-2xl border px-3 py-3 text-center transition ${
+                              active
+                                ? "border-[#1453c4] bg-[#e8efff] text-[#1453c4] shadow-sm"
+                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={active}
+                              onChange={() => toggleDay(day)}
+                              className="sr-only"
+                            />
+                            <span
+                              className={`flex h-5 w-5 items-center justify-center rounded-md border text-[11px] ${
+                                active
+                                  ? "border-[#1453c4] bg-[#1453c4] text-white"
+                                  : "border-slate-300 bg-white text-transparent"
+                              }`}
+                            >
+                              ✓
+                            </span>
+                            <span className="mt-2 text-xs font-bold uppercase tracking-wide">
+                              {day.slice(0, 3)}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                      Time Periods
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+                      {availabilityPeriods.map((period) => {
+                        const active = selectedPeriods.includes(period);
+                        return (
+                          <label
+                            key={period}
+                            className={`flex min-h-[78px] cursor-pointer flex-col items-center justify-center rounded-2xl border px-3 py-3 text-center transition ${
+                              active
+                                ? "border-[#1453c4] bg-[#e8efff] text-[#1453c4] shadow-sm"
+                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={active}
+                              onChange={() => togglePeriod(period)}
+                              className="sr-only"
+                            />
+                            <span
+                              className={`flex h-5 w-5 items-center justify-center rounded-md border text-[11px] ${
+                                active
+                                  ? "border-[#1453c4] bg-[#1453c4] text-white"
+                                  : "border-slate-300 bg-white text-transparent"
+                              }`}
+                            >
+                              ✓
+                            </span>
+                            <span className="mt-2 text-sm font-semibold">{period}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
           )}
@@ -600,7 +735,7 @@ function ProfileSettingsForm({
           {showOffered && (
             <section className="min-w-0 rounded-xl border border-slate-200 border-l-4 border-l-emerald-600 bg-white p-5">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xs font-semibold text-slate-800">
+                <h2 className="text-sm font-semibold text-slate-800">
                   Skills I Can Offer
                 </h2>
               </div>
@@ -617,12 +752,12 @@ function ProfileSettingsForm({
                       addOfferedSkill(newOfferedSkill);
                     }
                   }}
-                  className="h-8 min-w-0 flex-1 rounded-md border border-slate-300 px-3 text-xs outline-none focus:border-[#0758d8]"
+                  className="h-11 min-w-0 flex-1 rounded-lg border border-slate-300 px-4 text-sm outline-none focus:border-[#0758d8]"
                 />
                 <button
                   type="button"
                   onClick={() => addOfferedSkill(newOfferedSkill)}
-                  className="inline-flex h-8 shrink-0 items-center justify-center rounded-md bg-[#0758d8] px-3 text-[10px] font-bold text-white hover:bg-[#0648b4]"
+                  className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-[#0758d8] px-4 text-sm font-semibold text-white hover:bg-[#0648b4]"
                 >
                   Add
                 </button>
@@ -676,7 +811,7 @@ function ProfileSettingsForm({
           {showNeeded && (
             <section className="min-w-0 rounded-xl border border-slate-200 border-l-4 border-l-[#0758d8] bg-white p-5">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xs font-semibold text-slate-800">
+                <h2 className="text-sm font-semibold text-slate-800">
                   Skills I Need
                 </h2>
               </div>
@@ -693,12 +828,12 @@ function ProfileSettingsForm({
                       addNeededSkill(newNeededSkill);
                     }
                   }}
-                  className="h-8 min-w-0 flex-1 rounded-md border border-slate-300 px-3 text-xs outline-none focus:border-[#0758d8]"
+                  className="h-11 min-w-0 flex-1 rounded-lg border border-slate-300 px-4 text-sm outline-none focus:border-[#0758d8]"
                 />
                 <button
                   type="button"
                   onClick={() => addNeededSkill(newNeededSkill)}
-                  className="inline-flex h-8 shrink-0 items-center justify-center rounded-md bg-[#0758d8] px-3 text-[10px] font-bold text-white hover:bg-[#0648b4]"
+                  className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-[#0758d8] px-4 text-sm font-semibold text-white hover:bg-[#0648b4]"
                 >
                   Add
                 </button>
@@ -857,29 +992,29 @@ function LoginSecurity({
           <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
             <div className="flex flex-col gap-1">
               <h3 className="text-sm font-bold text-slate-800">Change Email</h3>
-              <p className="text-[11px] font-medium leading-relaxed text-slate-500">
+              <p className="text-sm font-medium leading-relaxed text-slate-500">
                 Update your account email and verify the new address from your inbox.
               </p>
             </div>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+              <label className="grid gap-2 text-sm font-semibold text-slate-700">
                 New Email Address
                 <input
                   type="email"
                   value={email}
                   onChange={(event) => onEmailChange(event.target.value)}
-                  className="h-9 min-w-0 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+                  className="h-11 min-w-0 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
                 />
               </label>
 
-              <label className="grid gap-1.5 text-xs font-semibold text-slate-600">
+              <label className="grid gap-2 text-sm font-semibold text-slate-700">
                 Current Password
                 <input
                   type="password"
                   value={emailPassword}
                   onChange={(event) => onEmailPasswordChange(event.target.value)}
-                  className="h-9 min-w-0 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
+                  className="h-11 min-w-0 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 outline-none transition focus:border-[#0758d8] focus:ring-4 focus:ring-blue-100"
                 />
               </label>
             </div>
@@ -901,7 +1036,7 @@ function LoginSecurity({
                 type="button"
                 onClick={() => void onUpdateEmail()}
                 disabled={emailBusy}
-                className="inline-flex h-9 min-w-[148px] items-center justify-center rounded-md bg-[#0758d8] px-4 text-xs font-bold text-white transition hover:bg-[#0648b4] disabled:opacity-60"
+                className="inline-flex h-11 min-w-[148px] items-center justify-center rounded-lg bg-[#0758d8] px-5 text-sm font-semibold text-white transition hover:bg-[#0648b4] disabled:opacity-60"
               >
                 {emailBusy ? "Updating Email..." : "Update Email"}
               </button>
@@ -912,21 +1047,21 @@ function LoginSecurity({
         <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
           <div className="flex flex-col gap-1">
             <h3 className="text-sm font-bold text-slate-800">Change Password</h3>
-            <p className="text-[11px] font-medium leading-relaxed text-slate-500">
+            <p className="text-sm font-medium leading-relaxed text-slate-500">
               Keep your account secure with a strong new password.
             </p>
           </div>
 
           <form className="mt-4 grid gap-4">
-            <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
+            <label className="grid min-w-0 gap-2 text-sm font-semibold text-slate-700">
               Current Password
-              <div className="flex h-9 items-center justify-between rounded-md border border-slate-300 bg-white px-3 transition focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100">
+              <div className="flex h-11 items-center justify-between rounded-lg border border-slate-300 bg-white px-4 transition focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100">
                 <input
                   type={showCurrent ? "text" : "password"}
                   value={currentPassword}
                   onChange={(event) => setCurrentPassword(event.target.value)}
                   autoComplete="current-password"
-                  className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none"
+                  className="w-full bg-transparent text-sm font-medium text-slate-800 outline-none"
                 />
                 <button
                   type="button"
@@ -939,15 +1074,15 @@ function LoginSecurity({
             </label>
 
             <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-              <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
+              <label className="grid min-w-0 gap-2 text-sm font-semibold text-slate-700">
                 New Password
-                <div className="flex h-9 items-center justify-between rounded-md border border-slate-300 bg-white px-3 transition focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100">
+                <div className="flex h-11 items-center justify-between rounded-lg border border-slate-300 bg-white px-4 transition focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100">
                   <input
                     type={showNew ? "text" : "password"}
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
                     autoComplete="new-password"
-                    className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none"
+                    className="w-full bg-transparent text-sm font-medium text-slate-800 outline-none"
                   />
                   <button
                     type="button"
@@ -959,15 +1094,15 @@ function LoginSecurity({
                 </div>
               </label>
 
-              <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-slate-600">
+              <label className="grid min-w-0 gap-2 text-sm font-semibold text-slate-700">
                 Confirm New
-                <div className="flex h-9 items-center justify-between rounded-md border border-slate-300 bg-white px-3 transition focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100">
+                <div className="flex h-11 items-center justify-between rounded-lg border border-slate-300 bg-white px-4 transition focus-within:border-[#0758d8] focus-within:ring-4 focus-within:ring-blue-100">
                   <input
                     type={showConfirm ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     autoComplete="new-password"
-                    className="w-full bg-transparent text-xs font-medium text-slate-800 outline-none"
+                    className="w-full bg-transparent text-sm font-medium text-slate-800 outline-none"
                   />
                   <button
                     type="button"
@@ -980,7 +1115,7 @@ function LoginSecurity({
               </label>
             </div>
 
-            <p className="text-[11px] font-medium leading-[1.45] text-slate-500">
+            <p className="text-sm font-medium leading-[1.6] text-slate-500">
               {strongPasswordMessage}
             </p>
 
@@ -1001,7 +1136,7 @@ function LoginSecurity({
                 type="button"
                 onClick={handleUpdatePassword}
                 disabled={isUpdatingPassword}
-                className="inline-flex h-9 min-w-[148px] items-center justify-center rounded-md bg-[#0758d8] px-4 text-xs font-bold text-white transition hover:bg-[#0648b4] disabled:opacity-60"
+                className="inline-flex h-11 min-w-[148px] items-center justify-center rounded-lg bg-[#0758d8] px-5 text-sm font-semibold text-white transition hover:bg-[#0648b4] disabled:opacity-60"
               >
                 {isUpdatingPassword ? "Updating..." : "Update Password"}
               </button>
@@ -1070,7 +1205,7 @@ function PrivacySettings({
         />
       </div>
 
-      <div className="mt-4 flex gap-2.5 rounded-md border border-teal-100 bg-teal-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-teal-700">
+      <div className="mt-4 flex gap-2.5 rounded-lg border border-teal-100 bg-teal-50 px-4 py-3 text-sm font-medium leading-relaxed text-teal-700">
         <InfoIcon className="mt-0.5 h-4 w-4 shrink-0" />
         <p>
           Making your profile public helps potential external mentors find you,
@@ -1086,8 +1221,8 @@ function DangerZone() {
     <section className="rounded-xl border border-red-200 bg-red-50/50 p-5">
       <div className="flex flex-col gap-3">
         <div>
-          <h2 className="text-xs font-bold text-red-700">Danger Zone</h2>
-          <p className="mt-1 text-[11px] font-semibold leading-relaxed text-slate-600">
+          <h2 className="text-sm font-bold text-red-700">Danger Zone</h2>
+          <p className="mt-1 text-sm font-medium leading-relaxed text-slate-600">
             Permanently deactivate your account. This action is irreversible and
             all your data, including swap history, will be removed.
           </p>
@@ -1095,7 +1230,7 @@ function DangerZone() {
         <button
           type="button"
           disabled
-          className="h-9 w-full rounded-md bg-red-200 text-red-400 border border-red-200 cursor-not-allowed px-4 text-xs font-bold"
+          className="h-11 w-full rounded-lg border border-red-200 bg-red-200 px-4 text-sm font-semibold text-red-400 cursor-not-allowed"
         >
           Deactivate Account
         </button>
@@ -1106,7 +1241,7 @@ function DangerZone() {
 
 function SectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
   return (
-    <div className="flex items-center gap-1.5 text-sm font-bold text-slate-800">
+    <div className="flex items-center gap-2 text-base font-semibold text-slate-800">
       <span className="text-[#0758d8]">{icon}</span>
       {title}
     </div>
@@ -1134,8 +1269,8 @@ function ToggleRow({
   return (
     <label className="flex cursor-pointer items-center justify-between gap-4">
       <span className="min-w-0">
-        <span className="block text-xs font-bold text-slate-900">{title}</span>
-        <span className="mt-0.5 block text-[11px] font-semibold text-slate-500">
+        <span className="block text-sm font-semibold text-slate-900">{title}</span>
+        <span className="mt-1 block text-sm font-medium text-slate-500">
           {description}
         </span>
       </span>

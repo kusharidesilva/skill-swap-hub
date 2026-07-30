@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
-  getRoleBadge,
   getVerificationBadge,
   type IdentityRole,
 } from "@/lib/identity-badges";
@@ -136,10 +135,10 @@ export default function Profile({ role: propRole }: { role: Role }) {
 
   const badgeRole: IdentityRole =
     displayRole === "admin" ? "buyer" : displayRole;
-  const roleBadge = getRoleBadge(badgeRole);
   const verificationBadge = getVerificationBadge(
     badgeRole,
     Boolean(userProfile.verifiedStudentProvider),
+    userProfile.accountType,
   );
 
   const academicLine = isNonStudentBuyer
@@ -192,11 +191,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
                     <VerifiedIcon className={`h-3.5 w-3.5 ${verificationBadge.iconClassName}`} />
                     {verificationBadge.label}
                   </span>
-                ) : (
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${roleBadge.className}`}>
-                    {roleBadge.label}
-                  </span>
-                )}
+                ) : null}
               </div>
 
               <p className="mt-1 text-sm text-slate-500">
