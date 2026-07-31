@@ -11,6 +11,7 @@ import {
   MODERATION_EVIDENCE_ACCEPT,
   formatReportId,
   moderationActionLabel,
+  normalizeModerationStatus,
   type ModerationAction,
   type ModerationEvidenceFile,
   isAllowedModerationEvidenceFile,
@@ -30,6 +31,7 @@ type ReportActionModalProps = {
 type ReportRecord = {
   reportCode?: string;
   adminNote?: string;
+  status?: string;
   targetUserId?: string;
   reportedUserId?: string;
   reportedUser?: string;
@@ -134,6 +136,13 @@ export default function ReportActionModal({
       return;
     }
 
+    if (!replyMessage.trim() && !selectedFile) {
+      setNotice(
+        "Your reply is required. Add a clarification message or attach one supporting file.",
+      );
+      return;
+    }
+
     setBusy(true);
     setNotice("");
 
@@ -155,6 +164,11 @@ export default function ReportActionModal({
       }
 
       try {
+        const nextStatus =
+          normalizeModerationStatus(report?.status || "") === "warn"
+            ? "Pending"
+            : report?.status || "Pending";
+
         await updateDoc(doc(db, "reports", reportId), {
           reportedUserResponses: arrayUnion({
             userId,
@@ -163,6 +177,7 @@ export default function ReportActionModal({
             evidenceFiles,
             submittedAt: Timestamp.now(),
           }),
+          status: nextStatus,
           adminNeedsReview: true,
           lastResponseAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -299,7 +314,12 @@ export default function ReportActionModal({
                         </p>
                         <textarea
                           value={replyMessage}
-                          onChange={(event) => setReplyMessage(event.target.value)}
+                          onChange={(event) => {
+                            setReplyMessage(event.target.value);
+                            if (notice) {
+                              setNotice("");
+                            }
+                          }}
                           placeholder="Add clarification, explain your side, or attach supporting details for admin review."
                           className="mt-4 min-h-32 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
                         />

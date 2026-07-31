@@ -104,8 +104,16 @@ service cloud.firestore {
     function canReportedUserReplyToReport() {
       return hasActiveAccount() &&
         isReportTarget() &&
+        (
+          request.resource.data.status == resource.data.status ||
+          (
+            resource.data.status == 'Warn' &&
+            request.resource.data.status == 'Pending'
+          )
+        ) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'reportedUserResponses',
+          'status',
           'adminNeedsReview',
           'lastResponseAt',
           'updatedAt'

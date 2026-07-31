@@ -207,7 +207,32 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
           addCompletedPartner(entry.data() as CompletedExchangeDoc, "provider");
         });
 
-        const nextUsers = Array.from(reportableUsers.values()).sort((left, right) =>
+        const resolvedUsers = await Promise.all(
+          Array.from(reportableUsers.values()).map(async (user) => {
+            try {
+              const userSnapshot = await getDoc(doc(db, "users", user.id));
+              if (!userSnapshot.exists()) {
+                return user;
+              }
+
+              const data = userSnapshot.data();
+              const liveName =
+                typeof data.name === "string" && data.name.trim()
+                  ? data.name.trim()
+                  : user.name;
+
+              return {
+                id: user.id,
+                name: liveName,
+              };
+            } catch (error) {
+              console.error("Error refreshing report target name:", error);
+              return user;
+            }
+          }),
+        );
+
+        const nextUsers = resolvedUsers.sort((left, right) =>
           left.name.localeCompare(right.name)
         );
         setUsersList(nextUsers);

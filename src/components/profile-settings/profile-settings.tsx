@@ -12,6 +12,7 @@ import {
 import { changeSignedInEmail, type UserProfile } from "@/lib/auth";
 import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
 import { useLookupOptions } from "@/lib/lookups";
+import { propagateUserProfileReferences } from "@/lib/user-profile-propagation";
 import {
   getVerificationBadge,
   type IdentityRole,
@@ -181,8 +182,6 @@ function ProfileSettingsForm({
   const [availability, setAvailability] = useState<string[]>(
     userProfile.providerProfile?.availability || [],
   );
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
 
   // These switches map directly to the nested Firestore settings object.
   const [emailNotifications, setEmailNotifications] = useState(
@@ -217,7 +216,6 @@ function ProfileSettingsForm({
       Array.from(
         new Set([
           ...(timeSlotOptions.length ? timeSlotOptions : [...AVAILABILITY_TIME_SLOTS]),
-          ...selectedPeriods,
           ...availability
             .map((slot) => {
               const normalizedSlot = slot.trim();
@@ -229,44 +227,46 @@ function ProfileSettingsForm({
             .filter(Boolean),
         ]),
       ),
-    [availability, selectedPeriods, timeSlotOptions],
+    [availability, timeSlotOptions],
   );
+  const selectedDays = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          availability
+            .map((slot) => {
+              const normalizedSlot = slot.trim();
+              return (
+                AVAILABILITY_DAYS.find((day) =>
+                  normalizedSlot.startsWith(`${day} `),
+                ) || ""
+              );
+            })
+            .filter(Boolean),
+        ),
+      ),
+    [availability],
+  );
+  const selectedPeriods = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          availability
+            .map((slot) => {
+              const normalizedSlot = slot.trim();
+              const matchingDay = AVAILABILITY_DAYS.find((day) =>
+                normalizedSlot.startsWith(`${day} `),
+              );
+              if (!matchingDay) return "";
 
-  useEffect(() => {
-    if (!availability.length) {
-      setSelectedDays([]);
-      setSelectedPeriods([]);
-      return;
-    }
-
-    const nextDays = new Set<string>();
-    const nextPeriods = new Set<string>();
-
-    availability.forEach((slot) => {
-      const normalizedSlot = slot.trim();
-      const matchingDay = AVAILABILITY_DAYS.find((day) =>
-        normalizedSlot.startsWith(`${day} `),
-      );
-      if (!matchingDay) return;
-
-      const period = normalizedSlot.slice(matchingDay.length).trim();
-      nextDays.add(matchingDay);
-
-      if (availabilityPeriods.includes(period)) {
-        nextPeriods.add(period);
-      }
-    });
-
-    const nextDaysList = Array.from(nextDays);
-    const nextPeriodsList = Array.from(nextPeriods);
-
-    setSelectedDays((current) =>
-      areSameSelections(current, nextDaysList) ? current : nextDaysList,
-    );
-    setSelectedPeriods((current) =>
-      areSameSelections(current, nextPeriodsList) ? current : nextPeriodsList,
-    );
-  }, [availability, availabilityPeriods]);
+              const period = normalizedSlot.slice(matchingDay.length).trim();
+              return availabilityPeriods.includes(period) ? period : "";
+            })
+            .filter(Boolean),
+        ),
+      ),
+    [availability, availabilityPeriods],
+  );
 
   // Build one update payload so Firestore receives an atomic profile change.
   const handleSaveProfile = async () => {
@@ -276,6 +276,7 @@ function ProfileSettingsForm({
 
     try {
       const userRef = doc(db, "users", userProfile.uid);
+      const trimmedName = name.trim();
       let nextProfileImageUrl = profileImageUrl;
 
       if (selectedProfileImageFile) {
@@ -285,7 +286,7 @@ function ProfileSettingsForm({
       }
 
       const updates: Record<string, unknown> = {
-        name,
+        name: trimmedName,
         profileImageUrl: nextProfileImageUrl,
         neededSkills,
         settings: {
@@ -312,6 +313,12 @@ function ProfileSettingsForm({
       }
 
       await updateDoc(userRef, updates);
+      await propagateUserProfileReferences({
+        uid: userProfile.uid,
+        name: trimmedName,
+        profileImageUrl: nextProfileImageUrl,
+      });
+      setName(trimmedName);
       setProfileImageUrl(nextProfileImageUrl);
       setSelectedProfileImageFile(null);
       await refreshProfile();
@@ -435,7 +442,6 @@ function ProfileSettingsForm({
       ? selectedDays.filter((value) => value !== day)
       : [...selectedDays, day];
 
-    setSelectedDays(nextDays);
     syncAvailability(nextDays, selectedPeriods);
   };
 
@@ -444,7 +450,6 @@ function ProfileSettingsForm({
       ? selectedPeriods.filter((value) => value !== period)
       : [...selectedPeriods, period];
 
-    setSelectedPeriods(nextPeriods);
     syncAvailability(selectedDays, nextPeriods);
   };
 

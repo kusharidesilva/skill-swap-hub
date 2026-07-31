@@ -87,10 +87,13 @@ export default function SkillGigsSection() {
         const statusSnapshot = await getDocs(
           query(collection(db, "gigs"), where("status", "==", "active")),
         );
-        const requestsSnapshot = await getDocs(
-          query(collection(db, "requests"), where("status", "==", "completed")),
-        );
-        const completedRequests = requestsSnapshot.docs.map((requestDoc) => requestDoc.data());
+        const completedRequests = userProfile
+          ? (
+              await getDocs(
+                query(collection(db, "requests"), where("status", "==", "completed")),
+              )
+            ).docs.map((requestDoc) => requestDoc.data())
+          : [];
 
         const gigRecords: GigRecord[] = statusSnapshot.docs
           .map((gigDoc, index) => {
