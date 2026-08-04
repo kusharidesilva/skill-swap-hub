@@ -45,7 +45,7 @@ export const ISSUE_TYPES = [
 
 export const STUDENT_PROOF_TYPES = [
   "Student ID",
-  "University confirmation letter",
+  "Confirmation Letter",
 ] as const;
 
 export const STUDENT_PROOF_ACCEPT =
