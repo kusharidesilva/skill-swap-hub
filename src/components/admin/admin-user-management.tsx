@@ -5,6 +5,13 @@ import Link from "next/link";
 import { collection, doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
+import {
+  getAdminReportStatus,
+  isPendingAdminReport,
+  isRejectedAdminReport,
+  isResolvedAdminReport,
+  normalizeAdminRole,
+} from "@/lib/admin-panel";
 import { createNotification } from "@/lib/notifications";
 import { formatRatingLabel } from "@/lib/ratings";
 import { isRole, scopedHref } from "@/lib/role-routes";
@@ -55,17 +62,19 @@ type ReportRecord = {
   category?: string;
   description?: string;
   status?: string;
+  adminNeedsReview?: boolean;
   createdAt?: TimestampLike;
   adminNote?: string;
 };
 
 function notificationHrefForRole(role?: string) {
-  return isRole(role) ? scopedHref("/notifications", role) : "/notifications";
+  const normalizedRole = normalizeAdminRole(role);
+  return isRole(normalizedRole) ? scopedHref("/notifications", normalizedRole) : "/notifications";
 }
 
 const accountFilters = ["All Statuses", "Active", "Pending Verification", "Suspended"];
 const verificationFilters = ["All Verifications", "Approved", "Pending", "Rejected", "Verified"];
-const roleFilters = ["All Roles", "Buyer", "Provider", "Admin"];
+const roleFilters = ["All Roles", "Buyer", "Provider", "Both", "Admin"];
 const typeFilters = ["All Types", "Student", "Non-student"];
 const USERS_PER_PAGE = 6;
 
@@ -148,12 +157,12 @@ export default function AdminUserManagement() {
           ? accountStatus.startsWith("pending")
           : accountStatus === normalizeStatus(accountFilter));
 
-      const role = normalizeStatus(user.role || "buyer");
+      const role = normalizeAdminRole(user.role || "buyer");
       const matchesRole =
         roleFilter === "All Roles" ||
-        (normalizeStatus(roleFilter) === "buyer" && (role === "buyer" || role === "both")) ||
-        (normalizeStatus(roleFilter) === "provider" && (role === "provider" || role === "both")) ||
-        role === normalizeStatus(roleFilter);
+        (normalizeAdminRole(roleFilter) === "buyer" && (role === "buyer" || role === "both")) ||
+        (normalizeAdminRole(roleFilter) === "provider" && (role === "provider" || role === "both")) ||
+        role === normalizeAdminRole(roleFilter);
 
       const accountType = normalizeStatus(user.accountType || "");
       const matchesType =
@@ -438,6 +447,8 @@ export default function AdminUserManagement() {
                 const targetUserId = user.uid || user.id;
                 const isSuspended = normalizeStatus(user.accountStatus || "") === "suspended";
                 const isSelf = targetUserId === userProfile?.uid;
+                const isStudentAccount = normalizeStatus(user.accountType || "") === "student";
+                const isAdminAccount = normalizeAdminRole(user.role) === "admin";
 
                 return (
                   <div
@@ -457,10 +468,10 @@ export default function AdminUserManagement() {
 
                     <div className="min-w-0">
                       <p className="truncate font-medium text-slate-700">
-                        {user.accountType === "student" ? user.university || "Not added" : "Not applicable"}
+                        {isStudentAccount ? user.university || "Not added" : "Not applicable"}
                       </p>
                       <p className="truncate text-sm text-slate-500">
-                        {user.accountType === "student"
+                        {isStudentAccount
                           ? [user.degree, user.yearOfStudy].filter(Boolean).join(" - ") || "Not added"
                           : "Not applicable"}
                       </p>
@@ -487,14 +498,15 @@ export default function AdminUserManagement() {
                     <div className="flex min-w-[120px] max-w-[120px] justify-self-center flex-col items-stretch gap-3">
                       <button
                         type="button"
+                        disabled={isAdminAccount}
                         onClick={() => setSelectedUserReports(user)}
-                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Reports
                       </button>
                       <button
                         type="button"
-                        disabled={busyUserId !== "" || (isSelf && !isSuspended)}
+                        disabled={isAdminAccount || busyUserId !== "" || (isSelf && !isSuspended)}
                         onClick={() => {
                           if (isSuspended) {
                             void handleAccountStatus(user, "active");
@@ -673,8 +685,9 @@ function accountStatusLabel(status?: string) {
 }
 
 function accountTypeLabel(accountType?: string) {
-  if (accountType === "student") return "Student";
-  if (accountType === "non-student") return "Non-student";
+  const normalized = normalizeStatus(accountType || "");
+  if (normalized === "student") return "Student";
+  if (normalized === "non_student") return "Non-student";
   return "Not set";
 }
 
@@ -687,9 +700,10 @@ function verificationLabel(status?: string) {
 }
 
 function roleLabel(role?: string) {
-  if (role === "both") return "Buyer + Provider";
-  if (role === "provider") return "Provider";
-  if (role === "admin") return "Admin";
+  const normalized = normalizeAdminRole(role);
+  if (normalized === "both") return "Buyer + Provider";
+  if (normalized === "provider") return "Provider";
+  if (normalized === "admin") return "Admin";
   return "Buyer";
 }
 
@@ -701,9 +715,10 @@ function accountTone(status?: string): "cyan" | "amber" | "rose" {
 }
 
 function roleTone(role?: string): "blue" | "violet" | "green" | "slate" {
-  if (role === "admin") return "violet";
-  if (role === "provider" || role === "both") return "blue";
-  if (role === "buyer") return "green";
+  const normalized = normalizeAdminRole(role);
+  if (normalized === "admin") return "violet";
+  if (normalized === "provider" || normalized === "both") return "blue";
+  if (normalized === "buyer") return "green";
   return "slate";
 }
 
@@ -839,8 +854,9 @@ function ReportsModal({
             {reports.length ? (
               <div className="space-y-4">
                 {reports.map((report) => {
-                  const normalizedStatus = normalizeStatus(report.status || "pending");
-                  const isPending = normalizedStatus === "pending";
+                  const displayStatus = getAdminReportStatus(report);
+                  const normalizedStatus = normalizeStatus(displayStatus);
+                  const isPending = isPendingAdminReport(report);
 
                   return (
                     <article
@@ -860,14 +876,14 @@ function ReportsModal({
                           className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
                             isPending
                               ? "bg-amber-100 text-amber-700"
-                              : normalizedStatus === "resolved"
+                              : isResolvedAdminReport(report.status)
                                 ? "bg-emerald-100 text-emerald-700"
-                                : normalizedStatus === "rejected"
+                                : isRejectedAdminReport(report.status)
                                   ? "bg-rose-100 text-rose-700"
                                   : "bg-slate-100 text-slate-600"
                           }`}
                         >
-                          {report.status || "Pending"}
+                          {displayStatus}
                         </span>
                       </div>
 

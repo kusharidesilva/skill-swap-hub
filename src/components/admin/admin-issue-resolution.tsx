@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Timestamp, arrayUnion, collection, doc, getDoc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { createNotification } from "@/lib/notifications";
+import { getAdminReportStatus, isPendingAdminReport } from "@/lib/admin-panel";
 import SelectField from "@/components/ui/select-field";
 import ModalPortal from "@/components/ui/modal-portal";
 import AdminFilePreviewModal from "@/components/admin/admin-file-preview-modal";
@@ -106,6 +107,8 @@ export default function AdminIssueResolution() {
     fileName?: string;
   } | null>(null);
 
+  const getDraftNote = (reportId: string) => notes[reportId]?.trim() || "";
+
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
       const nextAvatars = snapshot.docs.reduce<UserAvatarMap>((acc, docSnap) => {
@@ -148,9 +151,10 @@ export default function AdminIssueResolution() {
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
+      const effectiveStatus = getAdminReportStatus(report);
       const matchesStatus =
         statusFilter === "All Reports" ||
-        normalizeModerationStatus(report.status || "Pending") === normalizeModerationStatus(statusFilter);
+        normalizeModerationStatus(effectiveStatus) === normalizeModerationStatus(statusFilter);
 
       return matchesStatus;
     });
@@ -172,9 +176,7 @@ export default function AdminIssueResolution() {
   }, [currentPage, totalPages]);
 
   const pendingReports = reports.filter(
-    (report) =>
-      normalizeModerationStatus(report.status || "Pending") === "pending" ||
-      report.adminNeedsReview === true,
+    (report) => isPendingAdminReport(report),
   );
   const warnedReports = reports.filter(
     (report) => normalizeModerationStatus(report.status || "") === "warn",
@@ -185,7 +187,7 @@ export default function AdminIssueResolution() {
   });
 
   const updateReportStatus = async (report: ReportRecord, nextStatus: "Resolve" | "Reject") => {
-    const note = notes[report.id]?.trim() || report.adminNote || "";
+    const note = getDraftNote(report.id);
     setBusyKey(`${report.id}-${nextStatus}`);
     setNotice(null);
 
@@ -235,8 +237,8 @@ export default function AdminIssueResolution() {
       await updateDoc(doc(db, "reports", report.id), {
         status: "Warn",
         adminAction: "warning_sent",
-        adminNote: notes[report.id]?.trim() || report.adminNote || "",
-        decisionMessage: notes[report.id]?.trim() || report.adminNote || "",
+        adminNote: getDraftNote(report.id),
+        decisionMessage: getDraftNote(report.id),
         adminNeedsReview: false,
         updatedAt: serverTimestamp(),
         actionHistory: arrayUnion({
@@ -244,17 +246,18 @@ export default function AdminIssueResolution() {
           actorName: "Admin",
           action: "warn",
           status: "Warn",
-          message: notes[report.id]?.trim() || report.adminNote || "",
+          message: getDraftNote(report.id),
           createdAt: Timestamp.now(),
         }),
       });
       await notifyReportedUser(
         report,
         "warn",
-        notes[report.id]?.trim() || report.adminNote || "",
+        getDraftNote(report.id),
       );
 
       setNotice({ type: "success", text: `Warning sent to ${reportedUserName(report)}.` });
+      setNotes((current) => ({ ...current, [report.id]: "" }));
     } catch (error) {
       console.error("Error warning user:", error);
       setNotice({ type: "error", text: "Could not send the account warning." });
@@ -279,11 +282,10 @@ export default function AdminIssueResolution() {
         suspensionCode: "report_action",
         suspensionTitle: "Your account has been suspended by an admin",
         suspensionReason:
-          notes[report.id]?.trim() ||
-          report.adminNote ||
+          getDraftNote(report.id) ||
           `Your account was suspended after admin review of ${formatReportId(report.reportCode || report.id)}.`,
         suspensionReportId: report.id,
-        adminSuspensionReason: notes[report.id]?.trim() || report.adminNote || "",
+        adminSuspensionReason: getDraftNote(report.id),
         suspendedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -291,8 +293,8 @@ export default function AdminIssueResolution() {
       await updateDoc(doc(db, "reports", report.id), {
         status: "Suspend",
         adminAction: "account_suspended",
-        adminNote: notes[report.id]?.trim() || report.adminNote || "",
-        decisionMessage: notes[report.id]?.trim() || report.adminNote || "",
+        adminNote: getDraftNote(report.id),
+        decisionMessage: getDraftNote(report.id),
         adminNeedsReview: false,
         updatedAt: serverTimestamp(),
         resolvedAt: serverTimestamp(),
@@ -301,17 +303,18 @@ export default function AdminIssueResolution() {
           actorName: "Admin",
           action: "suspend",
           status: "Suspend",
-          message: notes[report.id]?.trim() || report.adminNote || "",
+          message: getDraftNote(report.id),
           createdAt: Timestamp.now(),
         }),
       });
       await notifyReportedUser(
         report,
         "suspend",
-        notes[report.id]?.trim() || report.adminNote || "",
+        getDraftNote(report.id),
       );
 
       setNotice({ type: "success", text: `${reportedUserName(report)} has been suspended.` });
+      setNotes((current) => ({ ...current, [report.id]: "" }));
     } catch (error) {
       console.error("Error suspending user:", error);
       setNotice({ type: "error", text: "Could not suspend the reported user." });
@@ -321,7 +324,7 @@ export default function AdminIssueResolution() {
   };
 
   const keepWarning = async (report: ReportRecord) => {
-    const note = notes[report.id]?.trim() || report.adminNote || "";
+    const note = getDraftNote(report.id);
     setBusyKey(`${report.id}-keep-warning`);
     setNotice(null);
 
@@ -347,6 +350,7 @@ export default function AdminIssueResolution() {
         openPopup: true,
       });
       setNotice({ type: "success", text: `Warning kept for ${reportedUserName(report)}.` });
+      setNotes((current) => ({ ...current, [report.id]: "" }));
     } catch (error) {
       console.error("Error keeping warning:", error);
       setNotice({ type: "error", text: "Could not keep the warning." });
@@ -356,7 +360,7 @@ export default function AdminIssueResolution() {
   };
 
   const removeWarning = async (report: ReportRecord) => {
-    const note = notes[report.id]?.trim() || report.adminNote || "";
+    const note = getDraftNote(report.id);
     setBusyKey(`${report.id}-remove-warning`);
     setNotice(null);
 
@@ -386,6 +390,7 @@ export default function AdminIssueResolution() {
         { openPopup: false },
       );
       setNotice({ type: "success", text: `Warning removed for ${reportedUserName(report)}.` });
+      setNotes((current) => ({ ...current, [report.id]: "" }));
     } catch (error) {
       console.error("Error removing warning:", error);
       setNotice({ type: "error", text: "Could not remove the warning." });
@@ -395,7 +400,7 @@ export default function AdminIssueResolution() {
   };
 
   const rejectResponse = async (report: ReportRecord) => {
-    const note = notes[report.id]?.trim() || report.adminNote || "";
+    const note = getDraftNote(report.id);
     setBusyKey(`${report.id}-reject-response`);
     setNotice(null);
 
@@ -424,6 +429,7 @@ export default function AdminIssueResolution() {
         { openPopup: false },
       );
       setNotice({ type: "success", text: `Response rejected for ${reportedUserName(report)}.` });
+      setNotes((current) => ({ ...current, [report.id]: "" }));
     } catch (error) {
       console.error("Error rejecting response:", error);
       setNotice({ type: "error", text: "Could not reject the user response." });
@@ -515,7 +521,7 @@ export default function AdminIssueResolution() {
               <EmptyRow>No reports found.</EmptyRow>
             ) : (
               paginatedReports.map((report) => {
-                const status = report.status || "Pending";
+                const status = getAdminReportStatus(report);
                 const evidence = Array.isArray(report.evidenceFiles) ? report.evidenceFiles : [];
 
                 return (
@@ -626,7 +632,7 @@ export default function AdminIssueResolution() {
       {selectedReport ? (
         <ReportActionModal
           report={selectedReport}
-          note={notes[selectedReport.id] ?? selectedReport.adminNote ?? ""}
+          note={notes[selectedReport.id] ?? ""}
           onNoteChange={(value) =>
             setNotes((current) => ({ ...current, [selectedReport.id]: value }))
           }
@@ -879,7 +885,7 @@ function ReportActionModal({
               <InfoRow label="Issue Type" value={report.issueType || report.category || "Issue"} />
               <InfoRow label="Reporter" value={report.reporterName || report.reporterEmail || "Reporter"} />
               <InfoRow label="Reported User" value={reportedUserName(report)} />
-              <InfoRow label="Current Status" value={report.status || "Pending"} />
+              <InfoRow label="Current Status" value={getAdminReportStatus(report)} />
               <InfoRow label="Latest Action" value={humanizeAdminAction(report.adminAction)} />
             </div>
             <p className="mt-4 text-sm leading-6 text-slate-700">

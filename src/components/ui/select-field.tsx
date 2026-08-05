@@ -3,6 +3,7 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent,
@@ -109,8 +110,10 @@ export default function SelectField({
   const menuId = `${selectId}-menu`;
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [openUpward, setOpenUpward] = useState(false);
   const normalizedOptions = options.map(normalizeOption);
   const selectedOption = normalizedOptions.find((option) => option.value === value);
   const selectedLabel = selectedOption?.label || value || placeholder || "";
@@ -127,6 +130,19 @@ export default function SelectField({
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
+
+  useLayoutEffect(() => {
+    if (!isOpen || !buttonRef.current || !menuRef.current) return;
+
+    const buttonRect = buttonRef.current.getBoundingClientRect();
+    const menuHeight = menuRef.current.offsetHeight;
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - buttonRect.bottom;
+    const spaceAbove = buttonRect.top;
+    const shouldOpenUpward = spaceBelow < menuHeight + 12 && spaceAbove > spaceBelow;
+
+    setOpenUpward(shouldOpenUpward);
+  }, [isOpen, normalizedOptions.length, placeholder]);
 
   const findEnabledIndex = (startIndex: number, direction: 1 | -1) => {
     if (normalizedOptions.length === 0) return -1;
@@ -250,10 +266,13 @@ export default function SelectField({
 
         {isOpen ? (
           <div
+            ref={menuRef}
             id={menuId}
             role="listbox"
             aria-labelledby={selectId}
-            className="absolute z-[140] mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl"
+            className={`absolute z-[140] w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl ${
+              openUpward ? "bottom-full mb-1" : "top-full mt-1"
+            }`}
           >
             <div
               className="max-h-60 overflow-y-auto py-1"

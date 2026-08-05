@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { isPendingAdminReport, normalizeAdminRole } from "@/lib/admin-panel";
 import { SERVICE_CATEGORIES } from "@/lib/platform";
 
 type TimestampLike =
@@ -50,6 +51,7 @@ type ReportRecord = {
   type?: string;
   issueType?: string;
   status?: string;
+  adminNeedsReview?: boolean;
   createdAt?: TimestampLike;
 };
 
@@ -261,13 +263,13 @@ export default function AdminDashboard() {
   const activeBuyers = users.filter(
     (user) =>
       normalizeStatus(user.accountStatus || "active") === "active" &&
-      (user.role === "buyer" || user.role === "both"),
+      ["buyer", "both"].includes(normalizeAdminRole(user.role)),
   );
   const activeProviders = users.filter(
     (user) =>
       normalizeStatus(user.accountStatus || "active") === "active" &&
       normalizeStatus(user.providerVerificationStatus || "") === "approved" &&
-      (user.role === "provider" || user.role === "both"),
+      ["provider", "both"].includes(normalizeAdminRole(user.role)),
   );
   const dashboardGigs = useMemo(() => mergeDashboardGigs(gigs, users), [gigs, users]);
   const activeGigs = dashboardGigs.filter(
@@ -280,7 +282,7 @@ export default function AdminDashboard() {
       Boolean(order.providerReview),
   );
   const pendingReports = reports.filter(
-    (report) => normalizeStatus(report.status || "pending") === "pending",
+    (report) => isPendingAdminReport(report),
   );
 
   const topStats: StatCard[] = [
@@ -307,10 +309,10 @@ export default function AdminDashboard() {
       (user) =>
         normalizeStatus(user.accountStatus || "active") === "active" &&
         normalizeStatus(user.providerVerificationStatus || "") === "approved" &&
-        (user.role === "provider" || user.role === "both"),
+        ["provider", "both"].includes(normalizeAdminRole(user.role)),
     );
     const buyerUsers = users.filter(
-      (user) => user.role === "buyer" || user.role === "both",
+      (user) => ["buyer", "both"].includes(normalizeAdminRole(user.role)),
     );
 
     return [
@@ -980,7 +982,7 @@ function mergeDashboardGigs(firestoreGigs: GigRecord[], users: UserRecord[]) {
   });
 
   users.forEach((user) => {
-    if (user.role !== "provider" && user.role !== "both") return;
+    if (!["provider", "both"].includes(normalizeAdminRole(user.role))) return;
 
     user.providerProfile?.gigs?.forEach((gig, index) => {
       const key = gig.id || gig.gigId || `${user.createdAt || user.updatedAt || "profile"}-${gig.title || "gig"}-${index}`;

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { isPendingAdminReport } from "@/lib/admin-panel";
 
 type NavItem = {
   label: string;
@@ -105,10 +106,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         setPendingReportCount(
           snapshot.docs.filter((docSnap) => {
             const data = docSnap.data();
-            return (
-              normalizeAdminStatus(data.status || "Pending") === "pending" ||
-              data.adminNeedsReview === true
-            );
+            return isPendingAdminReport({
+              status: typeof data.status === "string" ? data.status : undefined,
+              adminNeedsReview: data.adminNeedsReview === true,
+            });
           }).length,
         );
       },
@@ -400,10 +401,6 @@ function TriangleIcon() {
 
 function CollectionIcon() {
   return <LayersIcon />;
-}
-
-function normalizeAdminStatus(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, "_");
 }
 
 function NotificationLink({
