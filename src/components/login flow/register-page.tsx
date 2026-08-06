@@ -188,18 +188,19 @@ export default function RegisterPage() {
   const proofTypeValue = useWatch({ control, name: "proofType" }) || "Student ID";
   const proofFileValue = useWatch({ control, name: "proofFile" });
   const isStudentRegistration = accountType === "student";
-  const fieldGridClass = "grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]";
-  const fieldWrapClass = "grid min-w-0 gap-1";
-  const formLabelClass = "text-[11px] font-semibold text-slate-600";
+  const fieldGridClass = "grid gap-3.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]";
+  const accountFieldGridClass = isStudentRegistration ? fieldGridClass : "grid gap-3.5";
+  const fieldWrapClass = "grid min-w-0 gap-1.5";
+  const formLabelClass = "text-xs font-semibold text-slate-700";
   const compactInputClass =
-    "h-9 w-full rounded-lg border border-slate-200 px-3 text-[11px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#2b62e6]";
+    "h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 transition placeholder:text-slate-400 focus:border-[#2b62e6] focus:outline-none focus:ring-4 focus:ring-blue-100";
   const compactPasswordBoxClass =
-    "relative flex h-9 items-center justify-between rounded-lg border border-slate-200 px-3";
+    "relative flex h-10 items-center justify-between rounded-xl border border-slate-200 bg-white px-3 transition focus-within:border-[#2b62e6] focus-within:ring-4 focus-within:ring-blue-100";
   const compactInputTextClass =
-    "w-full bg-transparent text-[11px] text-slate-700 placeholder:text-slate-400 focus:outline-none";
-  const compactSelectClass = "h-9 py-1 text-[11px]";
+    "w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none";
+  const compactSelectClass = "h-10 py-1.5 text-sm";
   const compactSelectWrapperClass =
-    "gap-1 [&_button]:text-[11px] [&_[role=option]]:text-[11px] [&_.max-h-60]:max-h-40";
+    "gap-1.5 [&_button]:text-sm [&_[role=option]]:text-sm [&_.max-h-60]:max-h-44";
   const passwordHintInErrorState =
     errors.password?.message === strongPasswordMessage ||
     errors.confirmPassword?.message === strongPasswordMessage;
@@ -219,14 +220,17 @@ export default function RegisterPage() {
     <main className="auth-gradient-animate relative min-h-screen bg-[linear-gradient(140deg,#effdf9_0%,#dff4ff_48%,#f8fbff_100%)]">
       <div className="auth-gradient-animate fixed inset-0 bg-[linear-gradient(120deg,rgba(13,148,136,0.16),rgba(37,99,235,0.12),rgba(255,255,255,0.2))] backdrop-blur-sm" aria-hidden="true" />
       <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-4 py-6 sm:px-6">
-        <div
-          className={`scrollbar-none grid w-full max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl lg:max-h-[calc(100vh-3rem)] lg:overflow-hidden lg:grid-cols-[1.02fr_0.98fr] ${
-            isStudentRegistration ? "max-w-5xl" : "max-w-4xl"
-          }`}
-        >
+        <div className="scrollbar-none grid w-full max-h-[90vh] max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl lg:max-h-[calc(100vh-3rem)] lg:max-w-5xl lg:overflow-hidden lg:grid-cols-[1.02fr_0.98fr]">
           {/* Buyer registration form */}
-          <section className="relative flex justify-center bg-white px-7 py-7 sm:px-9 lg:px-10">
-            <div className="flex w-full max-w-md flex-col justify-center">
+          <section className="relative flex justify-center bg-white px-5 py-7 sm:px-7 md:px-10 lg:px-10">
+            <Link
+              href="/"
+              aria-label="Close"
+              className="absolute right-5 top-5 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-900 lg:hidden"
+            >
+              <CloseIcon className="h-4 w-4" />
+            </Link>
+            <div className="flex w-full max-w-lg flex-col justify-center lg:max-w-md">
               {serverError && (
                 <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[11px] text-red-600 border border-red-200">
                   {serverError}
@@ -234,12 +238,20 @@ export default function RegisterPage() {
               )}
 
               <form
-                className={isStudentRegistration ? "space-y-2.5" : "space-y-3"}
+                className={isStudentRegistration ? "space-y-3" : "space-y-4 lg:pt-8"}
                 onSubmit={handleSubmit(onSubmit)}
               >
+                <div className="space-y-1.5 pr-10 lg:hidden">
+                  <p className="text-sm font-bold uppercase tracking-wide text-[#2b62e6]">
+                    Create your account
+                  </p>
+                  <p className="text-sm leading-relaxed text-slate-600">
+                    Choose how you want to join Skill Swap Hub and complete the details below.
+                  </p>
+                </div>
                 <div>
                   <label className={formLabelClass}>Registering As</label>
-                  <div className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-lg bg-slate-100 p-1">
+                  <div className="mt-2 grid grid-cols-2 gap-1.5 rounded-2xl border border-slate-200 bg-slate-100/80 p-1">
                     {[
                       { label: "Student", value: "student" },
                       { label: "Non-student", value: "non-student" },
@@ -253,9 +265,9 @@ export default function RegisterPage() {
                             shouldValidate: true,
                           })
                         }
-                        className={`cursor-pointer rounded-md px-3 py-1.5 text-[11px] font-semibold transition ${
+                        className={`cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition ${
                           accountType === option.value
-                            ? "bg-white text-[#2b62e6] shadow-sm"
+                            ? "bg-white text-[#2b62e6]"
                             : "text-slate-500 hover:text-slate-700"
                         }`}
                       >
@@ -265,7 +277,7 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
-                <div className={fieldGridClass}>
+                <div className={accountFieldGridClass}>
                   <div className={fieldWrapClass}>
                     <label className={formLabelClass}>Full Name</label>
                     <input
@@ -288,7 +300,7 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
-                <div className={fieldGridClass}>
+                <div className={accountFieldGridClass}>
                   <div className={fieldWrapClass}>
                     <label className={formLabelClass}>Password</label>
                     <div className={compactPasswordBoxClass}>
@@ -358,8 +370,8 @@ export default function RegisterPage() {
                       }
                       placeholder="Type or select your University"
                       error={errors.university?.message}
-                      className={`${compactSelectClass} [&_input]:text-[11px]`}
-                      labelClassName="text-[11px]"
+                      className={`${compactSelectClass} [&_input]:text-sm`}
+                      labelClassName="text-xs"
                       wrapperClassName={compactSelectWrapperClass}
                     />
 
@@ -385,7 +397,7 @@ export default function RegisterPage() {
                         }
                         options={yearOptions}
                         className={compactSelectClass}
-                        labelClassName="text-[11px]"
+                        labelClassName="text-xs"
                         wrapperClassName={compactSelectWrapperClass}
                       />
                     </div>
@@ -402,14 +414,14 @@ export default function RegisterPage() {
                         }
                         options={[...STUDENT_PROOF_TYPES]}
                         className={compactSelectClass}
-                        labelClassName="text-[11px] leading-4"
+                        labelClassName="text-xs leading-4"
                         wrapperClassName={compactSelectWrapperClass}
                         title={proofTypeValue}
                       />
-                      <div className="grid min-w-0 gap-1 self-start">
+                      <div className="grid min-w-0 gap-1.5 self-start">
                         <label className={formLabelClass}>Student Proof Document</label>
                         <div className="grid gap-1">
-                          <label className="grid h-9 cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-slate-200 px-3 text-[11px] text-slate-500 transition hover:border-[#2b62e6]">
+                          <label className="grid h-10 cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-500 transition hover:border-[#2b62e6]">
                             <span className="block min-w-0 truncate">
                               {proofFileValue?.name || "PDF, DOC, DOCX, PNG, JPG"}
                             </span>
@@ -428,7 +440,7 @@ export default function RegisterPage() {
                                   <CloseIcon className="h-3.5 w-3.5" />
                                 </button>
                               ) : null}
-                              <span className="text-[11px] font-semibold text-[#2b62e6]">
+                              <span className="text-xs font-semibold text-[#2b62e6]">
                                 {proofFileValue ? "Change" : "Upload"}
                               </span>
                             </span>
@@ -459,7 +471,7 @@ export default function RegisterPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-1 flex h-9 w-full cursor-pointer items-center justify-center rounded-lg bg-[#2b62e6] px-4 text-[11px] font-semibold text-white shadow-sm transition hover:bg-[#1f55cc] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-2 flex h-11 w-full cursor-pointer items-center justify-center rounded-xl bg-[#2b62e6] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading
                     ? "Creating Account..."
@@ -479,7 +491,7 @@ export default function RegisterPage() {
           </section>
 
           {/* Registration benefits */}
-          <section className="auth-gradient-animate relative flex items-center justify-center bg-[linear-gradient(145deg,#e9fbf6_0%,#e6f3ff_100%)] px-6 py-6 sm:px-8">
+          <section className="auth-gradient-animate relative hidden items-center justify-center bg-[linear-gradient(145deg,#e9fbf6_0%,#e6f3ff_100%)] px-6 py-6 sm:px-8 lg:flex">
             <Link
               href="/"
               aria-label="Close"
@@ -499,7 +511,7 @@ export default function RegisterPage() {
                   Build your profile as a verified student provider or join as a buyer to request trusted student services.
                 </p>
               </div>
-              <div className="overflow-hidden rounded-2xl bg-white shadow-lg">
+              <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
                 <Image
                   src="/img/about-story-students.jpg"
                   alt="Students collaborating in a study group"
