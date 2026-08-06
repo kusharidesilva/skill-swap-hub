@@ -232,8 +232,14 @@ export default function ReportActionModal({
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/40 px-4 py-8 backdrop-blur-md">
-        <div className="scrollbar-none max-h-[88vh] w-full max-w-[920px] overflow-y-auto rounded-[30px] border border-white/70 bg-white px-5 py-6 shadow-[0_28px_70px_rgba(15,23,42,0.18)] sm:px-7 sm:py-7">
+      <div
+        className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/40 px-4 py-8 backdrop-blur-md"
+        onClick={onClose}
+      >
+        <div
+          className="scrollbar-none max-h-[88vh] w-full max-w-[920px] overflow-y-auto rounded-[30px] border border-white/70 bg-white px-5 py-6 shadow-[0_28px_70px_rgba(15,23,42,0.18)] sm:px-7 sm:py-7"
+          onClick={(event) => event.stopPropagation()}
+        >
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1454cc]">

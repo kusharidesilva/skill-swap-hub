@@ -43,8 +43,14 @@ export default function GuestAuthModal({
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-md">
-        <div className="w-full max-w-xl rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_28px_90px_rgba(15,23,42,0.24)] sm:p-8">
+      <div
+        className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-md"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-xl rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_28px_90px_rgba(15,23,42,0.24)] sm:p-8"
+          onClick={(event) => event.stopPropagation()}
+        >
           <div className="flex items-start justify-between gap-5">
             <div className="max-w-md">
               <p className="text-xs font-bold uppercase tracking-[0.26em] text-[#1453c4]">

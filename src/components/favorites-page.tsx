@@ -350,8 +350,14 @@ function SavedGigDetailsModal({
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md">
-        <article className="relative grid max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl md:grid-cols-[0.9fr_1.1fr]">
+      <div
+        className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md"
+        onClick={onClose}
+      >
+        <article
+          className="relative grid max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl md:grid-cols-[0.9fr_1.1fr]"
+          onClick={(event) => event.stopPropagation()}
+        >
           <button
             type="button"
             onClick={onClose}

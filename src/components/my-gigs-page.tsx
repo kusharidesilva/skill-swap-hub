@@ -516,8 +516,14 @@ export default function MyGigsPageContent({
 
       {deleteTarget ? (
         <ModalPortal>
-          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md">
-            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.55)]">
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md"
+            onClick={() => setDeleteTarget(null)}
+          >
+            <div
+              className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.55)]"
+              onClick={(event) => event.stopPropagation()}
+            >
               <div className="flex items-start gap-3">
                 <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-500">
                   <DeleteIcon className="h-4 w-4" />
