@@ -522,14 +522,11 @@ function VerificationReviewModal({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/35 px-4 py-2 backdrop-blur-md sm:py-3"
+      className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-slate-950/35 px-3 py-4 backdrop-blur-md sm:px-4 sm:py-6"
       onClick={onClose}
     >
       <div
-        ref={modalRef}
-        className={`relative max-h-[calc(100dvh-1rem)] w-full max-w-xl overflow-x-hidden overscroll-contain rounded-3xl border border-white/70 bg-white/95 p-4 text-slate-900 shadow-[0_24px_80px_rgba(15,23,42,0.25)] sm:max-h-[calc(100dvh-1.5rem)] sm:p-5 ${
-          needsScroll ? "overflow-y-auto" : "overflow-y-hidden"
-        }`}
+        className="relative my-auto w-full max-w-xl overflow-hidden rounded-[28px] border border-white/70 bg-white/95 p-3 text-slate-900 shadow-[0_24px_80px_rgba(15,23,42,0.25)] sm:rounded-3xl sm:p-5"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-blue-100/80 blur-3xl" aria-hidden="true" />
@@ -537,22 +534,27 @@ function VerificationReviewModal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-5 top-5 z-10 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+          className="absolute right-3 top-3 z-10 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-900 sm:right-5 sm:top-5"
           aria-label="Close verification review popup"
         >
           <CloseSmallIcon />
         </button>
 
-        <div className="relative">
-          <div className="flex flex-col gap-3 pr-10 sm:flex-row sm:items-start sm:justify-between">
+        <div
+          ref={modalRef}
+          className={`relative max-h-[calc(100dvh-2rem)] overflow-x-hidden overscroll-contain sm:max-h-[calc(100dvh-3rem)] ${
+            needsScroll ? "overflow-y-auto pr-1" : "overflow-y-visible"
+          }`}
+        >
+          <div className="flex flex-col gap-3 pr-12 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#1454cc]">
                 Verification review
               </p>
-              <h3 className="mt-1.5 truncate text-2xl font-semibold text-slate-950">
+              <h3 className="mt-1.5 break-words text-xl font-semibold leading-tight text-slate-950 sm:text-2xl">
                 {row.studentName}
               </h3>
-              <p className="mt-1 truncate text-sm text-slate-500">{row.email}</p>
+              <p className="mt-1 break-all text-sm text-slate-500">{row.email}</p>
             </div>
             <div className="shrink-0">
               <StatusPill status={row.status} />
@@ -591,7 +593,7 @@ function VerificationReviewModal({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-900">Uploaded proof</p>
-                <p className="mt-1 truncate text-xs text-slate-500">
+                <p className="mt-1 break-all text-xs text-slate-500">
                   {row.proof?.fileName || "Proof document"}
                 </p>
               </div>
@@ -599,7 +601,7 @@ function VerificationReviewModal({
                 type="button"
                 onClick={onPreview}
                 disabled={!hasProof}
-                className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
               >
                 View Proof
               </button>
@@ -621,7 +623,7 @@ function VerificationReviewModal({
               type="button"
               onClick={() => onReview("approved")}
               disabled={busy}
-              className="inline-flex h-12 cursor-pointer items-center justify-center rounded-xl bg-[#2f66e7] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2457cc] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-xl bg-[#2f66e7] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2457cc] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {busy ? "Updating..." : "Approve"}
             </button>
@@ -629,7 +631,7 @@ function VerificationReviewModal({
               type="button"
               onClick={() => onReview("rejected")}
               disabled={busy}
-              className="inline-flex h-12 cursor-pointer items-center justify-center rounded-xl border border-red-200 bg-red-50 px-5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-xl border border-red-200 bg-red-50 px-5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {busy ? "Updating..." : "Reject"}
             </button>
@@ -646,7 +648,7 @@ function InfoTile({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
         {label}
       </p>
-      <p className="mt-1 truncate text-sm font-semibold text-slate-800">{value}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-slate-800">{value}</p>
     </div>
   );
 }
