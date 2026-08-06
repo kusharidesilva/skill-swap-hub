@@ -192,25 +192,34 @@ export default function AdminAddAndManageGroupPage({
     setFormNotice(null);
 
     try {
-      const existingIds = new Set(items.map((item) => item.id));
-      const existingNames = new Set(
-        items.map((item) => normalizeLookupValue(itemName(item))),
+      const existingByNormalizedName = new Map(
+        items.map((item) => [normalizeLookupValue(itemName(item)), item] as const),
       );
+      const existingById = new Map(items.map((item) => [item.id, item] as const));
       const missingDefaults = group.defaults.filter((name) => {
         const normalizedName = normalizeLookupValue(name);
-        return !existingIds.has(slugify(name)) && !existingNames.has(normalizedName);
+        return (
+          !existingById.has(slugify(name)) &&
+          !existingByNormalizedName.has(normalizedName)
+        );
       });
+      const inactiveDefaults = group.defaults
+        .map((name) => {
+          const normalizedName = normalizeLookupValue(name);
+          return existingById.get(slugify(name)) || existingByNormalizedName.get(normalizedName) || null;
+        })
+        .filter((item): item is AddAndManageItem => Boolean(item && item.active === false));
 
-      if (missingDefaults.length === 0) {
+      if (missingDefaults.length === 0 && inactiveDefaults.length === 0) {
         setFormNotice({
           type: "error",
-          text: `All default ${group.title.toLowerCase()} already exist.`,
+          text: `All default ${group.title.toLowerCase()} already exist and are active.`,
         });
         return;
       }
 
-      await Promise.all(
-        missingDefaults.map((name) =>
+      await Promise.all([
+        ...missingDefaults.map((name) =>
           setDoc(
             doc(db, group.key, slugify(name)),
             {
@@ -222,11 +231,33 @@ export default function AdminAddAndManageGroupPage({
             { merge: true },
           ),
         ),
-      );
+        ...inactiveDefaults.map((item) =>
+          updateDoc(doc(db, group.key, item.id), {
+            active: true,
+            updatedAt: serverTimestamp(),
+          }),
+        ),
+      ]);
+
+      const resultParts: string[] = [];
+      if (missingDefaults.length > 0) {
+        resultParts.push(
+          `${missingDefaults.length} default ${
+            missingDefaults.length === 1 ? group.singular : group.title.toLowerCase()
+          } added`,
+        );
+      }
+      if (inactiveDefaults.length > 0) {
+        resultParts.push(
+          `${inactiveDefaults.length} default ${
+            inactiveDefaults.length === 1 ? group.singular : group.title.toLowerCase()
+          } reactivated`,
+        );
+      }
 
       setFormNotice({
         type: "success",
-        text: `${missingDefaults.length} default ${missingDefaults.length === 1 ? group.singular : group.title.toLowerCase()} added.`,
+        text: `${resultParts.join(" and ")}.`,
       });
     } catch (error) {
       console.error(`Error seeding ${group.key}:`, error);

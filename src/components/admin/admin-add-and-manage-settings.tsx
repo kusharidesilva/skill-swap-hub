@@ -64,6 +64,31 @@ const emptyAddAndManageState: Record<AddAndManageGroupKey, AddAndManageItem[]> =
   availabilityTimeSlots: [],
 };
 
+function buildBalancedRows<T>(values: T[]) {
+  const rows: T[][] = [];
+  let index = 0;
+  let remaining = values.length;
+
+  while (remaining > 0) {
+    if (remaining === 4) {
+      rows.push(values.slice(index, index + 2));
+      rows.push(values.slice(index + 2, index + 4));
+      break;
+    }
+
+    if (remaining === 2 || remaining === 3) {
+      rows.push(values.slice(index, index + remaining));
+      break;
+    }
+
+    rows.push(values.slice(index, index + 3));
+    index += 3;
+    remaining -= 3;
+  }
+
+  return rows;
+}
+
 export default function AdminAddAndManageSettings() {
   const [items, setItems] = useState(emptyAddAndManageState);
 
@@ -98,6 +123,7 @@ export default function AdminAddAndManageSettings() {
     }),
     [items],
   );
+  const groupRows = useMemo(() => buildBalancedRows(addAndManageGroups), []);
 
   return (
     <div className="px-6 py-10">
@@ -109,22 +135,35 @@ export default function AdminAddAndManageSettings() {
           </p>
         </div>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {addAndManageGroups.map((group) => (
-            <Link
-              key={group.key}
-              href={group.href}
-              className="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-[#2f66e7] hover:shadow-md"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-sm font-semibold text-slate-900">{group.title}</span>
-                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-[#1d4ed8]">
-                  {totals[group.key]}
-                </span>
+        <section className="space-y-4">
+          {groupRows.map((row, rowIndex) => {
+            const rowClassName =
+              row.length === 1
+                ? "grid gap-4 md:grid-cols-2 xl:mx-auto xl:max-w-[31rem] xl:grid-cols-1"
+                : row.length === 2
+                  ? "grid gap-4 md:grid-cols-2 xl:mx-auto xl:max-w-[64rem] xl:grid-cols-2"
+                  : "grid gap-4 md:grid-cols-2 xl:grid-cols-3";
+
+            return (
+              <div key={`row-${rowIndex}`} className={rowClassName}>
+                {row.map((group) => (
+                  <Link
+                    key={group.key}
+                    href={group.href}
+                    className="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-[#2f66e7] hover:shadow-md"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-sm font-semibold text-slate-900">{group.title}</span>
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-[#1d4ed8]">
+                        {totals[group.key]}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-slate-500">{group.description}</p>
+                  </Link>
+                ))}
               </div>
-              <p className="mt-3 text-sm leading-6 text-slate-500">{group.description}</p>
-            </Link>
-          ))}
+            );
+          })}
         </section>
       </div>
     </div>
