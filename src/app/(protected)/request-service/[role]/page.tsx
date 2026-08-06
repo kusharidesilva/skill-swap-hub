@@ -16,7 +16,7 @@ export default async function RoleRequestServicePage({ params }: RolePageProps) 
   }
 
   return (
-    <ProfileShell role={role}>
+    <ProfileShell role={role} navRole={role === "both" ? "buyer" : role}>
       <RequestServiceContent role={role} />
     </ProfileShell>
   );

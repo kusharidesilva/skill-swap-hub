@@ -3,8 +3,8 @@ import {
   doc,
   getDocs,
   query,
+  updateDoc,
   where,
-  writeBatch,
   type DocumentReference,
 } from "firebase/firestore";
 
@@ -61,16 +61,15 @@ async function addQueryUpdates(
 async function commitPendingUpdates(updates: Map<string, PendingUpdate>) {
   const pending = Array.from(updates.values());
 
-  for (let index = 0; index < pending.length; index += 400) {
-    const batch = writeBatch(db);
-    const slice = pending.slice(index, index + 400);
-
-    slice.forEach(({ ref, data }) => {
-      batch.update(ref, data);
-    });
-
-    await batch.commit();
-  }
+  await Promise.all(
+    pending.map(async ({ ref, data }) => {
+      try {
+        await updateDoc(ref, data);
+      } catch (err) {
+        console.warn(`Skipped profile reference sync for ${ref.path}:`, err);
+      }
+    }),
+  );
 }
 
 export async function propagateUserProfileReferences({

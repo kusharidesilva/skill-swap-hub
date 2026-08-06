@@ -15,11 +15,42 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { scopedHref, type Role } from "@/lib/role-routes";
 
+type RequestDocLike = {
+  title?: string;
+  serviceTitle?: string;
+  gigTitle?: string;
+  category?: string;
+  serviceCategory?: string;
+  subject?: string;
+  providerName?: string;
+  providerDisplayName?: string;
+  providerId?: string;
+  status?: string;
+  requestStatus?: string;
+  revisionNotes?: string;
+  review?: {
+    rating: number;
+    comment: string;
+  };
+  providerReview?: {
+    rating: number;
+    comment: string;
+  };
+  createdAt?: {
+    toMillis?: () => number;
+  };
+  updatedAt?: {
+    toMillis?: () => number;
+  };
+};
+
 type RequestCardData = {
   id: string;
+  sourceCollection: "requests" | "directServiceRequests";
   title: string;
   subject: string;
   providerName: string;
+  providerId?: string;
   rawStatus: string;
   status: string;
   statusTone: "teal" | "slate" | "red";
@@ -83,104 +114,164 @@ export default function AllRequestServicePage({
       return;
     }
 
-    const q = query(
+    const requestsQuery = query(
       collection(db, "requests"),
       where("buyerId", "==", userProfile.uid),
     );
+    const directRequestsQuery = query(
+      collection(db, "directServiceRequests"),
+      where("buyerUserId", "==", userProfile.uid),
+    );
+
+    const standardRequests = new Map<string, RequestCardData>();
+    const directRequests = new Map<string, RequestCardData>();
+
+    const normalizeDirectRequestStatus = (status?: string) => {
+      switch ((status || "").toLowerCase()) {
+        case "active":
+        case "pending":
+          return "pending";
+        case "working":
+        case "accepted":
+        case "in_progress":
+          return "working";
+        case "done":
+          return "done";
+        case "review_pending":
+          return "review_pending";
+        case "completed":
+          return "completed";
+        case "rejected":
+        case "declined":
+          return "rejected";
+        case "revision":
+          return "revision";
+        default:
+          return "pending";
+      }
+    };
+
+    const toRequestCard = (
+      id: string,
+      data: RequestDocLike,
+      sourceCollection: "requests" | "directServiceRequests",
+      normalizedStatus: string,
+    ): RequestCardData => {
+      let statusTone: "teal" | "slate" | "red" = "slate";
+      let iconTone: "teal" | "amber" | "blue" | "red" = "blue";
+      let displayStatus = "Pending";
+      let meta: [string, string] = ["", ""];
+      let primaryLabel = "View Details";
+      let secondaryLabel = "Manage";
+      let isAlert = false;
+
+      const dateSource = data.updatedAt || data.createdAt;
+      const dateStr = dateSource?.toMillis
+        ? new Date(dateSource.toMillis()).toLocaleDateString()
+        : "Just now";
+
+      if (
+        normalizedStatus === "pending" ||
+        normalizedStatus === "done" ||
+        normalizedStatus === "review_pending" ||
+        (normalizedStatus === "completed" && !data.providerReview)
+      ) {
+        statusTone = "slate";
+        iconTone = "amber";
+        displayStatus = "Pending";
+        if (normalizedStatus === "done") {
+          meta = [`Updated: ${dateStr}`, "Provider finished. Review required"];
+          primaryLabel = "Review Work";
+          secondaryLabel = "Pending";
+        } else if (
+          normalizedStatus === "review_pending" ||
+          normalizedStatus === "completed"
+        ) {
+          meta = [`Reviewed: ${dateStr}`, "Awaiting provider review"];
+        } else {
+          meta = [`Submitted: ${dateStr}`, "Awaiting provider response"];
+        }
+      } else if (
+        normalizedStatus === "working" ||
+        normalizedStatus === "revision"
+      ) {
+        statusTone = "teal";
+        iconTone = "teal";
+        displayStatus = "Matched";
+        meta = [
+          `Started: ${dateStr}`,
+          `Matched with: ${
+            data.providerName || data.providerDisplayName || "Provider"
+          }`,
+        ];
+      } else if (normalizedStatus === "completed") {
+        statusTone = "teal";
+        iconTone = "blue";
+        displayStatus = "Completed";
+        const ratingStr = data.review?.rating
+          ? `${data.review.rating}.0/5.0`
+          : "No rating";
+        meta = [`Completed: ${dateStr}`, `Rated: ${ratingStr}`];
+        primaryLabel = "View Review";
+        secondaryLabel = "Summary";
+      } else if (normalizedStatus === "rejected") {
+        statusTone = "red";
+        iconTone = "red";
+        displayStatus = "Declined";
+        meta = [`Submitted: ${dateStr}`, "Provider declined."];
+        primaryLabel = "Re-request";
+        secondaryLabel = "Close";
+        isAlert = true;
+      }
+
+      return {
+        id,
+        sourceCollection,
+        title:
+          data.title ||
+          data.serviceTitle ||
+          data.gigTitle ||
+          "Untitled Request",
+        subject:
+          data.category || data.serviceCategory || data.subject || "General",
+        providerName:
+          data.providerName || data.providerDisplayName || "Provider",
+        providerId: data.providerId,
+        rawStatus: normalizedStatus,
+        status: displayStatus,
+        statusTone,
+        iconTone,
+        meta,
+        primaryLabel,
+        secondaryLabel,
+        isAlert,
+        revisionNotes: data.revisionNotes,
+        review: data.review,
+        providerReview: data.providerReview,
+      };
+    };
+
+    const syncRequests = () => {
+      const docs = [
+        ...standardRequests.values(),
+        ...directRequests.values(),
+      ].sort((a, b) => b.id.localeCompare(a.id));
+      setRequestState({ uid: userProfile.uid, requests: docs });
+    };
 
     // This live query keeps the buyer's full request history in sync.
-    const unsubscribe = onSnapshot(
-      q,
+    const unsubscribeRequests = onSnapshot(
+      requestsQuery,
       (snapshot) => {
-        // Normalize each Firestore status into the labels and actions used by the card.
-        const docs: RequestCardData[] = [];
+        standardRequests.clear();
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
-
-          let statusTone: "teal" | "slate" | "red" = "slate";
-          let iconTone: "teal" | "amber" | "blue" | "red" = "blue";
-          let displayStatus = "Pending";
-          let meta: [string, string] = ["", ""];
-          let primaryLabel = "View Details";
-          let secondaryLabel = "Manage";
-          let isAlert = false;
-
-          const dateStr = data.createdAt
-            ? new Date(data.createdAt.toMillis()).toLocaleDateString()
-            : "Just now";
-
-          if (
-            data.status === "pending" ||
-            data.status === "done" ||
-            data.status === "review_pending" ||
-            (data.status === "completed" && !data.providerReview)
-          ) {
-            statusTone = "slate";
-            iconTone = "amber";
-            displayStatus = "Pending";
-            if (data.status === "done") {
-              meta = [
-                `Updated: ${dateStr}`,
-                "Provider finished. Review required",
-              ];
-              primaryLabel = "Review Work";
-              secondaryLabel = "Pending";
-            } else if (
-              data.status === "review_pending" ||
-              data.status === "completed"
-            ) {
-              meta = [`Reviewed: ${dateStr}`, "Awaiting provider review"];
-            } else {
-              meta = [`Submitted: ${dateStr}`, "Awaiting provider response"];
-            }
-          } else if (data.status === "working" || data.status === "revision") {
-            statusTone = "teal";
-            iconTone = "teal";
-            displayStatus = "Matched";
-            meta = [
-              `Started: ${dateStr}`,
-              `Matched with: ${data.providerName || "Provider"}`,
-            ];
-          } else if (data.status === "completed") {
-            statusTone = "teal";
-            iconTone = "blue";
-            displayStatus = "Completed";
-            const ratingStr = data.review?.rating
-              ? `${data.review.rating}.0/5.0`
-              : "No rating";
-            meta = [`Completed: ${dateStr}`, `Rated: ${ratingStr}`];
-            primaryLabel = "View Review";
-            secondaryLabel = "Summary";
-          } else if (data.status === "rejected") {
-            statusTone = "red";
-            iconTone = "red";
-            displayStatus = "Declined";
-            meta = [`Submitted: ${dateStr}`, "Provider declined."];
-            primaryLabel = "Re-request";
-            secondaryLabel = "Close";
-            isAlert = true;
-          }
-
-          docs.push({
-            id: docSnap.id,
-            title: data.title || "Untitled Request",
-            subject: data.category || "General",
-            providerName: data.providerName || "Provider",
-            rawStatus: data.status || "pending",
-            status: displayStatus,
-            statusTone,
-            iconTone,
-            meta,
-            primaryLabel,
-            secondaryLabel,
-            isAlert,
-            revisionNotes: data.revisionNotes,
-            review: data.review,
-            providerReview: data.providerReview,
-          });
+          standardRequests.set(
+            docSnap.id,
+            toRequestCard(docSnap.id, data, "requests", data.status || "pending"),
+          );
         });
-        // Reverse once so the newest activity appears first.
-        setRequestState({ uid: userProfile.uid, requests: docs.reverse() });
+        syncRequests();
       },
       (err) => {
         console.error("Error fetching requests:", err);
@@ -188,7 +279,34 @@ export default function AllRequestServicePage({
       },
     );
 
-    return () => unsubscribe();
+    const unsubscribeDirectRequests = onSnapshot(
+      directRequestsQuery,
+      (snapshot) => {
+        directRequests.clear();
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          directRequests.set(
+            docSnap.id,
+            toRequestCard(
+              docSnap.id,
+              data,
+              "directServiceRequests",
+              normalizeDirectRequestStatus(data.requestStatus),
+            ),
+          );
+        });
+        syncRequests();
+      },
+      (err) => {
+        console.error("Error fetching direct requests:", err);
+        setRequestState({ uid: userProfile.uid, requests: [] });
+      },
+    );
+
+    return () => {
+      unsubscribeRequests();
+      unsubscribeDirectRequests();
+    };
   }, [userProfile]);
 
   const requests =
@@ -341,7 +459,11 @@ function RequestCard({
           ? "bg-blue-50 text-[#2f66e7]"
           : "bg-red-50 text-red-600";
 
-  const chatHref = scopedHref("/chats", role);
+  const chatHref = request.providerId
+    ? `${scopedHref("/chats", role)}?peerId=${encodeURIComponent(
+        request.providerId,
+      )}&subject=${encodeURIComponent(request.title)}`
+    : scopedHref("/chats", role);
   const providerInitial = request.providerName.charAt(0).toUpperCase();
   const canOpenChat =
     request.rawStatus === "working" ||
@@ -358,7 +480,7 @@ function RequestCard({
     setSubmitting(true);
     try {
       // Completion stores the buyer review on the same request for later ratings.
-      await updateDoc(doc(db, "requests", request.id), {
+      const payload = {
         status: "review_pending",
         buyerReviewedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -366,7 +488,11 @@ function RequestCard({
           rating: reviewRating,
           comment: reviewComment.trim() || "Outstanding swap session!",
         },
-      });
+        ...(request.sourceCollection === "directServiceRequests"
+          ? { requestStatus: "review_pending" }
+          : {}),
+      };
+      await updateDoc(doc(db, request.sourceCollection, request.id), payload);
       setActiveReview(false);
       setReviewComment("");
       setReviewRating(5);
@@ -382,11 +508,15 @@ function RequestCard({
     setSubmitting(true);
     try {
       // Revision notes move delivered work back into an active provider task.
-      await updateDoc(doc(db, "requests", request.id), {
+      const payload = {
         status: "revision",
         revisionNotes: revisionText.trim(),
         updatedAt: serverTimestamp(),
-      });
+        ...(request.sourceCollection === "directServiceRequests"
+          ? { requestStatus: "revision" }
+          : {}),
+      };
+      await updateDoc(doc(db, request.sourceCollection, request.id), payload);
       setActiveRevision(false);
       setRevisionText("");
     } catch (err) {

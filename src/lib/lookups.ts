@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
+  AVAILABILITY_DAYS,
   AVAILABILITY_TIME_SLOTS,
   ISSUE_TYPES,
   SERVICE_CATEGORIES,
@@ -16,6 +17,7 @@ export type LookupCollection =
   | "universities"
   | "issueTypes"
   | "yearOfStudyOptions"
+  | "availabilityDays"
   | "availabilityTimeSlots";
 
 type LookupRecord = {
@@ -25,6 +27,7 @@ type LookupRecord = {
   universityName?: string;
   issueTypeName?: string;
   yearName?: string;
+  dayName?: string;
   timeSlotName?: string;
   active?: boolean;
   status?: string;
@@ -35,6 +38,7 @@ const lookupDefaults: Record<LookupCollection, readonly string[]> = {
   universities: UNIVERSITIES,
   issueTypes: ISSUE_TYPES,
   yearOfStudyOptions: YEAR_OF_STUDY_OPTIONS,
+  availabilityDays: AVAILABILITY_DAYS,
   availabilityTimeSlots: AVAILABILITY_TIME_SLOTS,
 };
 
@@ -50,6 +54,7 @@ function readLookupName(data: LookupRecord, fallbackId: string) {
     data.universityName ||
     data.issueTypeName ||
     data.yearName ||
+    data.dayName ||
     data.timeSlotName ||
     fallbackId
   ).trim();
@@ -70,6 +75,37 @@ function uniqueOptions(values: readonly string[]) {
     if (!normalized || seen.has(normalized)) return false;
     seen.add(normalized);
     return true;
+  });
+}
+
+function sortLookupOptions(
+  collectionName: LookupCollection,
+  values: readonly string[],
+) {
+  const defaultOrder = lookupDefaults[collectionName].map((value) =>
+    value.trim().toLowerCase(),
+  );
+  const orderIndex = new Map(
+    defaultOrder.map((value, index) => [value, index]),
+  );
+
+  return [...values].sort((left, right) => {
+    const leftKey = left.trim().toLowerCase();
+    const rightKey = right.trim().toLowerCase();
+    const leftIndex = orderIndex.get(leftKey);
+    const rightIndex = orderIndex.get(rightKey);
+
+    if (leftIndex !== undefined && rightIndex !== undefined) {
+      return leftIndex - rightIndex;
+    }
+    if (leftIndex !== undefined) {
+      return -1;
+    }
+    if (rightIndex !== undefined) {
+      return 1;
+    }
+
+    return left.localeCompare(right);
   });
 }
 
@@ -94,12 +130,11 @@ export function useLookupOptions(collectionName: LookupCollection) {
             const data = docSnap.data() as LookupRecord;
             return isLookupActive(data) ? readLookupName(data, docSnap.id) : "";
           })
-          .filter(Boolean)
-          .sort((left, right) => left.localeCompare(right));
+          .filter(Boolean);
 
         setRemoteState({
           collectionName,
-          options: uniqueOptions(nextOptions),
+          options: uniqueOptions(sortLookupOptions(collectionName, nextOptions)),
         });
       },
       (error) => {
@@ -116,7 +151,10 @@ export function useLookupOptions(collectionName: LookupCollection) {
       remoteState?.collectionName === collectionName ? remoteState.options : [];
 
     return uniqueOptions(
-      isStaticCollection ? defaults : remoteOptions.length ? remoteOptions : defaults,
+      sortLookupOptions(
+        collectionName,
+        isStaticCollection ? defaults : remoteOptions.length ? remoteOptions : defaults,
+      ),
     );
   }, [collectionName, defaults, isStaticCollection, remoteState]);
 }

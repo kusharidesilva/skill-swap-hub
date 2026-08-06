@@ -165,7 +165,7 @@ export default function MobileNav({ role }: { role: Role }) {
         aria-current={isActive ? "page" : undefined}
         className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold transition-all duration-200 cursor-pointer sm:gap-1.5 sm:px-3 sm:text-xs ${
           isActive
-            ? "bg-[#2f66e7]/10 text-[#2f66e7] shadow-xs ring-1 ring-[#2f66e7]/15"
+            ? "bg-white text-[#2f66e7] shadow-sm ring-1 ring-[#2f66e7]/20"
             : isSignOut
               ? "text-rose-600 hover:bg-rose-50"
               : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -185,7 +185,7 @@ export default function MobileNav({ role }: { role: Role }) {
 
   return (
     <nav
-      className="ssh-mobile-nav flex items-center gap-2 overflow-x-auto px-3 py-2.5 bg-white/80 backdrop-blur-md scrollbar-none sm:gap-3 sm:px-4 sm:py-3"
+      className="ssh-mobile-nav flex items-center gap-2 overflow-x-auto overflow-y-hidden px-3 py-2.5 bg-white/80 backdrop-blur-md scrollbar-none sm:gap-3 sm:px-4 sm:py-3"
       aria-label="Mobile navigation"
     >
       {/* General/Default group */}

@@ -120,8 +120,20 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   const [isSending, setIsSending] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const currentChatId = activeId || chatIdParam;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(max-width: 1023px)");
+    const syncViewport = () => setIsMobileViewport(mediaQuery.matches);
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+    return () => mediaQuery.removeEventListener("change", syncViewport);
+  }, []);
 
   // Opening chat from a profile creates the conversation only if it does not exist.
   useEffect(() => {
@@ -328,13 +340,13 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
         }
       }
 
-      if (!activeId) {
+      if (!activeId && !isMobileViewport) {
         setActiveId(list[0].id);
       }
     });
 
     return () => unsubscribe();
-  }, [userProfile, activeId, chatIdParam]);
+  }, [userProfile, activeId, chatIdParam, isMobileViewport]);
 
   const activeConversation =
     conversations.find((conversation) => conversation.id === currentChatId) || null;
@@ -540,6 +552,22 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
     }
   };
 
+  const clearActiveConversation = () => {
+    setActiveId(null);
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("chatId");
+    nextParams.delete("peerId");
+    nextParams.delete("subject");
+    nextParams.delete("gigId");
+    nextParams.delete("category");
+    nextParams.delete("price");
+    nextParams.delete("providerName");
+    router.replace(
+      nextParams.toString() ? `${pathname}?${nextParams.toString()}` : pathname,
+      { scroll: false },
+    );
+  };
+
   const handleFileSelection = (event: ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
 
@@ -583,10 +611,12 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   }
 
   return (
-    <section className="flex h-[calc(100dvh-12rem)] min-h-[560px] max-h-[calc(100dvh-12rem)] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[320px_minmax(0,1fr)_260px]">
+    <section className="flex min-h-[calc(100dvh-13rem)] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:h-[calc(100dvh-12rem)] lg:min-h-[560px] lg:max-h-[calc(100dvh-12rem)]">
+      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(280px,320px)_minmax(0,1fr)_minmax(220px,260px)]">
         {/* Peer search and inbox */}
-        <aside className="flex min-h-0 flex-col border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
+        <aside
+          className={`${activeConversation ? "hidden lg:flex" : "flex"} min-h-0 flex-col border-b border-slate-200 bg-white lg:border-b-0 lg:border-r`}
+        >
           <div className="border-b border-slate-100 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -633,9 +663,19 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
         {/* Active conversation and message composer */}
         {activeConversation ? (
           <div className="flex min-h-0 flex-col bg-[#eef2ff]">
-            <ChatHeader conversation={activeConversation} role={role} />
+            <ChatHeader
+              conversation={activeConversation}
+              role={role}
+              onBack={clearActiveConversation}
+            />
 
-            <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-8">
+            <MobileThreadRail
+              activeConversationId={currentChatId}
+              threads={peerThreads}
+              onSelectConversation={selectConversation}
+            />
+
+            <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
               <div className="space-y-4">
                 {messages.length > 0 ? (
                   messages.map((message) => (
@@ -666,7 +706,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
             />
           </div>
         ) : (
-          <div className="flex min-h-0 flex-col items-center justify-center bg-[#eef2ff] p-8 text-center">
+          <div className="hidden min-h-0 flex-col items-center justify-center bg-[#eef2ff] p-8 text-center lg:flex">
             <div className="rounded-full bg-blue-100 p-4 text-[#2f66e7]">
               <SendIcon className="h-8 w-8" />
             </div>
@@ -690,6 +730,46 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   );
 }
 
+function MobileThreadRail({
+  activeConversationId,
+  threads,
+  onSelectConversation,
+}: {
+  activeConversationId: string | null;
+  threads: Conversation[];
+  onSelectConversation: (conversationId: string) => void;
+}) {
+  if (threads.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="border-b border-blue-100 bg-white/70 px-4 py-3 lg:hidden">
+      <div className="scrollbar-none flex gap-2 overflow-x-auto">
+        {threads.map((thread) => (
+          <button
+            key={thread.id}
+            type="button"
+            onClick={() => onSelectConversation(thread.id)}
+            className={`min-w-0 shrink-0 rounded-full border px-3 py-2 text-left transition ${
+              thread.id === activeConversationId
+                ? "border-blue-200 bg-blue-50 text-[#1453c4]"
+                : "border-slate-200 bg-white text-slate-600"
+            }`}
+          >
+            <p className="max-w-[220px] truncate text-xs font-semibold">
+              {thread.serviceContext?.title || thread.skill || "General chat"}
+            </p>
+            <p className="mt-1 text-[10px] font-medium text-slate-400">
+              {formatThreadTypeLabel(thread)}
+            </p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ServiceThreadsPanel({
   activeConversationId,
   peerName,
@@ -702,7 +782,7 @@ function ServiceThreadsPanel({
   onSelectConversation: (conversationId: string) => void;
 }) {
   return (
-    <aside className="flex min-h-0 flex-col border-t border-slate-200 bg-white p-5 lg:border-l lg:border-t-0">
+    <aside className="hidden min-h-0 flex-col border-t border-slate-200 bg-white p-5 lg:flex lg:border-l lg:border-t-0">
       <h2 className="shrink-0 text-[13px] font-bold text-slate-900">Requested Gigs</h2>
 
       <div className="scrollbar-none mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
@@ -812,9 +892,11 @@ function PeerConversationButton({
 function ChatHeader({
   conversation,
   role,
+  onBack,
 }: {
   conversation: Conversation;
   role: Role;
+  onBack: () => void;
 }) {
   const peerProfileHref =
     conversation.peerRole === "buyer"
@@ -829,9 +911,17 @@ function ChatHeader({
     .slice(0, 2);
 
   return (
-    <header className="border-b border-blue-200 bg-[#eef2ff] px-5 py-4 sm:px-6">
-      <div className="flex items-center justify-between gap-4">
+    <header className="border-b border-blue-200 bg-[#eef2ff] px-4 py-4 sm:px-5 lg:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-4">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back to chats"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden"
+          >
+            <ArrowLeftIcon className="h-5 w-5" />
+          </button>
           <div className="relative shrink-0">
             {conversation.avatar ? (
               <img
@@ -850,7 +940,7 @@ function ChatHeader({
           </div>
 
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="truncate text-base font-bold text-slate-950">
                 {conversation.name}
               </h2>
@@ -870,13 +960,13 @@ function ChatHeader({
                 ) : null;
               })()}
             </div>
-            <p className="mt-1 truncate text-[13px] font-medium text-slate-500">
+            <p className="mt-1 max-w-full truncate text-[13px] font-medium text-slate-500">
               {conversation.university} | {conversation.serviceContext?.title || conversation.skill}
             </p>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
           <HeaderActionButton
             icon={<UserIcon className="h-4 w-4" />}
             label="View Profile"
@@ -940,7 +1030,7 @@ function MessageBubble({
   return (
     <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[min(620px,82%)] rounded-[18px] px-3.5 py-2.5 ${
+        className={`max-w-[min(100%,42rem)] rounded-[18px] px-3.5 py-2.5 sm:max-w-[min(620px,82%)] ${
           isMine
             ? "rounded-br-[6px] bg-[#2f66e7] text-white"
             : "rounded-bl-[6px] bg-white text-slate-900"
@@ -1029,7 +1119,7 @@ function Composer({
   fileInputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   return (
-    <form onSubmit={onSubmit} className="border-t border-slate-200 bg-white/85 p-4">
+    <form onSubmit={onSubmit} className="border-t border-slate-200 bg-white/85 p-3 sm:p-4">
       <input
         ref={fileInputRef}
         type="file"
@@ -1066,7 +1156,7 @@ function Composer({
           {error}
         </p>
       ) : null}
-      <div className="flex items-center gap-3">
+      <div className="flex items-end gap-2 sm:gap-3">
         <button
           type="button"
           aria-label="Attach file"
@@ -1079,12 +1169,13 @@ function Composer({
         <label className="sr-only" htmlFor="chat-message">
           Type your message
         </label>
-        <input
+        <textarea
           id="chat-message"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Type your message..."
-          className="h-12 min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-5 text-[13px] text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+          rows={1}
+          className="max-h-28 min-h-[48px] min-w-0 flex-1 resize-none rounded-[24px] border border-slate-300 bg-white px-4 py-3 text-[13px] text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
         />
 
         <button
@@ -1097,6 +1188,20 @@ function Composer({
         </button>
       </div>
     </form>
+  );
+}
+
+function ArrowLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path d="m15 18-6-6 6-6" />
+    </svg>
   );
 }
 

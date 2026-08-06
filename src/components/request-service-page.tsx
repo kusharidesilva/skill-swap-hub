@@ -68,6 +68,12 @@ export default function RequestServiceContent({
   role = "buyer",
 }: RequestServiceContentProps) {
   const { userProfile, loading, refreshProfile } = useAuth();
+  const workspaceLabel =
+    role === "both"
+      ? "Request Workspace"
+      : role === "provider"
+        ? "Provider Request Workspace"
+        : "Buyer Workspace";
 
   const targetProviderId = "general";
   const providerName = "General / Public Request";
@@ -102,7 +108,7 @@ export default function RequestServiceContent({
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700 shadow-sm">
               <SparkIcon className="h-3.5 w-3.5" />
-              Buyer Workspace
+              {workspaceLabel}
             </div>
             <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-[2.2rem]">
               Request a service with a cleaner, faster workflow

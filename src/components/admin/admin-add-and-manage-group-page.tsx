@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   serverTimestamp,
@@ -12,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
+  AVAILABILITY_DAYS,
   AVAILABILITY_TIME_SLOTS,
   ISSUE_TYPES,
   SERVICE_CATEGORIES,
@@ -22,6 +24,7 @@ export type AddAndManageGroupKey =
   | "serviceCategories"
   | "universities"
   | "issueTypes"
+  | "availabilityDays"
   | "availabilityTimeSlots";
 
 type AddAndManageItem = {
@@ -57,6 +60,12 @@ const addAndManageGroups: Record<AddAndManageGroupKey, AddAndManageGroup> = {
     singular: "issue type",
     defaults: ISSUE_TYPES,
   },
+  availabilityDays: {
+    key: "availabilityDays",
+    title: "Weekly Availability",
+    singular: "availability day",
+    defaults: AVAILABILITY_DAYS,
+  },
   availabilityTimeSlots: {
     key: "availabilityTimeSlots",
     title: "Availability Time Slots",
@@ -64,6 +73,32 @@ const addAndManageGroups: Record<AddAndManageGroupKey, AddAndManageGroup> = {
     defaults: AVAILABILITY_TIME_SLOTS,
   },
 };
+
+function sortGroupItems(group: AddAndManageGroup, values: AddAndManageItem[]) {
+  const defaultOrder = group.defaults.map((value) => value.trim().toLowerCase());
+  const orderIndex = new Map(
+    defaultOrder.map((value, index) => [value, index]),
+  );
+
+  return [...values].sort((left, right) => {
+    const leftName = itemName(left);
+    const rightName = itemName(right);
+    const leftIndex = orderIndex.get(leftName.trim().toLowerCase());
+    const rightIndex = orderIndex.get(rightName.trim().toLowerCase());
+
+    if (leftIndex !== undefined && rightIndex !== undefined) {
+      return leftIndex - rightIndex;
+    }
+    if (leftIndex !== undefined) {
+      return -1;
+    }
+    if (rightIndex !== undefined) {
+      return 1;
+    }
+
+    return leftName.localeCompare(rightName);
+  });
+}
 
 export default function AdminAddAndManageGroupPage({
   groupKey,
@@ -77,6 +112,8 @@ export default function AdminAddAndManageGroupPage({
   const [busyKey, setBusyKey] = useState("");
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [formNotice, setFormNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AddAndManageItem | null>(null);
+  const autoSeededRef = useRef(false);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -86,10 +123,9 @@ export default function AdminAddAndManageGroupPage({
           .map((docSnap) => ({
             id: docSnap.id,
             ...(docSnap.data() as Omit<AddAndManageItem, "id">),
-          }))
-          .sort((left, right) => itemName(left).localeCompare(itemName(right)));
+          }));
 
-        setItems(nextItems);
+        setItems(sortGroupItems(group, nextItems));
         setLoading(false);
       },
       (error) => {
@@ -200,6 +236,19 @@ export default function AdminAddAndManageGroupPage({
     }
   };
 
+  useEffect(() => {
+    if (loading || items.length > 0 || autoSeededRef.current) {
+      return;
+    }
+
+    if (!group.defaults.length) {
+      return;
+    }
+
+    autoSeededRef.current = true;
+    void seedDefaults();
+  }, [group.defaults, items.length, loading]);
+
   const toggleAddAndManageItem = async (item: AddAndManageItem) => {
     const nextActive = item.active === false;
     setBusyKey(`${group.key}-${item.id}`);
@@ -218,6 +267,25 @@ export default function AdminAddAndManageGroupPage({
     } catch (error) {
       console.error(`Error updating ${group.key}:`, error);
       setNotice({ type: "error", text: `Could not update this ${group.singular}.` });
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const deleteAddAndManageItem = async (item: AddAndManageItem) => {
+    setBusyKey(`${group.key}-${item.id}-delete`);
+    setNotice(null);
+
+    try {
+      await deleteDoc(doc(db, group.key, item.id));
+      setDeleteTarget(null);
+      setNotice({
+        type: "success",
+        text: `${itemName(item)} deleted successfully.`,
+      });
+    } catch (error) {
+      console.error(`Error deleting ${group.key}:`, error);
+      setNotice({ type: "error", text: `Could not delete this ${group.singular}.` });
     } finally {
       setBusyKey("");
     }
@@ -285,6 +353,14 @@ export default function AdminAddAndManageGroupPage({
             >
               {busyKey === `${group.key}-add` ? "Saving..." : "Add"}
             </button>
+            <button
+              type="button"
+              onClick={() => void seedDefaults()}
+              disabled={busyKey !== ""}
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {busyKey === `${group.key}-seed` ? "Loading..." : "Add Defaults"}
+            </button>
           </div>
 
           {formNotice ? (
@@ -318,22 +394,32 @@ export default function AdminAddAndManageGroupPage({
                         <p className="truncate text-sm font-semibold text-slate-700">{itemName(item)}</p>
                         <p className="text-xs text-slate-400">{item.id}</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleAddAndManageItem(item)}
-                        disabled={busyKey !== ""}
-                        className={`inline-flex h-9 shrink-0 items-center rounded-lg px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                          active
-                            ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                            : "bg-emerald-600 text-white hover:bg-emerald-700"
-                        }`}
-                      >
-                        {busyKey === `${group.key}-${item.id}`
-                          ? "Saving..."
-                          : active
-                            ? "Deactivate"
-                            : "Activate"}
-                      </button>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(item)}
+                          disabled={busyKey !== ""}
+                          className="inline-flex h-9 items-center rounded-lg bg-rose-50 px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleAddAndManageItem(item)}
+                          disabled={busyKey !== ""}
+                          className={`inline-flex h-9 items-center rounded-lg px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                            active
+                              ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                              : "bg-emerald-600 text-white hover:bg-emerald-700"
+                          }`}
+                        >
+                          {busyKey === `${group.key}-${item.id}`
+                            ? "Saving..."
+                            : active
+                              ? "Deactivate"
+                              : "Activate"}
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -342,6 +428,41 @@ export default function AdminAddAndManageGroupPage({
           </div>
         </Card>
       </div>
+
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/28 px-4 py-6 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-[28px] border border-white/70 bg-white p-6 shadow-[0_28px_70px_rgba(15,23,42,0.18)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Confirm Delete
+            </p>
+            <h3 className="mt-2 text-xl font-bold text-slate-900">
+              Are you sure?
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              This will permanently delete <span className="font-semibold text-slate-800">{itemName(deleteTarget)}</span> from {group.title.toLowerCase()}.
+            </p>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={busyKey !== ""}
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void deleteAddAndManageItem(deleteTarget)}
+                disabled={busyKey !== ""}
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {busyKey === `${group.key}-${deleteTarget.id}-delete` ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

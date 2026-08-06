@@ -163,6 +163,11 @@ export default function Profile({ role: propRole }: { role: Role }) {
       activeDays.add(day.short);
     }
   });
+  const previewSlots = availabilitySlots.slice(0, 3);
+  const remainingSlotCount = Math.max(availabilitySlots.length - previewSlots.length, 0);
+  const preferredSlotsLabel = availabilitySlots.length
+    ? `${previewSlots.join(", ")}${remainingSlotCount > 0 ? ` +${remainingSlotCount} more` : ""}`
+    : "Not added yet";
 
   return (
     <div className="profile-steady-cards flex flex-col gap-6">
@@ -345,11 +350,8 @@ export default function Profile({ role: propRole }: { role: Role }) {
             </span>
             Available for Swaps
           </div>
-          <p className="mt-2 text-xs text-slate-500">
-            Preferred slots:{" "}
-            {availabilitySlots.length
-              ? availabilitySlots.join(", ")
-              : "Not added yet"}
+          <p className="mt-2 break-words text-xs leading-5 text-slate-500">
+            Preferred slots: {preferredSlotsLabel}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {availableDays.map((day) => (

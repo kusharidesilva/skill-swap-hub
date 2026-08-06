@@ -517,7 +517,9 @@ function GigDetailsModal({
               {gig.category}
             </span>
             <h2 className="mt-3 break-words text-xl font-bold leading-7 text-slate-900">{gig.title}</h2>
-            <p className="mt-3 break-words text-sm leading-6 text-slate-600">{gig.description || gig.summary}</p>
+            <p className="mt-3 line-clamp-3 break-words text-sm leading-6 text-slate-600">
+              {gig.summary || gig.description}
+            </p>
 
             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
               <InfoItem label="Price" value={formatPrice(gig.price)} />

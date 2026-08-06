@@ -11,7 +11,6 @@ import {
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { getUserProfile, type UserProfile } from "@/lib/auth";
-import { runReviewComplianceAuditForUser } from "@/lib/review-compliance";
 
 interface AuthContextValue {
   firebaseUser: User | null;
@@ -37,23 +36,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Firebase restores the session first, then we load the matching Firestore profile.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
-      if (user) {
-        const profile = await getUserProfile(user.uid);
-        if (profile) {
-          await runReviewComplianceAuditForUser({
-            uid: profile.uid,
-            name: profile.name,
-            email: profile.email,
-            role: profile.role,
-            accountStatus: profile.accountStatus,
-          });
+      try {
+        if (user) {
+          const refreshedProfile = await getUserProfile(user.uid);
+          setUserProfile(refreshedProfile);
+        } else {
+          setUserProfile(null);
         }
-        const refreshedProfile = await getUserProfile(user.uid);
-        setUserProfile(refreshedProfile);
-      } else {
+      } catch (error) {
+        console.error("Failed to restore auth profile:", error);
         setUserProfile(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -62,19 +57,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Features such as provider registration call this after updating the profile.
   const refreshProfile = useCallback(async () => {
     const user = auth.currentUser;
-    if (!user) return;
-    const profile = await getUserProfile(user.uid);
-    if (profile) {
-      await runReviewComplianceAuditForUser({
-        uid: profile.uid,
-        name: profile.name,
-        email: profile.email,
-        role: profile.role,
-        accountStatus: profile.accountStatus,
-      });
+    if (!user) {
+      setUserProfile(null);
+      return;
     }
-    const refreshedProfile = await getUserProfile(user.uid);
-    setUserProfile(refreshedProfile);
+
+    try {
+      const refreshedProfile = await getUserProfile(user.uid);
+      setUserProfile(refreshedProfile);
+    } catch (error) {
+      console.error("Failed to refresh auth profile:", error);
+      setUserProfile(null);
+    }
   }, []);
 
   // One provider gives every client page the same live authentication state.

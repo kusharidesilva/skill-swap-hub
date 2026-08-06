@@ -9,6 +9,7 @@ type AddAndManageGroupKey =
   | "serviceCategories"
   | "universities"
   | "issueTypes"
+  | "availabilityDays"
   | "availabilityTimeSlots";
 
 type AddAndManageItem = {
@@ -42,6 +43,12 @@ const addAndManageGroups: AddAndManageGroup[] = [
     href: "/admin/add-and-manage/issue-types",
   },
   {
+    key: "availabilityDays",
+    title: "Weekly Availability",
+    description: "Manage the days shown in weekly availability selectors.",
+    href: "/admin/add-and-manage/weekly-availability",
+  },
+  {
     key: "availabilityTimeSlots",
     title: "Availability Time Slots",
     description: "Keep provider availability slots consistent across the app.",
@@ -53,6 +60,7 @@ const emptyAddAndManageState: Record<AddAndManageGroupKey, AddAndManageItem[]> =
   serviceCategories: [],
   universities: [],
   issueTypes: [],
+  availabilityDays: [],
   availabilityTimeSlots: [],
 };
 
@@ -85,6 +93,7 @@ export default function AdminAddAndManageSettings() {
       serviceCategories: items.serviceCategories.filter((item) => item.active !== false).length,
       universities: items.universities.filter((item) => item.active !== false).length,
       issueTypes: items.issueTypes.filter((item) => item.active !== false).length,
+      availabilityDays: items.availabilityDays.filter((item) => item.active !== false).length,
       availabilityTimeSlots: items.availabilityTimeSlots.filter((item) => item.active !== false).length,
     }),
     [items],

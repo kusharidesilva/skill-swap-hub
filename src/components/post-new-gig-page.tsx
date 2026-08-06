@@ -29,7 +29,11 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   const { userProfile, refreshProfile } = useAuth();
   const isEditMode = mode === "edit";
   const serviceCategories = useLookupOptions("serviceCategories");
+  const availabilityDayOptions = useLookupOptions("availabilityDays");
   const timeSlotOptions = useLookupOptions("availabilityTimeSlots");
+  const weeklyAvailabilityDays = availabilityDayOptions.length
+    ? availabilityDayOptions
+    : [...AVAILABILITY_DAYS];
 
   const skillIndex = isEditMode && gigId ? parseInt(gigId.replace("gig-", ""), 10) : -1;
 
@@ -65,13 +69,13 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
           ...availability
             .map((slot) => {
               const normalizedSlot = slot.trim();
-              const matchingDay = AVAILABILITY_DAYS.find((day) => normalizedSlot.startsWith(`${day} `));
+              const matchingDay = weeklyAvailabilityDays.find((day) => normalizedSlot.startsWith(`${day} `));
               return matchingDay ? normalizedSlot.slice(matchingDay.length).trim() : "";
             })
             .filter(Boolean),
         ]),
       ),
-    [availability, selectedPeriods, timeSlotOptions],
+    [availability, selectedPeriods, timeSlotOptions, weeklyAvailabilityDays],
   );
 
   useEffect(() => {
@@ -135,7 +139,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
 
     availability.forEach((slot) => {
       const normalizedSlot = slot.trim();
-      const matchingDay = AVAILABILITY_DAYS.find((day) => normalizedSlot.startsWith(`${day} `));
+      const matchingDay = weeklyAvailabilityDays.find((day) => normalizedSlot.startsWith(`${day} `));
       if (!matchingDay) return;
 
       const period = normalizedSlot.slice(matchingDay.length).trim();
@@ -155,7 +159,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
     setSelectedPeriods((current) =>
       areSameSelections(current, nextPeriodsList) ? current : nextPeriodsList,
     );
-  }, [availability, availabilityPeriods]);
+  }, [availability, availabilityPeriods, weeklyAvailabilityDays]);
 
   const addTag = () => {
     const trimmed = tagInput.trim();
@@ -582,7 +586,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                     Weekly Availability *
                   </p>
                   <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
-                    {AVAILABILITY_DAYS.map((day) => {
+                    {weeklyAvailabilityDays.map((day) => {
                       const active = selectedDays.includes(day);
                       return (
                         <label

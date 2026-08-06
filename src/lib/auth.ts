@@ -42,7 +42,6 @@ import {
   type StudentProofType,
   isPendingAdminVerificationStatus,
 } from "./platform";
-import { runReviewComplianceAuditForUser } from "./review-compliance";
 
 const STUDENT_PROOF_CONTENT_TYPES: Record<
   (typeof STUDENT_PROOF_EXTENSIONS)[number],
@@ -556,20 +555,6 @@ export async function loginUser(
   if (profile.providerVerificationStatus === "rejected") {
     throw new RejectedVerificationError(user, profile);
   }
-
-  await runReviewComplianceAuditForUser({
-    uid: user.uid,
-    name: profile.name,
-    email: profile.email,
-    role: profile.role,
-    accountStatus: profile.accountStatus,
-  });
-
-  const refreshedUserDoc = await getDoc(doc(db, "users", user.uid));
-  if (!refreshedUserDoc.exists()) {
-    throw new Error("User profile not found. Please contact support.");
-  }
-  profile = refreshedUserDoc.data() as UserProfile;
 
   if (
     accountNeedsEmailVerification(profile.accountType) &&

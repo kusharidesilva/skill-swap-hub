@@ -37,8 +37,12 @@ export default function ProviderRegisterPage() {
   const [skillInput, setSkillInput] = useState("");
   const serviceCategories = useLookupOptions("serviceCategories");
   const yearOptions = useLookupOptions("yearOfStudyOptions");
+  const availabilityDayOptions = useLookupOptions("availabilityDays");
   const timeSlotOptions = useLookupOptions("availabilityTimeSlots");
-  const availabilityOptions = AVAILABILITY_DAYS.flatMap((day) =>
+  const weeklyAvailabilityDays = availabilityDayOptions.length
+    ? availabilityDayOptions
+    : [...AVAILABILITY_DAYS];
+  const availabilityOptions = weeklyAvailabilityDays.flatMap((day) =>
     (timeSlotOptions.length ? timeSlotOptions : [...AVAILABILITY_TIME_SLOTS]).map(
       (slot) => `${day} ${slot}`,
     ),

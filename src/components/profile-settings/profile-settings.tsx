@@ -136,12 +136,11 @@ function ProfileSettingsForm({
   const showNeeded = role === "buyer" || role === "both";
   const showAvailability = role === "provider" || role === "both";
   const serviceCategories = useLookupOptions("serviceCategories");
+  const availabilityDayOptions = useLookupOptions("availabilityDays");
   const timeSlotOptions = useLookupOptions("availabilityTimeSlots");
-  const availabilityOptions = AVAILABILITY_DAYS.flatMap((day) =>
-    (timeSlotOptions.length ? timeSlotOptions : [...AVAILABILITY_TIME_SLOTS]).map(
-      (slot) => `${day} ${slot}`,
-    ),
-  );
+  const weeklyAvailabilityDays = availabilityDayOptions.length
+    ? availabilityDayOptions
+    : [...AVAILABILITY_DAYS];
 
   const description =
     role === "both"
@@ -182,6 +181,8 @@ function ProfileSettingsForm({
   const [availability, setAvailability] = useState<string[]>(
     userProfile.providerProfile?.availability || [],
   );
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
 
   // These switches map directly to the nested Firestore settings object.
   const [emailNotifications, setEmailNotifications] = useState(
@@ -219,7 +220,7 @@ function ProfileSettingsForm({
           ...availability
             .map((slot) => {
               const normalizedSlot = slot.trim();
-              const matchingDay = AVAILABILITY_DAYS.find((day) =>
+              const matchingDay = weeklyAvailabilityDays.find((day) =>
                 normalizedSlot.startsWith(`${day} `),
               );
               return matchingDay ? normalizedSlot.slice(matchingDay.length).trim() : "";
@@ -227,46 +228,41 @@ function ProfileSettingsForm({
             .filter(Boolean),
         ]),
       ),
-    [availability, timeSlotOptions],
+    [availability, timeSlotOptions, weeklyAvailabilityDays],
   );
-  const selectedDays = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          availability
-            .map((slot) => {
-              const normalizedSlot = slot.trim();
-              return (
-                AVAILABILITY_DAYS.find((day) =>
-                  normalizedSlot.startsWith(`${day} `),
-                ) || ""
-              );
-            })
-            .filter(Boolean),
-        ),
-      ),
-    [availability],
-  );
-  const selectedPeriods = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          availability
-            .map((slot) => {
-              const normalizedSlot = slot.trim();
-              const matchingDay = AVAILABILITY_DAYS.find((day) =>
-                normalizedSlot.startsWith(`${day} `),
-              );
-              if (!matchingDay) return "";
+  useEffect(() => {
+    if (!availability.length) {
+      return;
+    }
 
-              const period = normalizedSlot.slice(matchingDay.length).trim();
-              return availabilityPeriods.includes(period) ? period : "";
-            })
-            .filter(Boolean),
-        ),
-      ),
-    [availability, availabilityPeriods],
-  );
+    const nextDays = new Set<string>();
+    const nextPeriods = new Set<string>();
+
+    availability.forEach((slot) => {
+      const normalizedSlot = slot.trim();
+      const matchingDay = weeklyAvailabilityDays.find((day) =>
+        normalizedSlot.startsWith(`${day} `),
+      );
+      if (!matchingDay) return;
+
+      const period = normalizedSlot.slice(matchingDay.length).trim();
+      nextDays.add(matchingDay);
+
+      if (availabilityPeriods.includes(period)) {
+        nextPeriods.add(period);
+      }
+    });
+
+    const nextDaysList = Array.from(nextDays);
+    const nextPeriodsList = Array.from(nextPeriods);
+
+    setSelectedDays((current) =>
+      areSameSelections(current, nextDaysList) ? current : nextDaysList,
+    );
+    setSelectedPeriods((current) =>
+      areSameSelections(current, nextPeriodsList) ? current : nextPeriodsList,
+    );
+  }, [availability, availabilityPeriods, weeklyAvailabilityDays]);
 
   // Build one update payload so Firestore receives an atomic profile change.
   const handleSaveProfile = async () => {
@@ -313,11 +309,15 @@ function ProfileSettingsForm({
       }
 
       await updateDoc(userRef, updates);
-      await propagateUserProfileReferences({
-        uid: userProfile.uid,
-        name: trimmedName,
-        profileImageUrl: nextProfileImageUrl,
-      });
+      try {
+        await propagateUserProfileReferences({
+          uid: userProfile.uid,
+          name: trimmedName,
+          profileImageUrl: nextProfileImageUrl,
+        });
+      } catch (syncError) {
+        console.warn("Profile saved, but reference sync was skipped:", syncError);
+      }
       setName(trimmedName);
       setProfileImageUrl(nextProfileImageUrl);
       setSelectedProfileImageFile(null);
@@ -442,6 +442,7 @@ function ProfileSettingsForm({
       ? selectedDays.filter((value) => value !== day)
       : [...selectedDays, day];
 
+    setSelectedDays(nextDays);
     syncAvailability(nextDays, selectedPeriods);
   };
 
@@ -450,6 +451,7 @@ function ProfileSettingsForm({
       ? selectedPeriods.filter((value) => value !== period)
       : [...selectedPeriods, period];
 
+    setSelectedPeriods(nextPeriods);
     syncAvailability(selectedDays, nextPeriods);
   };
 
@@ -645,7 +647,7 @@ function ProfileSettingsForm({
                       Weekly Availability
                     </p>
                     <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
-                      {AVAILABILITY_DAYS.map((day) => {
+                      {weeklyAvailabilityDays.map((day) => {
                         const active = selectedDays.includes(day);
                         return (
                           <label

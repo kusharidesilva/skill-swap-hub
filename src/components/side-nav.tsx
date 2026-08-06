@@ -189,7 +189,7 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
   const effectiveFindItems     = findItems;
 
   return (
-    <aside className="ssh-sidebar flex h-full w-full flex-col overflow-hidden border-r border-slate-300 bg-[#eef0ff] px-4 py-5">
+    <aside className="ssh-sidebar scrollbar-none flex h-full w-full flex-col overflow-y-auto border-r border-slate-300 bg-[#eef0ff] px-4 py-5">
       <nav className="flex min-h-0 flex-1 flex-col text-[14px] font-medium">
         <div className="flex flex-col gap-1">
           {effectiveDefaultItems.map((link) => (

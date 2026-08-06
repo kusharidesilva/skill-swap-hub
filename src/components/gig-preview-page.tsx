@@ -487,16 +487,16 @@ export default function GigPreviewPage({
         href: `${scopedHref("/chats", "provider")}?chatId=${chatId}`,
       });
 
+      const nextRequestRole = userProfile.role === "provider" ? "both" : activeRole;
+
       if (userProfile.role === "provider") {
         await updateDoc(doc(db, "users", buyerId), {
           role: "both",
-          canBuyServices: true,
-          updatedAt: serverTimestamp(),
         });
         await refreshProfile();
       }
 
-      router.push(`${scopedHref("/chats", activeRole)}?chatId=${encodeURIComponent(chatId)}`);
+      router.push(`${scopedHref("/chats", nextRequestRole)}?chatId=${encodeURIComponent(chatId)}`);
     } catch (error) {
       console.error("Error creating direct request:", error);
     } finally {
@@ -756,7 +756,7 @@ function PackageCard({
               disabled={requesting}
               className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#1453c4] px-4 text-sm font-bold text-white transition hover:bg-[#0f43a1]"
             >
-              {requesting ? "Opening Chat..." : "Request Now"}
+              {requesting ? "Creating Request..." : "Request Now"}
             </button>
             <Link
               href={chatHref}
