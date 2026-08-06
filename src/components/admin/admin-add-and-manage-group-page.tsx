@@ -430,8 +430,14 @@ export default function AdminAddAndManageGroupPage({
       </div>
 
       {deleteTarget ? (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/28 px-4 py-6 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-[28px] border border-white/70 bg-white p-6 shadow-[0_28px_70px_rgba(15,23,42,0.18)]">
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/28 px-4 py-6 backdrop-blur-md"
+          onClick={() => setDeleteTarget(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-[28px] border border-white/70 bg-white p-6 shadow-[0_28px_70px_rgba(15,23,42,0.18)]"
+            onClick={(event) => event.stopPropagation()}
+          >
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
               Confirm Delete
             </p>

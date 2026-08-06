@@ -164,6 +164,7 @@ export default function AdminIssueResolution() {
     (currentPage - 1) * REPORTS_PER_PAGE,
     currentPage * REPORTS_PER_PAGE,
   );
+  const paginationItems = buildCompactPagination(currentPage, totalPages);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -612,14 +613,23 @@ export default function AdminIssueResolution() {
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
             />
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-              <PagerButton
-                key={page}
-                label={String(page)}
-                active={currentPage === page}
-                onClick={() => setCurrentPage(page)}
-              />
-            ))}
+            {paginationItems.map((item, index) =>
+              item === "ellipsis" ? (
+                <span
+                  key={`ellipsis-${index}`}
+                  className="inline-flex h-10 min-w-[24px] items-center justify-center text-sm font-semibold text-slate-400"
+                >
+                  ...
+                </span>
+              ) : (
+                <PagerButton
+                  key={item}
+                  label={String(item)}
+                  active={currentPage === item}
+                  onClick={() => setCurrentPage(item)}
+                />
+              ),
+            )}
             <PagerButton
               label="Next"
               disabled={currentPage === totalPages}
@@ -816,6 +826,36 @@ function PagerButton({
   );
 }
 
+function buildCompactPagination(currentPage: number, totalPages: number) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages = new Set<number>([1, totalPages, currentPage]);
+
+  if (currentPage <= 3) {
+    pages.add(2);
+  }
+
+  if (currentPage >= totalPages - 2) {
+    pages.add(totalPages - 1);
+  }
+
+  const sortedPages = Array.from(pages)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right);
+
+  const items: Array<number | "ellipsis"> = [];
+  sortedPages.forEach((page, index) => {
+    if (index > 0 && page - sortedPages[index - 1] > 1) {
+      items.push("ellipsis");
+    }
+    items.push(page);
+  });
+
+  return items;
+}
+
 function ReportActionModal({
   report,
   note,
@@ -855,8 +895,14 @@ function ReportActionModal({
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md">
-        <div className="scrollbar-none max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
+      <div
+        className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md"
+        onClick={onClose}
+      >
+        <div
+          className="scrollbar-none max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.22)]"
+          onClick={(event) => event.stopPropagation()}
+        >
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">

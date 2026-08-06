@@ -190,6 +190,7 @@ export default function AdminUserManagement() {
     (currentPage - 1) * USERS_PER_PAGE,
     currentPage * USERS_PER_PAGE,
   );
+  const paginationItems = buildCompactPagination(currentPage, totalPages);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -546,14 +547,23 @@ export default function AdminUserManagement() {
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
             />
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-              <PagerButton
-                key={page}
-                label={String(page)}
-                active={currentPage === page}
-                onClick={() => setCurrentPage(page)}
-              />
-            ))}
+            {paginationItems.map((item, index) =>
+              item === "ellipsis" ? (
+                <span
+                  key={`ellipsis-${index}`}
+                  className="inline-flex h-10 min-w-[24px] items-center justify-center text-sm font-semibold text-slate-400"
+                >
+                  ...
+                </span>
+              ) : (
+                <PagerButton
+                  key={item}
+                  label={String(item)}
+                  active={currentPage === item}
+                  onClick={() => setCurrentPage(item)}
+                />
+              ),
+            )}
             <PagerButton
               label="Next"
               disabled={currentPage === totalPages}
@@ -625,11 +635,22 @@ function StatusChip({
   tone,
   children,
 }: {
-  tone: "teal" | "amber" | "blue" | "violet" | "cyan" | "green" | "rose" | "slate";
+  tone:
+    | "teal"
+    | "amber"
+    | "blue"
+    | "violet"
+    | "cyan"
+    | "green"
+    | "rose"
+    | "slate"
+    | "gradient";
   children: ReactNode;
 }) {
   const styles =
-    tone === "teal"
+    tone === "gradient"
+      ? "border border-cyan-200 bg-gradient-to-r from-[#dbeafe] to-[#d1fae5] text-[#1454cc] shadow-sm"
+      : tone === "teal"
       ? "bg-teal-100 text-teal-700"
       : tone === "amber"
         ? "bg-amber-100 text-amber-700"
@@ -646,7 +667,9 @@ function StatusChip({
                 : "bg-slate-100 text-slate-600";
 
   return (
-    <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${styles}`}>
+    <span
+      className={`inline-flex w-fit whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${styles}`}
+    >
       {children}
     </span>
   );
@@ -714,10 +737,11 @@ function accountTone(status?: string): "cyan" | "amber" | "rose" {
   return "cyan";
 }
 
-function roleTone(role?: string): "blue" | "violet" | "green" | "slate" {
+function roleTone(role?: string): "blue" | "violet" | "green" | "slate" | "gradient" {
   const normalized = normalizeAdminRole(role);
   if (normalized === "admin") return "violet";
-  if (normalized === "provider" || normalized === "both") return "blue";
+  if (normalized === "both") return "gradient";
+  if (normalized === "provider") return "blue";
   if (normalized === "buyer") return "green";
   return "slate";
 }
@@ -815,6 +839,36 @@ function StarIcon() {
   );
 }
 
+function buildCompactPagination(currentPage: number, totalPages: number) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages = new Set<number>([1, totalPages, currentPage]);
+
+  if (currentPage <= 3) {
+    pages.add(2);
+  }
+
+  if (currentPage >= totalPages - 2) {
+    pages.add(totalPages - 1);
+  }
+
+  const sortedPages = Array.from(pages)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right);
+
+  const items: Array<number | "ellipsis"> = [];
+  sortedPages.forEach((page, index) => {
+    if (index > 0 && page - sortedPages[index - 1] > 1) {
+      items.push("ellipsis");
+    }
+    items.push(page);
+  });
+
+  return items;
+}
+
 function ReportsModal({
   user,
   reports,
@@ -828,8 +882,14 @@ function ReportsModal({
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/18 px-4 py-6 backdrop-blur-md">
-        <div className="w-full max-w-[720px] overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.18)]">
+      <div
+        className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/18 px-4 py-6 backdrop-blur-md"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-[720px] overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.18)]"
+          onClick={(event) => event.stopPropagation()}
+        >
           <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">User Reports</p>
@@ -937,8 +997,14 @@ function SuspendConfirmModal({
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/18 px-4 py-6 backdrop-blur-md">
-        <div className="w-full max-w-[560px] overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.18)]">
+      <div
+        className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/18 px-4 py-6 backdrop-blur-md"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-[560px] overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.18)]"
+          onClick={(event) => event.stopPropagation()}
+        >
           <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-400">Confirm Suspension</p>

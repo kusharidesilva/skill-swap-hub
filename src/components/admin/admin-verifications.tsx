@@ -148,6 +148,7 @@ export default function AdminVerifications() {
     (currentPage - 1) * VERIFICATIONS_PER_PAGE,
     currentPage * VERIFICATIONS_PER_PAGE,
   );
+  const paginationItems = buildCompactPagination(currentPage, totalPages);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -442,14 +443,23 @@ export default function AdminVerifications() {
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
             />
-            {Array.from({ length: totalPages }, (_, pageIndex) => pageIndex + 1).map((page) => (
-              <PagerButton
-                key={page}
-                label={String(page)}
-                active={currentPage === page}
-                onClick={() => setCurrentPage(page)}
-              />
-            ))}
+            {paginationItems.map((item, index) =>
+              item === "ellipsis" ? (
+                <span
+                  key={`ellipsis-${index}`}
+                  className="inline-flex h-10 min-w-[24px] items-center justify-center text-sm font-semibold text-slate-400"
+                >
+                  ...
+                </span>
+              ) : (
+                <PagerButton
+                  key={item}
+                  label={String(item)}
+                  active={currentPage === item}
+                  onClick={() => setCurrentPage(item)}
+                />
+              ),
+            )}
             <PagerButton
               label="Next"
               disabled={currentPage === totalPages}
@@ -867,6 +877,36 @@ function CheckCircleIcon() {
       <path d="m8.8 12.2 2.1 2.1 4.4-4.7" />
     </svg>
   );
+}
+
+function buildCompactPagination(currentPage: number, totalPages: number) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages = new Set<number>([1, totalPages, currentPage]);
+
+  if (currentPage <= 3) {
+    pages.add(2);
+  }
+
+  if (currentPage >= totalPages - 2) {
+    pages.add(totalPages - 1);
+  }
+
+  const sortedPages = Array.from(pages)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right);
+
+  const items: Array<number | "ellipsis"> = [];
+  sortedPages.forEach((page, index) => {
+    if (index > 0 && page - sortedPages[index - 1] > 1) {
+      items.push("ellipsis");
+    }
+    items.push(page);
+  });
+
+  return items;
 }
 
 function FilterResetIcon() {
