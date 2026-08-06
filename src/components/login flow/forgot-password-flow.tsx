@@ -103,10 +103,10 @@ export default function ForgotPasswordFlow() {
   return (
     <main className="auth-gradient-animate relative min-h-screen bg-[linear-gradient(140deg,#eefdf8_0%,#dff3ff_44%,#f8fbff_100%)]">
       <div className="auth-gradient-animate fixed inset-0 bg-[linear-gradient(120deg,rgba(20,184,166,0.16),rgba(37,99,235,0.12),rgba(255,255,255,0.22))]" aria-hidden="true" />
-      <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-6 py-10">
-        <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="relative z-10 mx-auto flex min-h-screen items-center justify-center px-4 py-6 sm:px-6 lg:py-10">
+        <div className="grid w-full max-h-[90vh] max-w-xl overflow-y-auto rounded-3xl bg-white shadow-2xl lg:max-h-none lg:max-w-5xl lg:overflow-hidden lg:grid-cols-[1.05fr_0.95fr]">
           {/* Security guidance */}
-          <section className="auth-gradient-animate relative flex flex-col justify-between bg-linear-to-br from-[#2f66e7] via-[#1d7fe7] to-[#173b8f] px-10 py-12 text-white">
+          <section className="auth-gradient-animate relative hidden flex-col justify-between bg-linear-to-br from-[#2f66e7] via-[#1d7fe7] to-[#173b8f] px-10 py-12 text-white lg:flex">
             <div className="absolute inset-0 opacity-10">
               <div className="h-full w-full bg-[linear-gradient(120deg,rgba(255,255,255,0.15)_0%,rgba(255,255,255,0.02)_50%,transparent_100%)]" />
             </div>
@@ -144,7 +144,7 @@ export default function ForgotPasswordFlow() {
           </section>
 
           {/* Recovery form or success message */}
-          <section className="relative flex flex-col justify-center bg-white px-8 py-12 sm:px-12">
+          <section className="relative flex flex-col items-center justify-center bg-white px-5 py-8 sm:px-7 md:px-8 lg:items-stretch lg:px-12 lg:py-12">
             <Link
               href="/"
               aria-label="Close"
@@ -155,7 +155,10 @@ export default function ForgotPasswordFlow() {
 
             {step === "recovery" ? (
               /* Email entry step */
-              <div className="max-w-md">
+              <div className="w-full max-w-md">
+                <p className="mb-2 text-sm font-bold uppercase tracking-wide text-[#2b62e6] lg:hidden">
+                  Recover your account
+                </p>
                 <h2 className="text-2xl font-semibold text-slate-900">
                   Account Recovery
                 </h2>
@@ -233,7 +236,10 @@ export default function ForgotPasswordFlow() {
               </div>
             ) : (
               /* Email sent confirmation */
-              <div className="max-w-md">
+              <div className="w-full max-w-md">
+                <p className="mb-2 text-sm font-bold uppercase tracking-wide text-[#2b62e6] lg:hidden">
+                  Check your email
+                </p>
                 {/* Success badge */}
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 shadow-sm">
                   <MailCheckIcon className="h-7 w-7" />
