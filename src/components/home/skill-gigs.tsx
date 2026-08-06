@@ -147,7 +147,7 @@ export default function SkillGigsSection() {
           .filter((gig) => gig.card.providerId)
           .filter((gig) => !(hideOwnGig && userProfile && gig.card.providerId === userProfile.uid))
           .sort((a, b) => b.card.sortTime - a.card.sortTime)
-          .slice(0, 4);
+          .slice(0, 3);
 
         const liveGigs: LiveGig[] = gigRecords.map(({ card: gig }) => ({
           id: gig.id,
@@ -182,9 +182,9 @@ export default function SkillGigsSection() {
   return (
     <section id="explore-skills" className="ssh-section-clear bg-white scroll-mt-20">
       {/* Featured live service gigs */}
-      <div className="mx-auto max-w-6xl px-6 py-14">
+      <div className="mx-auto max-w-6xl px-5 py-12 sm:px-6 sm:py-14">
         <ScrollReveal delayMs={40}>
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
             <div>
               <h2 className="text-xl font-semibold text-slate-900 sm:text-2xl">
                 Explore Student Skill Gigs
@@ -193,31 +193,16 @@ export default function SkillGigsSection() {
                 Find skills offered by verified university students.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (!userProfile) {
-                  setAuthModalOpen(true);
-                  return;
-                }
-
-                router.push(viewAllHref);
-              }}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f4cbf]"
-            >
-              Discover More Skills
-              <span aria-hidden="true">&rarr;</span>
-            </button>
           </div>
         </ScrollReveal>
 
         {loading ? (
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {[1, 2, 3, 4].map((i) => (
-              <ScrollReveal key={i} delayMs={80 + i * 55}>
-                <div className="ssh-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <div className="h-40 w-full animate-pulse bg-slate-200" />
-                  <div className="space-y-3 p-5">
+          <div className="mt-6 grid auto-rows-fr grid-cols-1 items-stretch justify-items-stretch gap-4 min-[560px]:grid-cols-2 min-[760px]:grid-cols-3 sm:mt-8 min-[760px]:gap-3 xl:gap-5">
+            {[1, 2, 3].map((i) => (
+              <ScrollReveal key={i} delayMs={80 + i * 55} className="flex h-full w-full max-w-[19rem] justify-self-center min-[560px]:max-w-none">
+                <div className="ssh-card flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="h-28 w-full animate-pulse bg-slate-200 sm:h-32 xl:h-36" />
+                  <div className="space-y-3 p-4 min-[760px]:p-3.5 xl:p-4">
                     <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200" />
                     <div className="h-3 w-1/2 animate-pulse rounded bg-slate-100" />
                     <div className="flex gap-2">
@@ -239,14 +224,36 @@ export default function SkillGigsSection() {
             </div>
           </ScrollReveal>
         ) : (
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid auto-rows-fr grid-cols-1 items-stretch justify-items-stretch gap-4 min-[560px]:grid-cols-2 min-[760px]:grid-cols-3 sm:mt-8 min-[760px]:gap-3 xl:gap-5">
             {gigs.map((gig, index) => (
-              <ScrollReveal key={gig.id} delayMs={80 + index * 60}>
+              <ScrollReveal key={gig.id} delayMs={80 + index * 60} className="flex h-full w-full max-w-[19rem] justify-self-center min-[560px]:max-w-none">
                 <GigCard gig={gig} />
               </ScrollReveal>
             ))}
           </div>
         )}
+
+        {loading || gigs.length > 0 ? (
+          <ScrollReveal delayMs={220}>
+            <div className="mt-7 flex justify-center sm:mt-8">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!userProfile) {
+                    setAuthModalOpen(true);
+                    return;
+                  }
+
+                  router.push(viewAllHref);
+                }}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-blue-100 bg-white px-5 text-sm font-semibold text-[#0f4cbf] shadow-[0_10px_24px_rgba(43,98,230,0.08)] transition hover:border-blue-200 hover:bg-blue-50"
+              >
+                Discover More Skills
+                <span aria-hidden="true">&rarr;</span>
+              </button>
+            </div>
+          </ScrollReveal>
+        ) : null}
       </div>
       <GuestAuthModal
         open={authModalOpen}
@@ -339,43 +346,43 @@ function GigCard({ gig }: { gig: LiveGig }) {
 
   return (
     <>
-      <article className="ssh-card flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
-        <div className="ssh-card-image relative h-40 bg-slate-100">
+      <article className="ssh-card flex h-full min-h-[310px] w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md min-[760px]:min-h-[332px] xl:min-h-[350px]">
+        <div className="ssh-card-image relative h-28 bg-slate-100 sm:h-32 xl:h-40">
           <Image
             src={gig.image}
             alt={gig.title}
             fill
             className="object-cover"
-            sizes="(min-width: 1024px) 320px, 100vw"
+            sizes="(min-width: 1280px) 320px, (min-width: 900px) 33vw, (min-width: 560px) 50vw, 100vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/45 via-slate-900/10 to-transparent" />
-          <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-[#1453c4] shadow-sm">
+          <span className="absolute left-2.5 top-2.5 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-[#1453c4] shadow-sm sm:left-3 sm:top-3 sm:px-3 sm:text-xs">
             {gig.category}
           </span>
-          <div className="absolute right-3 top-3 flex flex-col items-end gap-2">
+          <div className="absolute right-2.5 top-2.5 flex flex-col items-end gap-1.5 sm:right-3 sm:top-3 sm:gap-2">
             <button
               type="button"
               onClick={handleToggleFavorite}
               aria-label={isFavorited ? "Remove this gig from favorites" : "Save this gig to favorites"}
-              className={`flex h-9 w-9 items-center justify-center rounded-full shadow-sm transition ${
+              className={`flex h-8 w-8 items-center justify-center rounded-full shadow-sm transition sm:h-9 sm:w-9 ${
                 isFavorited ? "bg-red-500 text-white" : "bg-white/95 text-slate-700 hover:bg-red-50 hover:text-red-600"
               }`}
             >
               <HeartIcon className="h-4.5 w-4.5" filled={isFavorited} />
             </button>
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-bold text-slate-700 shadow-sm sm:px-2.5 sm:py-1 sm:text-xs">
               <StarIcon className="h-3.5 w-3.5 text-amber-400" />
               {formatRatingLabel(gig.rating)}
             </span>
           </div>
         </div>
-        <div className="flex flex-1 flex-col p-4">
-          <h3 className="line-clamp-2 text-[0.97rem] font-bold leading-6 text-slate-900">
+        <div className="flex flex-1 flex-col p-3 min-[900px]:p-3.5 xl:p-4">
+          <h3 className="line-clamp-2 text-[0.9rem] font-bold leading-5 text-slate-900 xl:text-[0.97rem] xl:leading-6">
             {gig.title}
           </h3>
 
           <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-            <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#2f66e7] text-[10px] font-bold text-white ring-2 ring-white">
+            <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-[#2f66e7] text-[10px] font-bold text-white ring-2 ring-white sm:h-8 sm:w-8">
               {gig.providerImage && gig.providerImage.startsWith("/") ? (
                 <Image
                   src={gig.providerImage}
@@ -389,22 +396,22 @@ function GigCard({ gig }: { gig: LiveGig }) {
               )}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold leading-5 text-slate-700">
+              <p className="truncate text-[12px] font-semibold leading-5 text-slate-700 xl:text-[13px]">
                 {gig.providerName} <span className="font-medium text-slate-400">|</span>{" "}
                 <span className="font-medium text-slate-500">{gig.university}</span>
               </p>
             </div>
           </div>
 
-          <p className="mt-3 line-clamp-2 text-[12.5px] leading-5 text-slate-600">
+          <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-slate-600 xl:mt-3 xl:text-[12.5px]">
             {gig.summary}
           </p>
 
-          <div className="mt-auto border-t border-slate-200 pt-3">
+          <div className="mt-auto border-t border-slate-200 pt-2.5 sm:pt-3">
             <div className="text-[11px] text-slate-500">
               <span className="block truncate">{gig.availability}</span>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="mt-2.5 grid grid-cols-2 gap-2 min-[760px]:gap-1.5 xl:mt-3 xl:gap-2">
               <button
                 type="button"
                 onClick={() => setPreviewOpen(true)}

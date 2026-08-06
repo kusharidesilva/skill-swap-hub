@@ -59,38 +59,38 @@ export default function AboutPage({
           className="ssh-hero-orbit ssh-hero-orbit-right"
           aria-hidden="true"
         />
-        <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_72px)]">
-          <div className="ssh-hero-copy relative z-10 flex flex-col justify-center">
-            <span className="ssh-highlight-badge ssh-highlight-badge-blue inline-flex items-center gap-2 self-start rounded-full bg-[#dfe8ff] px-3 py-1 text-xs font-semibold text-[#315ccf]">
+        <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-10 sm:px-6 sm:py-12 md:py-14 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_72px)]">
+          <div className="ssh-hero-copy relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center justify-center text-center lg:mx-0 lg:max-w-none lg:items-start lg:text-left">
+            <span className="ssh-highlight-badge ssh-highlight-badge-blue inline-flex items-center gap-2 self-center rounded-full bg-[#dfe8ff] px-3 py-1 text-xs font-semibold text-[#315ccf] lg:self-start">
               WHY SKILL SWAP HUB
             </span>
-            <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl leading-tight">
+            <h1 className="mt-4 text-[clamp(1.9rem,4.6vw,2.45rem)] font-bold leading-[1.16] tracking-tight text-slate-900 lg:text-5xl lg:leading-tight">
               <span className="block">Empowering</span>
               <span className="block text-[#2b62e6]">Sri Lankan</span>
               <span className="block text-[#2b62e6]">University Students</span>
               <span className="block">to Grow Together.</span>
             </h1>
-            <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-[0.95rem] lg:mx-0 lg:max-w-xl lg:text-base">
               Skill Swap Hub is a trusted platform where verified Sri Lankan
               university students can offer skills and both students and buyers
               can request services, connect safely, and gain practical value.
             </p>
-            <div className="mt-6 flex flex-wrap gap-4">
+            <div className="mt-6 flex w-full flex-nowrap justify-center gap-3 sm:gap-4 lg:justify-start">
               <Link
                 href={primaryCtaHref}
-                className="ssh-primary-action rounded-lg bg-[#2b62e6] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+                className="ssh-primary-action inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-[#2b62e6] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1f55cc] min-[420px]:flex-none min-[420px]:px-5 sm:px-6 sm:py-3 sm:text-sm"
               >
                 {primaryCtaLabel}
               </Link>
               <Link
                 href={secondaryCtaHref}
-                className="ssh-secondary-action rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900"
+                className="ssh-secondary-action inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white/60 px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-xs transition hover:border-slate-300 hover:bg-white hover:text-slate-900 min-[420px]:flex-none min-[420px]:px-5 sm:px-6 sm:py-3 sm:text-sm"
               >
                 {secondaryCtaLabel}
               </Link>
             </div>
           </div>
-          <div className="ssh-hero-art relative flex items-end justify-center lg:justify-end -mb-5 lg:-mb-10 self-end lg:translate-x-16">
+          <div className="ssh-hero-art relative hidden items-end justify-center lg:flex lg:justify-end lg:-mb-10 self-end lg:translate-x-16">
             <Image
               src="/img/about%20img.png"
               alt="Student using a laptop"
@@ -106,8 +106,8 @@ export default function AboutPage({
 
       {/* Platform story and purpose */}
       <section id="story" className="ssh-section-clear bg-white scroll-mt-20">
-        <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1fr_1.05fr]">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 sm:px-6 sm:py-16 lg:grid-cols-[1fr_1.05fr] lg:gap-12">
+          <div className="hidden grid-cols-2 gap-4 lg:grid">
             {storyImages.map((image, index) => (
               <ScrollReveal key={image.src} delayMs={70 + index * 55}>
                 <div
@@ -180,7 +180,7 @@ export default function AboutPage({
 
       {/* Community values */}
       <section className="ssh-section-clear bg-white">
-        <div className="mx-auto max-w-6xl px-6 py-12">
+        <div className="mx-auto max-w-6xl px-5 py-12 sm:px-6">
           <ScrollReveal delayMs={30}>
             <div className="text-center">
               <h2 className="text-xl font-semibold text-slate-900">
@@ -191,11 +191,11 @@ export default function AboutPage({
               </p>
             </div>
           </ScrollReveal>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
+          <div className="mt-8 grid gap-4 sm:gap-5 md:grid-cols-3 lg:mt-10 lg:gap-6">
             {values.map((value, index) => (
               <ScrollReveal key={value.title} delayMs={90 + index * 70}>
                 <div
-                  className="ssh-card rounded-2xl border border-slate-100 bg-white p-6 shadow-sm"
+                  className="ssh-card rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6"
                 >
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef1ff] text-[#0f4cbf]">
                     <ValueIcon type={value.icon} className="h-5 w-5" />
@@ -215,7 +215,7 @@ export default function AboutPage({
 
       {/* Join the community call to action */}
       <section className="ssh-section-clear bg-white pb-16">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-6xl px-5 sm:px-6">
           <ScrollReveal delayMs={70}>
             <div className="ssh-cta-panel relative overflow-hidden rounded-3xl bg-[#0f4cbf] px-8 py-10 text-center text-white shadow-lg">
             <div className="absolute -left-10 top-10 h-32 w-32 rounded-full bg-white/10" />

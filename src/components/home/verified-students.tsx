@@ -38,8 +38,8 @@ const features: Feature[] = [
 export default function VerifiedStudentsSection() {
   return (
     // This section explains the trust checks behind the student community.
-    <section id="trust-section" className="ssh-section-band bg-[#f3f5ff] py-16 sm:py-20 scroll-mt-20">
-      <div className="mx-auto max-w-6xl px-6">
+    <section id="trust-section" className="ssh-section-band bg-[#f3f5ff] py-12 sm:py-16 lg:py-20 scroll-mt-20">
+      <div className="mx-auto max-w-6xl px-5 sm:px-6">
         <ScrollReveal delayMs={30}>
           <div className="text-center">
             <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl leading-tight">
@@ -51,18 +51,18 @@ export default function VerifiedStudentsSection() {
             </p>
           </div>
         </ScrollReveal>
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:gap-5 md:grid-cols-3 lg:mt-12 lg:gap-6">
           {features.map((feature, index) => (
             <ScrollReveal key={feature.title} delayMs={90 + index * 70}>
               <div
-                className="ssh-card group rounded-2xl bg-white p-6 border border-slate-100/80 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
+                className="ssh-card group rounded-2xl bg-white p-5 border border-slate-100/80 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md sm:p-6"
               >
                 <div
                   className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 ${feature.tone}`}
                 >
                   <feature.Icon className="h-6 w-6" aria-hidden="true" />
                 </div>
-                <h3 className="mt-5 text-base font-bold text-slate-900">
+                <h3 className="mt-4 text-base font-bold text-slate-900 sm:mt-5">
                   {feature.title}
                 </h3>
                 <p className="mt-2 text-sm sm:text-base leading-relaxed text-slate-600">

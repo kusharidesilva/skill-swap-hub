@@ -59,9 +59,9 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
         className="ssh-hero-orbit ssh-hero-orbit-right"
         aria-hidden="true"
       />
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-14 pb-0 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_72px)]"> 
-        <div className="ssh-hero-copy relative z-10"> 
-          <div className="flex flex-wrap items-center gap-3"> 
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-10 sm:px-6 sm:py-12 md:py-14 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_72px)]">
+        <div className="ssh-hero-copy relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center text-center lg:mx-0 lg:max-w-none lg:items-start lg:text-left">
+          <div className="flex flex-nowrap items-center justify-center gap-2 min-[420px]:gap-3 lg:justify-start">
             {highlights.map((item) => (
               <HighlightBadge
                 key={item.label}
@@ -70,19 +70,19 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
               />
             ))}
           </div>
-          <h1 className="mt-6 text-5xl font-bold tracking-tight text-slate-900 sm:text-6xl leading-[1.15]"> 
+          <h1 className="mt-5 text-[clamp(2.05rem,5vw,2.75rem)] font-bold leading-[1.12] tracking-tight text-slate-900 lg:mt-6 lg:text-6xl lg:leading-[1.15]">
             <span className="block">Exchange Skills</span>
-            <span className="block text-[#2b62e6]">Learn Together</span> 
+            <span className="block text-[#2b62e6]">Learn Together</span>
             <span className="block">Grow Faster</span>
           </h1>
-          <p className="mt-6 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base"> 
+          <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-[0.95rem] md:mt-6 lg:mx-0 lg:max-w-xl lg:text-base">
             A trusted platform where verified university students offer skills
             and both students and buyers can request services with confidence.
           </p>
-          <div className="mt-8 flex flex-wrap gap-4"> 
-            <Link 
+          <div className="mt-6 flex w-full flex-nowrap justify-center gap-3 sm:gap-4 md:mt-7 lg:justify-start">
+            <Link
               href={primaryHref}
-              className="ssh-primary-action rounded-lg bg-[#2b62e6] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]" 
+              className="ssh-primary-action inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-[#2b62e6] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1f55cc] min-[420px]:flex-none min-[420px]:px-5 sm:px-6 sm:py-3 sm:text-sm"
             >
               {primaryLabel}
             </Link>
@@ -93,43 +93,43 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
                 event.preventDefault();
                 setAuthModalOpen(true);
               }}
-              className="ssh-secondary-action rounded-lg border border-slate-200 bg-white/60 backdrop-blur-xs px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-white hover:border-slate-300 hover:text-slate-900" 
+              className="ssh-secondary-action inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white/60 px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-xs transition hover:border-slate-300 hover:bg-white hover:text-slate-900 min-[420px]:flex-none min-[420px]:px-5 sm:px-6 sm:py-3 sm:text-sm"
             >
               Explore Skills
             </Link>
           </div>
           <form
             onSubmit={handleSearchSubmit}
-            className="ssh-search-card mt-8 flex w-full max-w-xl items-center gap-3 rounded-xl bg-white p-1.5 shadow-md border border-slate-200/80"
+            className="ssh-search-card mx-auto mt-5 flex w-full max-w-lg flex-col items-stretch gap-1 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-[0_12px_28px_rgba(43,98,230,0.09)] backdrop-blur min-[500px]:flex-row min-[500px]:items-center min-[500px]:gap-1.5 md:mt-6 lg:mx-0 lg:max-w-xl"
             role="search"
           >
-            <div className="flex flex-1 items-center gap-2.5 px-3 text-slate-400"> 
-              <SearchIcon className="h-5 w-5 text-slate-400" aria-hidden="true" /> 
+            <div className="flex min-h-9 flex-1 items-center gap-2 rounded-xl px-3 text-slate-400 transition focus-within:bg-slate-50 min-[500px]:min-h-10">
+              <SearchIcon className="h-4 w-4 text-slate-400 sm:h-4.5 sm:w-4.5" aria-hidden="true" />
               <input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                className="min-w-0 flex-1 bg-transparent text-[13px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none sm:text-sm"
                 type="text"
                 placeholder="Search for skills or services"
               />
             </div>
             <button
               type="submit"
-              className="ssh-primary-action rounded-lg bg-[#2b62e6] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f55cc]"
+              className="ssh-primary-action min-h-9 rounded-xl bg-[#2b62e6] px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#1f55cc] min-[500px]:min-h-10 min-[500px]:w-auto min-[500px]:shrink-0 min-[500px]:px-5 sm:text-sm"
             >
               Search Skills
             </button>
           </form>
         </div>
-        <div className="ssh-hero-art relative flex items-end justify-center lg:justify-end -mb-5 lg:-mb-10 self-end lg:translate-x-16">
+        <div className="ssh-hero-art relative hidden items-end justify-center self-end lg:flex lg:justify-end lg:-mb-11 xl:translate-x-13">
           <Image
             src="/img/hero-illustration.png"
             alt="Student learning with laptop"
             width={720}
             height={720}
-            className="ssh-hero-image h-auto w-full max-w-md object-contain sm:max-w-lg lg:max-w-[630px] lg:w-[630px] transition-all duration-300 hover:scale-[1.02]"
+            className="ssh-hero-image h-auto w-full max-w-md object-contain sm:max-w-lg lg:w-[min(52vw,690px)] lg:max-w-none xl:w-[740px] transition-all duration-300 hover:scale-[1.02]"
             priority
-            sizes="(min-width: 1024px) 630px, 80vw"
+            sizes="(min-width: 1280px) 740px, (min-width: 1024px) 52vw, 80vw"
           />
         </div>
       </div>
@@ -143,18 +143,18 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
   );
 }
 
-function HighlightBadge({ 
-  label, 
-  Icon, 
-}: { 
-  label: string; 
-  Icon: IconType; 
-}) { 
-  return ( 
-    <span className="ssh-highlight-badge inline-flex items-center gap-1.5 rounded-full bg-[#e6fcf4] px-3 py-1 text-xs font-semibold text-[#0f8a6b] shadow-xs"> 
-      <Icon className="h-4 w-4" aria-hidden="true" /> 
-      {label} 
-    </span> 
+function HighlightBadge({
+  label,
+  Icon,
+}: {
+  label: string;
+  Icon: IconType;
+}) {
+  return (
+    <span className="ssh-highlight-badge inline-flex min-w-0 shrink items-center gap-1 rounded-full bg-[#e6fcf4] px-2 py-1 text-[10px] font-bold leading-none text-[#0f8a6b] shadow-xs min-[420px]:gap-1.5 min-[420px]:px-3 min-[420px]:text-xs">
+      <Icon className="h-3.5 w-3.5 shrink-0 min-[420px]:h-4 min-[420px]:w-4" aria-hidden="true" />
+      <span className="truncate">{label}</span>
+    </span>
   );
 }
 

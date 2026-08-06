@@ -333,10 +333,11 @@ export default function Navbar({ role: propRole }: NavbarProps) {
         {/* Hamburger Toggle Label (Mobile) */}
         <label
           htmlFor="nav-toggle"
-          className="absolute right-3 top-3 inline-flex cursor-pointer items-center rounded-md p-2 text-slate-700 transition-colors hover:text-slate-900 sm:right-5 sm:top-4 lg:hidden"
+          className="absolute right-3 top-3 inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200/80 bg-white/85 p-2 text-slate-700 shadow-sm backdrop-blur transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-[#0758d8] sm:right-5 sm:top-4 lg:hidden"
+          aria-label="Open navigation menu"
         >
           <svg
-            className="h-6 w-6"
+            className="h-5 w-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -350,41 +351,49 @@ export default function Navbar({ role: propRole }: NavbarProps) {
           </svg>
         </label>
 
+        <label
+          htmlFor="nav-toggle"
+          className="fixed inset-0 top-[68px] z-0 hidden cursor-default bg-transparent peer-checked:block sm:top-[72px] lg:hidden"
+          aria-label="Close navigation menu"
+        />
+
         {/* Mobile Menu */}
-        <div className="ssh-menu max-h-0 overflow-hidden border-b border-slate-200 bg-white/95 opacity-0 transition-[max-height,opacity] duration-300 ease-out peer-checked:max-h-[calc(100dvh-68px)] peer-checked:opacity-100 lg:hidden">
+        <div className="ssh-menu relative z-10 max-h-0 overflow-hidden border-b border-slate-200 bg-white/95 opacity-0 shadow-[0_18px_45px_rgba(15,23,42,0.08)] transition-[max-height,opacity] duration-300 ease-out peer-checked:max-h-[calc(100dvh-68px)] peer-checked:opacity-100 lg:hidden">
           <nav
             id="mobile-nav"
-            className="flex max-h-[calc(100dvh-68px)] flex-col gap-4 overflow-y-auto px-4 pb-5 pt-3 text-sm font-medium sm:px-6 sm:pb-6 sm:pt-4"
+            className="flex max-h-[calc(100dvh-68px)] flex-col gap-2 overflow-y-auto bg-linear-to-b from-white via-white to-[#f2fbfb] px-4 pb-4 pt-2.5 text-[13px] font-medium sm:px-5 sm:pb-5 sm:pt-3"
           >
-            {navLinks.map((link) => {
-              const isActive = currentActiveSection === link.name;
-              return (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className={`transition-colors font-semibold ${
-                    isActive
-                      ? "text-[#2b62e6]"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              );
-            })}
+            <div className="grid gap-1.5 rounded-2xl border border-slate-200/80 bg-white/85 p-1.5 shadow-[0_8px_20px_rgba(15,23,42,0.035)] backdrop-blur min-[520px]:grid-cols-2">
+              {navLinks.map((link) => {
+                const isActive = currentActiveSection === link.name;
+                return (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    className={`rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-all ${
+                      isActive
+                        ? "bg-[#eaf1ff] text-[#0758d8] shadow-[inset_0_0_0_1px_rgba(47,102,231,0.16)]"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    }`}
+                  >
+                    {link.name}
+                  </Link>
+                );
+              })}
+            </div>
 
-            <div className="mt-2 flex flex-col gap-3">
+            <div className="grid gap-1.5 rounded-2xl border border-slate-200/80 bg-white/85 p-1.5 shadow-[0_8px_20px_rgba(15,23,42,0.035)] backdrop-blur min-[520px]:grid-cols-2">
               {role === "guest" ? (
                 <>
                   <Link
                     href="/login"
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-600 hover:text-slate-900"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-[13px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
                     Login
                   </Link>
                   <Link
                     href="/get-started"
-                    className="ssh-primary-action rounded-xl bg-[#0f4cbf] px-5 py-3 text-center text-sm font-semibold text-white shadow-sm"
+                    className="ssh-primary-action rounded-xl bg-[#0f4cbf] px-4 py-2.5 text-center text-[13px] font-semibold text-white shadow-sm"
                   >
                     Get Started
                   </Link>
@@ -393,40 +402,40 @@ export default function Navbar({ role: propRole }: NavbarProps) {
                 <>
                   <Link
                     href={notificationsHref}
-                    className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-600 hover:text-slate-900"
+                    className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
                     Notifications
                     {showUnreadNotifications ? (
-                      <span className="ssh-pulse-dot h-2.5 w-2.5 rounded-full bg-[#2f66e7]" />
+                      <span className="ssh-pulse-dot h-2.5 w-2.5 rounded-full bg-[#2f66e7] ring-[3px] ring-[#e9f0ff]" />
                     ) : null}
                   </Link>
                   <Link
                     href={favoritesHref}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-600 hover:text-slate-900"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
                     Favorites
                   </Link>
                   <Link
                     href={profileHref}
-                    className="ssh-primary-action rounded-xl bg-[#0f4cbf] px-5 py-3 text-center text-sm font-semibold text-white shadow-sm"
+                    className="ssh-primary-action rounded-xl bg-linear-to-r from-[#2f66e7] to-[#0f4cbf] px-4 py-2.5 text-center text-[13px] font-semibold text-white shadow-sm"
                   >
                     Profile
                   </Link>
                   <Link
                     href={settingsHref}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-600 hover:text-slate-900"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
                     Settings
                   </Link>
                   <Link
                     href={helpHref(accountRole)}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-600 hover:text-slate-900"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
                     Help & Support
                   </Link>
                   <Link
                     href="/sign-out"
-                    className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-rose-600 hover:text-rose-700"
+                    className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2.5 text-[13px] font-semibold text-rose-600 transition hover:border-rose-200 hover:bg-rose-100 hover:text-rose-700"
                   >
                     Sign Out
                   </Link>
