@@ -146,8 +146,12 @@ export default function SkillGigsSection() {
           })
           .filter((gig) => gig.card.providerId)
           .filter((gig) => !(hideOwnGig && userProfile && gig.card.providerId === userProfile.uid))
-          .sort((a, b) => b.card.sortTime - a.card.sortTime)
-          .slice(0, 3);
+          .sort(
+            (a, b) =>
+              b.card.rating - a.card.rating ||
+              b.card.sortTime - a.card.sortTime,
+          )
+          .slice(0, 4);
 
         const liveGigs: LiveGig[] = gigRecords.map(({ card: gig }) => ({
           id: gig.id,
@@ -197,8 +201,8 @@ export default function SkillGigsSection() {
         </ScrollReveal>
 
         {loading ? (
-          <div className="mt-6 grid auto-rows-fr grid-cols-1 items-stretch justify-items-stretch gap-4 min-[560px]:grid-cols-2 min-[760px]:grid-cols-3 sm:mt-8 min-[760px]:gap-3 xl:gap-5">
-            {[1, 2, 3].map((i) => (
+          <div className="mt-6 grid auto-rows-fr grid-cols-1 items-stretch justify-items-stretch gap-4 min-[560px]:grid-cols-2 min-[760px]:grid-cols-3 min-[1280px]:grid-cols-4 sm:mt-8 min-[760px]:gap-3 xl:gap-5">
+            {[1, 2, 3, 4].map((i) => (
               <ScrollReveal key={i} delayMs={80 + i * 55} className="flex h-full w-full max-w-[19rem] justify-self-center min-[560px]:max-w-none">
                 <div className="ssh-card flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <div className="h-28 w-full animate-pulse bg-slate-200 sm:h-32 xl:h-36" />
@@ -224,7 +228,7 @@ export default function SkillGigsSection() {
             </div>
           </ScrollReveal>
         ) : (
-          <div className="mt-6 grid auto-rows-fr grid-cols-1 items-stretch justify-items-stretch gap-4 min-[560px]:grid-cols-2 min-[760px]:grid-cols-3 sm:mt-8 min-[760px]:gap-3 xl:gap-5">
+          <div className="mt-6 grid auto-rows-fr grid-cols-1 items-stretch justify-items-stretch gap-4 min-[560px]:grid-cols-2 min-[760px]:grid-cols-3 min-[1280px]:grid-cols-4 sm:mt-8 min-[760px]:gap-3 xl:gap-5">
             {gigs.map((gig, index) => (
               <ScrollReveal key={gig.id} delayMs={80 + index * 60} className="flex h-full w-full max-w-[19rem] justify-self-center min-[560px]:max-w-none">
                 <GigCard gig={gig} />

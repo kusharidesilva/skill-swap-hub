@@ -59,8 +59,8 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
         className="ssh-hero-orbit ssh-hero-orbit-right"
         aria-hidden="true"
       />
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-10 sm:px-6 sm:py-12 md:py-14 lg:grid-cols-2 lg:pt-12 lg:pb-0 lg:min-h-[calc(100vh_-_72px)]">
-        <div className="ssh-hero-copy relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center text-center lg:mx-0 lg:max-w-none lg:items-start lg:text-left">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-10 sm:px-6 sm:py-12 md:py-14 lg:grid-cols-[minmax(0,0.98fr)_minmax(0,0.82fr)] lg:items-center lg:gap-8 lg:pt-9 lg:pb-0 lg:min-h-[calc(100vh_-_72px)] xl:gap-10 xl:pt-10 xl:pb-0">
+        <div className="ssh-hero-copy relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center text-center lg:mx-0 lg:max-w-none lg:items-start lg:self-center lg:pt-0 lg:text-left xl:-mt-1">
           <div className="flex flex-nowrap items-center justify-center gap-2 min-[420px]:gap-3 lg:justify-start">
             {highlights.map((item) => (
               <HighlightBadge
@@ -70,12 +70,12 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
               />
             ))}
           </div>
-          <h1 className="mt-5 text-[clamp(2.05rem,5vw,2.75rem)] font-bold leading-[1.12] tracking-tight text-slate-900 lg:mt-6 lg:text-6xl lg:leading-[1.15]">
+          <h1 className="mt-5 text-[clamp(2.05rem,5vw,2.75rem)] font-bold leading-[1.12] tracking-tight text-slate-900 lg:mt-4 lg:text-[3.55rem] lg:leading-[1.03] xl:mt-5 xl:text-[3.85rem] 2xl:text-[4.05rem]">
             <span className="block">Exchange Skills</span>
             <span className="block text-[#2b62e6]">Learn Together</span>
             <span className="block">Grow Faster</span>
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-[0.95rem] md:mt-6 lg:mx-0 lg:max-w-xl lg:text-base">
+          <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-[0.95rem] md:mt-6 lg:mx-0 lg:max-w-[27rem] lg:text-[0.92rem] xl:max-w-[28rem]">
             A trusted platform where verified university students offer skills
             and both students and buyers can request services with confidence.
           </p>
@@ -100,7 +100,7 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
           </div>
           <form
             onSubmit={handleSearchSubmit}
-            className="ssh-search-card mx-auto mt-5 flex w-full max-w-lg flex-col items-stretch gap-1 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-[0_12px_28px_rgba(43,98,230,0.09)] backdrop-blur min-[500px]:flex-row min-[500px]:items-center min-[500px]:gap-1.5 md:mt-6 lg:mx-0 lg:max-w-xl"
+            className="ssh-search-card mx-auto mt-5 flex w-full max-w-lg flex-col items-stretch gap-1 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-[0_12px_28px_rgba(43,98,230,0.09)] backdrop-blur min-[500px]:flex-row min-[500px]:items-center min-[500px]:gap-1.5 md:mt-6 lg:mx-0 lg:max-w-[46rem]"
             role="search"
           >
             <div className="flex min-h-9 flex-1 items-center gap-2 rounded-xl px-3 text-slate-400 transition focus-within:bg-slate-50 min-[500px]:min-h-10">
@@ -121,15 +121,15 @@ export default function HeroSection({ role = "guest" }: HeroSectionProps) {
             </button>
           </form>
         </div>
-        <div className="ssh-hero-art relative hidden items-end justify-center self-end lg:flex lg:justify-end lg:-mb-11 xl:translate-x-13">
+        <div className="ssh-hero-art relative hidden items-end justify-center self-end lg:-mb-10 lg:flex lg:justify-end lg:self-end lg:translate-x-10 xl:-mb-10 xl:translate-x-14">
           <Image
             src="/img/hero-illustration.png"
             alt="Student learning with laptop"
             width={720}
             height={720}
-            className="ssh-hero-image h-auto w-full max-w-md object-contain sm:max-w-lg lg:w-[min(52vw,690px)] lg:max-w-none xl:w-[740px] transition-all duration-300 hover:scale-[1.02]"
+            className="ssh-hero-image h-auto w-full max-w-md object-contain sm:max-w-lg lg:w-[min(36vw,495px)] lg:max-w-none xl:w-[540px] 2xl:w-[580px] transition-all duration-300 hover:scale-[1.02]"
             priority
-            sizes="(min-width: 1280px) 740px, (min-width: 1024px) 52vw, 80vw"
+            sizes="(min-width: 1536px) 580px, (min-width: 1280px) 540px, (min-width: 1024px) 36vw, 80vw"
           />
         </div>
       </div>
