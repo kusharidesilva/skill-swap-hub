@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
+import {
+  collection,
+  getDocs,
+  onSnapshot,
+  query,
+  where,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { getVerificationBadge, type IdentityRole } from "@/lib/identity-badges";
+import ReviewCard from "@/components/reviews/review-card";
 
 type Role = "buyer" | "provider" | "both";
 type ReviewsTab = "received" | "given";
@@ -16,24 +23,25 @@ interface ReviewItem {
   partnerName: string;
   partnerUniversity: string;
   skill: string;
+  serviceCategory?: string;
   rating: number;
   comment: string;
-  isFromProvider?: boolean; // true if a provider left this review for the user (buyer)
+  isFromProvider?: boolean;
   partnerRole: IdentityRole;
 }
 
 export default function RatingsPageContent({ role }: RatingsPageContentProps) {
   const { userProfile, loading } = useAuth();
-  const [received, setReceived]   = useState<ReviewItem[]>([]);
-  const [given, setGiven]         = useState<ReviewItem[]>([]);
-  const [fetching, setFetching]   = useState(false);
-
-  // Start with feedback about the user, which is usually the most useful view.
+  const [received, setReceived] = useState<ReviewItem[]>([]);
+  const [given, setGiven] = useState<ReviewItem[]>([]);
+  const [fetching, setFetching] = useState(false);
   const [tab, setTab] = useState<ReviewsTab>("received");
   const [filterStars, setFilterStars] = useState<"all" | "5" | "4" | "3">("all");
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     if (!userProfile) return;
+    const currentUserId = userProfile.uid;
 
     async function load() {
       setFetching(true);
@@ -41,34 +49,35 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
         const receivedList: ReviewItem[] = [];
         const givenList: ReviewItem[] = [];
 
-        // Provider-side requests can contain reviews written in both directions.
         const asProviderSnap = await getDocs(
-          query(collection(db, "requests"),
-            where("providerId", "==", userProfile!.uid),
-            where("status", "==", "completed"))
+          query(
+            collection(db, "requests"),
+            where("providerId", "==", currentUserId),
+            where("status", "==", "completed"),
+          ),
         );
 
         asProviderSnap.forEach((d) => {
           const r = d.data();
-          // The buyer's review belongs in this user's received list.
           if (r.review && typeof r.review.rating === "number") {
             receivedList.push({
               id: `recv-prov-${d.id}`,
               partnerName: r.buyerName || "Anonymous Buyer",
               partnerUniversity: r.buyerUniversity || "Swap Partner",
               skill: r.title || "Skill Swap",
+              serviceCategory: r.category || "Service",
               rating: r.review.rating,
               comment: r.review.comment || "",
               partnerRole: "buyer",
             });
           }
-          // The provider's review belongs in this user's given list.
           if (r.providerReview && typeof r.providerReview.rating === "number") {
             givenList.push({
               id: `given-prov-${d.id}`,
               partnerName: r.buyerName || "Anonymous Buyer",
               partnerUniversity: r.buyerUniversity || "Swap Partner",
               skill: r.title || "Skill Swap",
+              serviceCategory: r.category || "Service",
               rating: r.providerReview.rating,
               comment: r.providerReview.comment || "",
               partnerRole: "buyer",
@@ -76,35 +85,36 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
           }
         });
 
-        // Buyer-side requests are mapped the same way from the opposite role.
         const asBuyerSnap = await getDocs(
-          query(collection(db, "requests"),
-            where("buyerId", "==", userProfile!.uid),
-            where("status", "==", "completed"))
+          query(
+            collection(db, "requests"),
+            where("buyerId", "==", currentUserId),
+            where("status", "==", "completed"),
+          ),
         );
 
         asBuyerSnap.forEach((d) => {
           const r = d.data();
-          // The provider's review belongs in this user's received list.
           if (r.providerReview && typeof r.providerReview.rating === "number") {
             receivedList.push({
               id: `recv-buyer-${d.id}`,
               partnerName: r.providerName || "Anonymous Provider",
               partnerUniversity: r.providerUniversity || "Swap Partner",
               skill: r.title || "Skill Swap",
+              serviceCategory: r.category || "Service",
               rating: r.providerReview.rating,
               comment: r.providerReview.comment || "",
               isFromProvider: true,
               partnerRole: "provider",
             });
           }
-          // The buyer's review belongs in this user's given list.
           if (r.review && typeof r.review.rating === "number") {
             givenList.push({
               id: `given-buyer-${d.id}`,
               partnerName: r.providerName || "Anonymous Provider",
               partnerUniversity: r.providerUniversity || "Swap Partner",
               skill: r.title || "Skill Swap",
+              serviceCategory: r.category || "Service",
               rating: r.review.rating,
               comment: r.review.comment || "",
               partnerRole: "provider",
@@ -123,13 +133,13 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
 
     const providerQuery = query(
       collection(db, "requests"),
-      where("providerId", "==", userProfile.uid),
-      where("status", "==", "completed")
+      where("providerId", "==", currentUserId),
+      where("status", "==", "completed"),
     );
     const buyerQuery = query(
       collection(db, "requests"),
-      where("buyerId", "==", userProfile.uid),
-      where("status", "==", "completed")
+      where("buyerId", "==", currentUserId),
+      where("status", "==", "completed"),
     );
 
     const unsubscribeProvider = onSnapshot(providerQuery, () => {
@@ -151,8 +161,23 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
     const n = Number(filterStars);
     return activeList.filter((r) => r.rating === n);
   }, [activeList, filterStars]);
+  const reviewsPerPage = filtered.length > 1 ? 2 : 1;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / reviewsPerPage));
+  const pagedReviews = filtered.slice(
+    page * reviewsPerPage,
+    page * reviewsPerPage + reviewsPerPage,
+  );
 
-  // Summary scores use received reviews only, never reviews written by the user.
+  useEffect(() => {
+    setPage(0);
+  }, [tab, filterStars, userProfile?.uid]);
+
+  useEffect(() => {
+    if (page > totalPages - 1) {
+      setPage(Math.max(0, totalPages - 1));
+    }
+  }, [page, totalPages]);
+
   const avgRating = received.length
     ? (received.reduce((s, r) => s + r.rating, 0) / received.length).toFixed(1)
     : "–";
@@ -160,7 +185,11 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
   const dist = [5, 4, 3, 2, 1].map((s) => ({
     star: s,
     count: received.filter((r) => r.rating === s).length,
-    pct: received.length ? Math.round((received.filter((r) => r.rating === s).length / received.length) * 100) : 0,
+    pct: received.length
+      ? Math.round(
+          (received.filter((r) => r.rating === s).length / received.length) * 100,
+        )
+      : 0,
   }));
 
   if (loading || fetching) {
@@ -173,21 +202,26 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
 
   return (
     <section className="space-y-5 pb-10">
-      {/* Rating summary and received/given tabs */}
       <header>
         <h1 className="text-xl font-bold text-slate-900">Ratings &amp; Reviews</h1>
-        <p className="mt-1 text-xs text-slate-500">Manage your reputation and view feedback from your swap partners.</p>
+        <p className="mt-1 text-xs text-slate-500">
+          Manage your reputation and view feedback from your swap partners.
+        </p>
       </header>
 
-      {/* Stats row - Hidden for pure buyers who do not have public listing stats */}
       {role !== "buyer" && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm text-center">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Rating</p>
-            <p className="mt-2 text-4xl font-bold leading-none text-[#1453c4]">{avgRating}</p>
+          <article className="rounded-xl border border-slate-200 bg-white p-5 text-center shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Rating
+            </p>
+            <p className="mt-2 text-4xl font-bold leading-none text-[#1453c4]">
+              {avgRating}
+            </p>
             <p className="mt-2 text-lg leading-none text-amber-500">
-              {avgRating !== "–" 
-                ? "★".repeat(Math.round(Number(avgRating) || 0)) + "☆".repeat(5 - Math.round(Number(avgRating) || 0)) 
+              {avgRating !== "–"
+                ? "★".repeat(Math.round(Number(avgRating) || 0)) +
+                  "☆".repeat(5 - Math.round(Number(avgRating) || 0))
                 : "☆☆☆☆☆"}
             </p>
           </article>
@@ -197,10 +231,16 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
             <div className="mt-3 grid gap-4 sm:grid-cols-[minmax(0,1fr)_80px] sm:items-center">
               <div className="space-y-1.5">
                 {dist.map(({ star, pct }) => (
-                  <div key={star} className="grid grid-cols-[14px_minmax(0,1fr)_28px] items-center gap-1.5 text-xs text-slate-600">
+                  <div
+                    key={star}
+                    className="grid grid-cols-[14px_minmax(0,1fr)_28px] items-center gap-1.5 text-xs text-slate-600"
+                  >
                     <span>{star}</span>
                     <div className="h-1.5 rounded-full bg-slate-100">
-                      <div className="h-full rounded-full bg-[#1453c4]" style={{ width: `${pct}%` }} />
+                      <div
+                        className="h-full rounded-full bg-[#1453c4]"
+                        style={{ width: `${pct}%` }}
+                      />
                     </div>
                     <span className="text-right">{pct}%</span>
                   </div>
@@ -215,23 +255,31 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
         </div>
       )}
 
-      {/* Tabs */}
       <div className="flex items-center gap-5 border-b border-slate-200">
         <button
           onClick={() => setTab("received")}
           className={`border-b-2 pb-2.5 text-sm font-semibold ${tab === "received" ? "border-[#1453c4] text-[#1453c4]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
         >
-          Reviews Received {received.length > 0 && <span className="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px]">{received.length}</span>}
+          Reviews Received{" "}
+          {received.length > 0 && (
+            <span className="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px]">
+              {received.length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setTab("given")}
           className={`border-b-2 pb-2.5 text-sm font-semibold ${tab === "given" ? "border-[#1453c4] text-[#1453c4]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
         >
-          Reviews Given {given.length > 0 && <span className="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px]">{given.length}</span>}
+          Reviews Given{" "}
+          {given.length > 0 && (
+            <span className="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px]">
+              {given.length}
+            </span>
+          )}
         </button>
       </div>
 
-      {/* Filter pills */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-slate-500">Filter:</span>
         {(["all", "5", "4", "3"] as const).map((v) => (
@@ -245,54 +293,109 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
         ))}
       </div>
 
-      {/* Review list */}
       <div className="space-y-3">
+        {filtered.length > 0 ? (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.03)]">
+            <div>
+              <p className="text-sm font-bold text-slate-900">
+                {tab === "received" ? "Feedback you received" : "Feedback you shared"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {filtered.length} review{filtered.length !== 1 ? "s" : ""} available
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-400">
+                {page + 1} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(0, current - 1))}
+                disabled={page === 0}
+                aria-label="Previous reviews"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-[#1453c4] hover:text-[#1453c4] disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <ChevronLeftIcon />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setPage((current) => Math.min(totalPages - 1, current + 1))
+                }
+                disabled={page >= totalPages - 1}
+                aria-label="Next reviews"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-[#1453c4] hover:text-[#1453c4] disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <ChevronRightIcon />
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-sm text-slate-400">
             No reviews found.
           </div>
         ) : (
-          filtered.map((review) => (
-            <article key={review.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-[#2f66e7]">
-                    {review.partnerName.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-bold text-slate-900">{review.partnerName}</p>
-                      {getVerificationBadge(review.partnerRole, review.partnerRole !== "buyer") ? (
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.25 text-[9px] font-extrabold ${getVerificationBadge(review.partnerRole, review.partnerRole !== "buyer")?.className}`}>
-                          <VerifiedBadgeIcon className={`h-3 w-3 ${getVerificationBadge(review.partnerRole, review.partnerRole !== "buyer")?.iconClassName}`} />
-                          {getVerificationBadge(review.partnerRole, review.partnerRole !== "buyer")?.label}
-                        </span>
-                      ) : null}
-                    </div>
-                    {review.partnerUniversity && (
-                      <p className="text-[11px] text-slate-400">{review.partnerUniversity}</p>
-                    )}
-                    <p className="mt-0.5 text-amber-500 text-xs">
-                      {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
-                    </p>
-                  </div>
-                </div>
-                <span className="rounded-full bg-teal-100 px-2.5 py-0.5 text-[10px] font-bold text-teal-700 shrink-0">{review.skill}</span>
-              </div>
-              <p className="mt-3 text-xs leading-relaxed text-slate-700">&ldquo;{review.comment}&rdquo;</p>
-            </article>
-          ))
+          <div className="grid gap-3 xl:grid-cols-2">
+            {pagedReviews.map((review) => (
+              <ReviewCard
+                key={review.id}
+                reviewerName={review.partnerName}
+                reviewerMeta={review.partnerUniversity}
+                rating={review.rating}
+                comment={review.comment}
+                serviceTitle={review.skill}
+                serviceCategory={review.serviceCategory}
+                contextLabel={tab === "received" ? "Reviewed Service" : "Rated Service"}
+                directionLabel={tab === "received" ? "Received" : "Given"}
+                roleLabel={
+                  getVerificationBadge(review.partnerRole, review.partnerRole !== "buyer")
+                    ?.label ||
+                  (review.partnerRole === "buyer" ? "Buyer" : "Provider")
+                }
+                tone={tab === "received" ? "blue" : "amber"}
+                compact
+                className="h-full border-slate-200/70"
+              />
+            ))}
+          </div>
         )}
       </div>
     </section>
   );
 }
 
-function VerifiedBadgeIcon({ className }: { className?: string }) {
+function ChevronLeftIcon() {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
-      <path d="M12 2.8 14.1 5l3-.5.9 2.9 2.8 1.3-1.4 2.7 1.4 2.7-2.8 1.3-.9 2.9-3-.5L12 20l-2.1-2.2-3 .5-.9-2.9-2.8-1.3 1.4-2.7-1.4-2.7L6 7.4l.9-2.9 3 .5z" />
-      <path d="m9.6 12.1 1.6 1.6 3.4-3.5" fill="none" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m9 18 6-6-6-6" />
     </svg>
   );
 }

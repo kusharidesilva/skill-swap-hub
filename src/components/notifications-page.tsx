@@ -1,27 +1,27 @@
-"use client";
+"use client"; 
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { db } from "@/lib/firebase";
+import { useEffect, useState } from "react"; 
+import { useRouter } from "next/navigation"; 
+import { useAuth } from "@/context/AuthContext"; 
+import { db } from "@/lib/firebase"; 
 import ReportActionModal from "@/components/report-action-modal";
 import { dashboardHref, resolveRole, scopedHref } from "@/lib/role-routes";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-  doc,
-  getDoc,
-  updateDoc,
-  deleteDoc,
-} from "firebase/firestore";
+import { 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot, 
+  doc, 
+  getDoc, 
+  updateDoc, 
+  deleteDoc, 
+} from "firebase/firestore"; 
 import type { ModerationAction } from "@/lib/moderation";
 
 interface NotificationItem {
   id: string;
-  title: string;
+  title: string; 
   description: string;
   time: string;
   tone: "blue" | "emerald" | "green" | "teal" | "indigo" | "red";

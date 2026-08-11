@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
 
 import { useAuth } from "@/context/AuthContext";
@@ -15,6 +15,7 @@ import { scopedHref, type Role } from "@/lib/role-routes";
 import type { ProviderGig } from "@/lib/auth";
 import { getVerificationBadge } from "@/lib/identity-badges";
 import { getGigCoverForCategory } from "@/lib/gig-covers";
+import ReviewCard from "@/components/reviews/review-card";
 
 type ProviderProfilePublicPageProps = {
   providerId: string;
@@ -34,12 +35,12 @@ type PublicGig = {
 
 type PublicReview = {
   id: string;
-  name: string;
-  initials: string;
-  meta: string;
-  quote: string;
+  reviewerName: string;
+  reviewerMeta: string;
+  serviceTitle: string;
+  serviceCategory: string;
+  comment: string;
   rating: number;
-  avatarTone: string;
 };
 
 type ProviderProfileData = {
@@ -66,9 +67,11 @@ type FirestoreReview = {
 type FirebaseRequestDoc = {
   id: string;
   title?: string;
+  category?: string;
   status?: string;
   createdAt?: { toDate?: () => Date } | Date | string | number | null;
   buyerName?: string;
+  buyerUniversity?: string;
   review?: FirestoreReview;
 };
 
@@ -103,6 +106,7 @@ export default function ProviderProfilePublicPage({
   const [profile, setProfile] = useState<ProviderProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPrivateProfile, setIsPrivateProfile] = useState(false);
+  const [reviewPage, setReviewPage] = useState(0);
 
   const getGigFavoriteKey = (gigId: string) => `${providerId}-${gigId}`;
 
@@ -118,6 +122,14 @@ export default function ProviderProfilePublicPage({
       (fav) => (fav as { gigId?: string }).gigId === getGigFavoriteKey(gigId),
     ) || false;
 
+  const reviewsPerPage = 2;
+  const totalReviewPages = Math.max(1, Math.ceil((profile?.reviews.length || 0) / reviewsPerPage));
+  const visibleReviews = useMemo(() => {
+    if (!profile) return [];
+    const start = reviewPage * reviewsPerPage;
+    return profile.reviews.slice(start, start + reviewsPerPage);
+  }, [profile, reviewPage]);
+
   useEffect(() => {
     let active = true;
 
@@ -130,6 +142,7 @@ export default function ProviderProfilePublicPage({
 
         if (!userSnap.exists()) {
           setProfile(null);
+          setReviewPage(0);
           setLoading(false);
           return;
         }
@@ -141,11 +154,13 @@ export default function ProviderProfilePublicPage({
         if (member.settings?.profileVisibility === false && !isOwnerViewing) {
           setIsPrivateProfile(true);
           setProfile(null);
+          setReviewPage(0);
           setLoading(false);
           return;
         }
 
         setIsPrivateProfile(false);
+        setReviewPage(0);
 
         // Reject buyer-only records instead of showing an empty provider profile.
         const isProviderMember =
@@ -155,6 +170,7 @@ export default function ProviderProfilePublicPage({
 
         if (!isProviderMember) {
           setProfile(null);
+          setReviewPage(0);
           setLoading(false);
           return;
         }
@@ -175,10 +191,12 @@ export default function ProviderProfilePublicPage({
         );
 
         setProfile(buildProviderProfile(member, providerId, completedRequests));
+        setReviewPage(0);
       } catch (error) {
         console.error("Error loading provider public profile:", error);
         if (active) {
           setProfile(null);
+          setReviewPage(0);
         }
       } finally {
         if (active) {
@@ -537,13 +555,51 @@ export default function ProviderProfilePublicPage({
             <EmptyPanel message="No offered gigs or services listed yet." />
           )
         ) : (
-          <div className="mt-5 space-y-4">
-            <h2 className="text-lg font-semibold text-[#1453c4]">Recent Feedback</h2>
-            {profile.reviews.length > 0 ? (
-              profile.reviews.map((review) => <FeedbackCard key={review.id} review={review} />)
-            ) : (
-              <EmptyPanel message="No reviews received yet." />
-            )}
+          <div className="mt-5 rounded-[1.15rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div className="rounded-[1.05rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.92),rgba(255,255,255,1))] px-4 py-3.5 shadow-[0_8px_22px_rgba(15,23,42,0.025)] sm:px-5">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <h2 className="text-lg font-semibold text-[#1453c4]">Recent Feedback</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {profile.reviews.length} review{profile.reviews.length !== 1 ? "s" : ""} available
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-slate-400">
+                    {Math.min(reviewPage + 1, totalReviewPages)} / {totalReviewPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setReviewPage((current) => Math.max(0, current - 1))}
+                    disabled={reviewPage === 0}
+                    aria-label="Previous reviews"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-[#2b62e6] hover:text-[#2b62e6] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronLeftIcon />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setReviewPage((current) => Math.min(totalReviewPages - 1, current + 1))
+                    }
+                    disabled={reviewPage >= totalReviewPages - 1}
+                    aria-label="Next reviews"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-[#2b62e6] hover:text-[#2b62e6] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronRightIcon />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 xl:grid-cols-2">
+              {profile.reviews.length > 0 ? (
+                visibleReviews.map((review) => <FeedbackCard key={review.id} review={review} />)
+              ) : (
+                <EmptyPanel message="No reviews received yet." />
+              )}
+            </div>
           </div>
         )}
       </section>
@@ -597,23 +653,49 @@ function MetricCard({
 
 function FeedbackCard({ review }: { review: PublicReview }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-[#f7f8ff] p-3 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span
-            className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${review.avatarTone}`}
-          >
-            {review.initials}
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-slate-900">{review.name}</p>
-            <p className="break-words text-xs text-slate-500">{review.meta}</p>
-          </div>
-        </div>
-        <p className="text-lg text-teal-700">{buildStars(String(review.rating))}</p>
-      </div>
-      <p className="mt-2 break-words text-xs leading-5 text-slate-700">{review.quote}</p>
-    </article>
+    <ReviewCard
+      reviewerName={review.reviewerName}
+      reviewerMeta={review.reviewerMeta}
+      rating={review.rating}
+      comment={review.comment}
+      serviceTitle={review.serviceTitle}
+      serviceCategory={review.serviceCategory}
+      contextLabel="Reviewed Gig"
+      directionLabel="Received"
+      roleLabel="Buyer"
+      tone="teal"
+      compact
+      tight
+      className="h-full border-slate-200/70"
+    />
+  );
+}
+
+function ChevronLeftIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-[18px] w-[18px]">
+      <path
+        d="M11.75 4.5L6.25 10L11.75 15.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-[18px] w-[18px]">
+      <path
+        d="M8.25 4.5L13.75 10L8.25 15.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -713,12 +795,12 @@ function buildProviderProfile(
       const buyerName = request.buyerName || "Anonymous Buyer";
       return {
         id: request.id,
-        name: buyerName,
-        initials: buildInitials(buyerName),
-        meta: `${formatDateLabel(request.createdAt)} | Swap: ${request.title || "Skill Swap"}`,
-        quote: request.review?.comment || "Outstanding swap session!",
+        reviewerName: buyerName,
+        reviewerMeta: `${request.buyerUniversity || "Community Member"} | ${formatDateLabel(request.createdAt)}`,
+        serviceTitle: request.title || "Skill Swap",
+        serviceCategory: request.category || "Service",
+        comment: request.review?.comment || "Outstanding swap session!",
         rating: request.review?.rating || 5,
-        avatarTone: "bg-[#2f66e7] text-white",
       };
     });
 
@@ -737,15 +819,6 @@ function buildProviderProfile(
     gigs,
     reviews,
   };
-}
-
-function buildInitials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 }
 
 function fallbackGigImage(index: number) {

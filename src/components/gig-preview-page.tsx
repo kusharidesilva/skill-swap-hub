@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 import { createNotification } from "@/lib/notifications";
 import { inferServiceCategory } from "@/lib/platform";
 import { getGigCoverForCategory } from "@/lib/gig-covers";
+import ReviewFeedbackCard from "@/components/reviews/review-card";
 
 type GigPreviewPageProps = {
   role: SiteRole;
@@ -29,8 +30,11 @@ type GigPreviewPageProps = {
 
 type ReviewData = {
   name: string;
+  meta?: string;
   rating: number;
   quote: string;
+  serviceTitle?: string;
+  serviceCategory?: string;
 };
 
 type GigPreviewData = {
@@ -289,10 +293,13 @@ export default function GigPreviewPage({
             if (reviewCards.length < 2) {
               reviewCards.push({
                 name: request.buyerName || "Student buyer",
+                meta: formatReviewDateLabel(request.createdAt),
                 rating,
                 quote:
                   request.review.comment ||
                   "Helpful, clear, and reliable support throughout the swap.",
+                serviceTitle: gigMatchTarget.title,
+                serviceCategory: gigMatchTarget.category,
               });
             }
           });
@@ -844,7 +851,7 @@ function ReviewsSection({ reviews }: { reviews: ReviewData[] }) {
   if (reviews.length === 0) {
     return (
       <section className="space-y-2.5">
-        <h2 className="text-[1.35rem] font-bold text-slate-900">What people say about this swap</h2>
+        <h2 className="text-[1.35rem] font-bold text-slate-900">Reviews for this service</h2>
         <div className="rounded-[24px] border border-slate-200 bg-white px-5 py-8 text-sm text-slate-500 shadow-[0_14px_34px_rgba(15,23,42,0.05)]">
           No ratings or reviews yet.
         </div>
@@ -854,7 +861,7 @@ function ReviewsSection({ reviews }: { reviews: ReviewData[] }) {
 
   return (
       <section className="space-y-2.5">
-        <h2 className="text-[1.35rem] font-bold text-slate-900">What people say about this swap</h2>
+        <h2 className="text-[1.35rem] font-bold text-slate-900">Reviews for this service</h2>
         <div className="grid gap-3 md:grid-cols-2">
         {reviews.slice(0, 2).map((review, index) => (
             <ReviewCard
@@ -876,24 +883,18 @@ function ReviewCard({
   accent?: "blue" | "teal";
 }) {
   return (
-    <article className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.05)] lg:p-5">
-      <div className="flex items-center gap-3">
-        <span
-          className={`flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-bold text-white ${
-            accent === "teal" ? "bg-teal-600" : "bg-[#2f66e7]"
-          }`}
-        >
-          {getInitials(review.name).slice(0, 1)}
-        </span>
-        <div>
-          <h3 className="text-sm font-bold text-slate-900">{review.name}</h3>
-          <p className="text-xs font-semibold text-teal-700">
-            {formatRatingLabel(review.rating)} rating
-          </p>
-        </div>
-      </div>
-      <p className="mt-3 break-words text-sm leading-6 text-slate-700">&quot;{review.quote}&quot;</p>
-    </article>
+    <ReviewFeedbackCard
+      reviewerName={review.name}
+      reviewerMeta={review.meta}
+      rating={review.rating}
+      comment={review.quote}
+      serviceTitle={review.serviceTitle}
+      serviceCategory={review.serviceCategory}
+      contextLabel="Reviewed Gig"
+      directionLabel="Buyer Review"
+      roleLabel="Completed Swap"
+      tone={accent === "teal" ? "teal" : "blue"}
+    />
   );
 }
 
@@ -937,6 +938,26 @@ function slugSegment(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80) || "gig";
+}
+
+function formatReviewDateLabel(value: unknown) {
+  if (!value) return "Completed swap review";
+
+  const rawDate = value as { toDate?: () => Date } | Date | string | number;
+  const date =
+    typeof (rawDate as { toDate?: () => Date }).toDate === "function"
+      ? (rawDate as { toDate: () => Date }).toDate()
+      : new Date(rawDate as string | number | Date);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Completed swap review";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function formatAvailability(availability?: string[]) {

@@ -8,6 +8,7 @@ import {
   getVerificationBadge,
   type IdentityRole,
 } from "@/lib/identity-badges";
+import ReviewCard from "@/components/reviews/review-card";
 
 export type Role = "buyer" | "provider" | "both";
 
@@ -25,8 +26,15 @@ export default function Profile({ role: propRole }: { role: Role }) {
   const { userProfile, loading } = useAuth();
   const [swapsCount, setSwapsCount] = useState(0);
   const [averageRating, setAverageRating] = useState<number | null>(null);
+  const [reviewPage, setReviewPage] = useState(0);
   const [reviewsList, setReviewsList] = useState<
-    { rating: number; comment: string; reviewer: string }[]
+    {
+      rating: number;
+      comment: string;
+      reviewer: string;
+      serviceTitle: string;
+      serviceCategory: string;
+    }[]
   >([]);
 
   useEffect(() => {
@@ -50,7 +58,13 @@ export default function Profile({ role: propRole }: { role: Role }) {
         const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
         if (!active) return;
 
-        const list: { rating: number; comment: string; reviewer: string }[] = [];
+        const list: {
+          rating: number;
+          comment: string;
+          reviewer: string;
+          serviceTitle: string;
+          serviceCategory: string;
+        }[] = [];
         let totalRating = 0;
         let count = 0;
 
@@ -61,6 +75,8 @@ export default function Profile({ role: propRole }: { role: Role }) {
               rating: data.review.rating,
               comment: data.review.comment,
               reviewer: data.buyerName || "Buyer",
+              serviceTitle: data.title || "Skill Swap",
+              serviceCategory: data.category || "Service",
             });
             totalRating += data.review.rating;
             count += 1;
@@ -74,6 +90,8 @@ export default function Profile({ role: propRole }: { role: Role }) {
               rating: data.providerReview.rating,
               comment: data.providerReview.comment,
               reviewer: data.providerName || "Provider",
+              serviceTitle: data.title || "Skill Swap",
+              serviceCategory: data.category || "Service",
             });
             totalRating += data.providerReview.rating;
             count += 1;
@@ -151,10 +169,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
         .join(" - ");
 
   const offeredSkills = userProfile.providerProfile?.skills || [];
-  const neededSkills = userProfile.neededSkills || [];
   const showOffered = displayRole === "provider" || displayRole === "both";
-  const showNeeded = displayRole === "buyer" || displayRole === "both";
-  const showProfileSidebar = showOffered;
 
   const availabilitySlots = userProfile.providerProfile?.availability || [];
   const activeDays = new Set<string>();
@@ -164,17 +179,36 @@ export default function Profile({ role: propRole }: { role: Role }) {
     }
   });
   const previewSlots = availabilitySlots.slice(0, 3);
-  const remainingSlotCount = Math.max(availabilitySlots.length - previewSlots.length, 0);
+  const remainingSlotCount = Math.max(
+    availabilitySlots.length - previewSlots.length,
+    0,
+  );
   const preferredSlotsLabel = availabilitySlots.length
     ? `${previewSlots.join(", ")}${remainingSlotCount > 0 ? ` +${remainingSlotCount} more` : ""}`
     : "Not added yet";
+  const reviewsPerPage = reviewsList.length > 1 ? 2 : 1;
+  const totalReviewPages = Math.max(
+    1,
+    Math.ceil(reviewsList.length / reviewsPerPage),
+  );
+  const visibleReviews = reviewsList.slice(
+    reviewPage * reviewsPerPage,
+    reviewPage * reviewsPerPage + reviewsPerPage,
+  );
+
+  useEffect(() => {
+    if (reviewPage > totalReviewPages - 1) {
+      setReviewPage(Math.max(0, totalReviewPages - 1));
+    }
+  }, [reviewPage, totalReviewPages]);
 
   return (
-    <div className="profile-steady-cards flex flex-col gap-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 md:p-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-5 sm:items-center">
-            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 shadow-inner">
+    <div className="profile-steady-cards flex flex-col gap-5 sm:gap-6">
+      <section className="overflow-hidden rounded-[1.35rem] border border-slate-200/80 bg-white shadow-[0_16px_45px_rgba(15,23,42,0.04)]">
+        <div className="h-2 bg-gradient-to-r from-[#2b62e6] via-[#4fd8c2] to-[#e8fbf6]" />
+        <div className="grid gap-6 p-5 sm:p-6 md:p-7 lg:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)] lg:items-stretch">
+          <div className="flex min-w-0 flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:text-left">
+            <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white bg-slate-100 shadow-[0_12px_30px_rgba(43,98,230,0.14)] sm:h-24 sm:w-24">
               {userProfile.profileImageUrl ? (
                 <img
                   src={userProfile.profileImageUrl}
@@ -182,29 +216,35 @@ export default function Profile({ role: propRole }: { role: Role }) {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-blue-500 to-[#2b62e6] text-xl font-bold text-white">
+                <span className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-blue-500 to-[#2b62e6] text-2xl font-bold text-white">
                   {name.charAt(0).toUpperCase()}
                 </span>
               )}
             </div>
 
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-xl font-semibold text-slate-900">{name}</h1>
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                <h1 className="text-2xl font-bold leading-tight text-slate-950 sm:text-[1.7rem]">
+                  {name}
+                </h1>
                 {verificationBadge ? (
-                  <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${verificationBadge.className}`}>
-                    <VerifiedIcon className={`h-3.5 w-3.5 ${verificationBadge.iconClassName}`} />
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ring-1 ring-inset ${verificationBadge.className}`}
+                  >
+                    <VerifiedIcon
+                      className={`h-3.5 w-3.5 ${verificationBadge.iconClassName}`}
+                    />
                     {verificationBadge.label}
                   </span>
                 ) : null}
               </div>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-2 text-sm font-medium leading-5 text-slate-500">
                 {academicLine || "Profile details not added yet"}
               </p>
 
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                <div className="flex items-center gap-2">
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-600 sm:justify-start">
+                <div className="inline-flex min-h-9 items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                     <StarIcon />
                   </span>
@@ -217,38 +257,33 @@ export default function Profile({ role: propRole }: { role: Role }) {
                       : "(No reviews yet)"}
                   </span>
                 </div>
-                <span className="text-slate-400">|</span>
-                <span className="font-semibold text-slate-700">
+                <span className="inline-flex min-h-9 items-center rounded-full border border-slate-200 bg-slate-50 px-4 font-semibold text-slate-700">
                   {swapsCount} swaps
                 </span>
               </div>
             </div>
           </div>
+
+          <div className="border-t border-slate-200/80 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+            <div className="flex items-center gap-3 text-sm font-bold text-slate-800">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                i
+              </span>
+              About {name.split(" ")[0]}
+            </div>
+            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">
+              {bio}
+            </p>
+          </div>
         </div>
       </section>
 
-      <section
-        className={`grid gap-6 ${
-          showProfileSidebar ? "xl:grid-cols-[2fr_1fr]" : "xl:grid-cols-1"
-        }`}
-      >
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-              i
-            </span>
-            About {name.split(" ")[0]}
-          </div>
-          <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">
-            {bio}
-          </p>
-        </div>
-
-        <div className={`flex flex-col gap-4 ${showProfileSidebar ? "" : "hidden"}`}>
+      <section className={`${showOffered ? "block" : "hidden"}`}>
+        <div className="flex flex-col gap-4">
           {showOffered && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+            <div className="h-full rounded-[1.15rem] border border-emerald-100 bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.035)] sm:p-6">
+              <div className="flex items-center gap-3 text-sm font-bold text-slate-800">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
                   <CheckIcon />
                 </span>
                 Skills I Can Offer
@@ -258,7 +293,7 @@ export default function Profile({ role: propRole }: { role: Role }) {
                   offeredSkills.map((skill) => (
                     <span
                       key={skill}
-                      className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+                      className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-bold leading-4 text-emerald-700"
                     >
                       {skill}
                     </span>
@@ -271,69 +306,73 @@ export default function Profile({ role: propRole }: { role: Role }) {
               </div>
             </div>
           )}
-
-          {/* Keep the buyer "Skills I Need" card hidden for now.
-          {showNeeded && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                  <CheckIcon />
-                </span>
-                Skills I Need
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {neededSkills.length > 0 ? (
-                  neededSkills.map((skill: string) => (
-                    <span
-                      key={skill}
-                      className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700"
-                    >
-                      {skill}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-xs text-slate-400">No needed skills listed yet.</p>
-                )}
-              </div>
-            </div>
-          )}
-          */}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-              <SparkIcon />
-            </span>
-            Recent Reviews
+      <section className="rounded-[1.15rem] border border-slate-200/80 bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.035)] sm:p-6">
+        <div className="rounded-[1.05rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.92),rgba(255,255,255,1))] px-4 py-3.5 shadow-[0_8px_22px_rgba(15,23,42,0.025)] sm:px-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-3 text-sm font-bold text-slate-800">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-[#2b62e6]">
+                  <SparkIcon />
+                </span>
+                Feedback you received
+              </div>
+              <p className="mt-1 text-sm text-slate-500">
+                {reviewsList.length} review{reviewsList.length !== 1 ? "s" : ""} available
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-400">
+                {Math.min(reviewPage + 1, totalReviewPages)} / {totalReviewPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setReviewPage((current) => Math.max(0, current - 1))}
+                disabled={reviewPage === 0}
+                aria-label="Previous reviews"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-[#2b62e6] hover:text-[#2b62e6] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeftIcon />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setReviewPage((current) => Math.min(totalReviewPages - 1, current + 1))
+                }
+                disabled={reviewPage >= totalReviewPages - 1}
+                aria-label="Next reviews"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-[#2b62e6] hover:text-[#2b62e6] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronRightIcon />
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4">
+        <div className="mt-4 grid gap-3 xl:grid-cols-2">
           {reviewsList.length > 0 ? (
-            reviewsList.map((rev, index) => (
-              <div
-                key={index}
-                className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700">
-                    {rev.reviewer}
-                  </span>
-                  <span className="text-xs font-bold text-amber-500">
-                    {"★".repeat(rev.rating)}
-                    {"☆".repeat(5 - rev.rating)}
-                  </span>
-                </div>
-                <p className="text-xs italic text-slate-600">
-                  &ldquo;{rev.comment}&rdquo;
-                </p>
-              </div>
+            visibleReviews.map((rev, index) => (
+              <ReviewCard
+                key={`${rev.reviewer}-${rev.serviceTitle}-${index}`}
+                reviewerName={rev.reviewer}
+                rating={rev.rating}
+                comment={rev.comment}
+                serviceTitle={rev.serviceTitle}
+                serviceCategory={rev.serviceCategory}
+                contextLabel="Reviewed Service"
+                directionLabel="Received"
+                roleLabel="Community Review"
+                tone="blue"
+                compact
+                tight
+                className="h-full border-slate-200/70"
+              />
             ))
           ) : (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-8 text-center">
+            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
               <p className="text-sm text-slate-500">
                 No reviews yet. Complete your first swap to receive reviews!
               </p>
@@ -343,21 +382,21 @@ export default function Profile({ role: propRole }: { role: Role }) {
       </section>
 
       {showOffered && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-6">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+        <section className="rounded-[1.15rem] border border-slate-200/80 bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.035)] sm:p-6">
+          <div className="flex items-center gap-3 text-sm font-bold text-slate-800">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
               <DotIcon />
             </span>
             Available for Swaps
           </div>
-          <p className="mt-2 break-words text-xs leading-5 text-slate-500">
+          <p className="mt-3 break-words text-sm leading-6 text-slate-500">
             Preferred slots: {preferredSlotsLabel}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {availableDays.map((day) => (
               <span
                 key={day.short}
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                className={`min-w-12 rounded-full px-3 py-1.5 text-center text-xs font-bold ${
                   activeDays.has(day.short)
                     ? "bg-blue-600 text-white"
                     : "bg-slate-100 text-slate-500"
@@ -438,5 +477,41 @@ function SparkIcon() {
 }
 
 function DotIcon() {
-  return <span className="block h-2.5 w-2.5 rounded-full bg-current" aria-hidden="true" />;
+  return (
+    <span className="block h-2.5 w-2.5 rounded-full bg-current" aria-hidden="true" />
+  );
+}
+
+function ChevronLeftIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
 }

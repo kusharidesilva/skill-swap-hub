@@ -8,6 +8,7 @@ import { db } from "@/lib/firebase";
 import { scopedHref, type Role } from "@/lib/role-routes";
 import { useAuth } from "@/context/AuthContext";
 import { getVerificationBadge } from "@/lib/identity-badges";
+import ReviewCard from "@/components/reviews/review-card";
 
 type BuyerProfilePublicPageProps = {
   buyerId: string;
@@ -86,6 +87,8 @@ export default function BuyerProfilePublicPage({
   const [profile, setProfile] = useState<BuyerProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPrivateProfile, setIsPrivateProfile] = useState(false);
+  const [receivedPage, setReceivedPage] = useState(0);
+  const [givenPage, setGivenPage] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -109,11 +112,15 @@ export default function BuyerProfilePublicPage({
         if (member.settings?.profileVisibility === false && !isOwnerViewing) {
           setIsPrivateProfile(true);
           setProfile(null);
+          setReceivedPage(0);
+          setGivenPage(0);
           setLoading(false);
           return;
         }
 
         setIsPrivateProfile(false);
+        setReceivedPage(0);
+        setGivenPage(0);
 
         // This page is intentionally limited to buyer-only community members.
         const isProviderMember =
@@ -123,6 +130,8 @@ export default function BuyerProfilePublicPage({
 
         if (isProviderMember) {
           setProfile(null);
+          setReceivedPage(0);
+          setGivenPage(0);
           setLoading(false);
           return;
         }
@@ -147,6 +156,8 @@ export default function BuyerProfilePublicPage({
         console.error("Error loading buyer public profile:", error);
         if (active) {
           setProfile(null);
+          setReceivedPage(0);
+          setGivenPage(0);
         }
       } finally {
         if (active) {
@@ -169,15 +180,27 @@ export default function BuyerProfilePublicPage({
     ? `${scopedHref("/report-issue", role)}/${buyerId}`
     : "/get-started";
 
-  // Keep public pages compact by showing only the six latest reviews in each direction.
-  const recentReceived = useMemo(
-    () => profile?.reviewsReceived.slice(0, 6) || [],
-    [profile?.reviewsReceived]
+  const reviewsPerPage = 2;
+  const totalReceivedPages = Math.max(
+    1,
+    Math.ceil((profile?.reviewsReceived.length || 0) / reviewsPerPage),
   );
-  const recentGiven = useMemo(
-    () => profile?.reviewsGiven.slice(0, 6) || [],
-    [profile?.reviewsGiven]
+  const totalGivenPages = Math.max(
+    1,
+    Math.ceil((profile?.reviewsGiven.length || 0) / reviewsPerPage),
   );
+
+  const recentReceived = useMemo(() => {
+    if (!profile) return [];
+    const start = receivedPage * reviewsPerPage;
+    return profile.reviewsReceived.slice(start, start + reviewsPerPage);
+  }, [profile, receivedPage]);
+
+  const recentGiven = useMemo(() => {
+    if (!profile) return [];
+    const start = givenPage * reviewsPerPage;
+    return profile.reviewsGiven.slice(start, start + reviewsPerPage);
+  }, [profile, givenPage]);
 
   if (loading || authLoading) {
     return (
@@ -305,19 +328,45 @@ export default function BuyerProfilePublicPage({
       {/* Reviews received and given */}
       <section className="grid gap-4 xl:grid-cols-2">
         <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-[#1453c4]">Reviews Received</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Feedback this buyer received from providers.
-              </p>
+          <div className="rounded-[1.05rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.92),rgba(255,255,255,1))] px-4 py-3.5 shadow-[0_8px_22px_rgba(15,23,42,0.025)]">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-[#1453c4]">Reviews Received</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {profile.reviewsReceived.length} review
+                  {profile.reviewsReceived.length !== 1 ? "s" : ""} available
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-slate-400">
+                  {Math.min(receivedPage + 1, totalReceivedPages)} / {totalReceivedPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setReceivedPage((current) => Math.max(0, current - 1))}
+                  disabled={receivedPage === 0}
+                  aria-label="Previous received reviews"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-[#2b62e6] hover:text-[#2b62e6] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeftIcon />
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setReceivedPage((current) => Math.min(totalReceivedPages - 1, current + 1))
+                  }
+                  disabled={receivedPage >= totalReceivedPages - 1}
+                  aria-label="Next received reviews"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-[#2b62e6] hover:text-[#2b62e6] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRightIcon />
+                </button>
+              </div>
             </div>
-            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-[#1453c4]">
-              {profile.reviewsReceived.length}
-            </span>
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 grid gap-3">
             {recentReceived.length > 0 ? (
               recentReceived.map((review) => (
                 <BuyerReviewCard key={review.id} review={review} badgeText="Received" />
@@ -329,19 +378,45 @@ export default function BuyerProfilePublicPage({
         </article>
 
         <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-[#1453c4]">Reviews Given</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Ratings and comments this buyer shared with others.
-              </p>
+          <div className="rounded-[1.05rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.92),rgba(255,255,255,1))] px-4 py-3.5 shadow-[0_8px_22px_rgba(15,23,42,0.025)]">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-[#1453c4]">Reviews Given</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {profile.reviewsGiven.length} review
+                  {profile.reviewsGiven.length !== 1 ? "s" : ""} available
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-slate-400">
+                  {Math.min(givenPage + 1, totalGivenPages)} / {totalGivenPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setGivenPage((current) => Math.max(0, current - 1))}
+                  disabled={givenPage === 0}
+                  aria-label="Previous given reviews"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-[#2b62e6] hover:text-[#2b62e6] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeftIcon />
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setGivenPage((current) => Math.min(totalGivenPages - 1, current + 1))
+                  }
+                  disabled={givenPage >= totalGivenPages - 1}
+                  aria-label="Next given reviews"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-[#2b62e6] hover:text-[#2b62e6] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRightIcon />
+                </button>
+              </div>
             </div>
-            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">
-              {profile.reviewsGiven.length}
-            </span>
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 grid gap-3">
             {recentGiven.length > 0 ? (
               recentGiven.map((review) => (
                 <BuyerReviewCard key={review.id} review={review} badgeText="Given" />
@@ -407,35 +482,50 @@ function BuyerReviewCard({
   review: BuyerActivityReview;
   badgeText: string;
 }) {
-  const badgeTone =
-    badgeText === "Received"
-      ? "bg-blue-50 text-[#1453c4]"
-      : "bg-amber-50 text-amber-700";
-
   return (
-    <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-sm font-semibold text-slate-900">{review.partnerName}</p>
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeTone}`}>
-              {badgeText}
-            </span>
-            <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
-              {review.sourceRole === "provider" ? "Provider" : "Buyer"}
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
-            {review.partnerUniversity || "Community Member"} | {review.dateLabel}
-          </p>
-          <p className="mt-1 text-xs font-semibold text-[#1453c4]">Service: {review.skill}</p>
-        </div>
-        <p className="shrink-0 text-sm font-bold text-amber-500">
-          {buildStars(String(review.rating))}
-        </p>
-      </div>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{review.comment}</p>
-    </article>
+    <ReviewCard
+      reviewerName={review.partnerName}
+      reviewerMeta={`${review.partnerUniversity || "Community Member"} | ${review.dateLabel}`}
+      rating={review.rating}
+      comment={review.comment}
+      serviceTitle={review.skill}
+      serviceCategory={review.sourceRole === "provider" ? "Provider Review" : "Buyer Review"}
+      contextLabel={badgeText === "Received" ? "Reviewed Service" : "Rated Service"}
+      directionLabel={badgeText}
+      roleLabel={review.sourceRole === "provider" ? "Provider" : "Buyer"}
+      tone={badgeText === "Received" ? "blue" : "amber"}
+      compact
+      tight
+      className="h-full border-slate-200/70"
+    />
+  );
+}
+
+function ChevronLeftIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-[18px] w-[18px]">
+      <path
+        d="M11.75 4.5L6.25 10L11.75 15.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-[18px] w-[18px]">
+      <path
+        d="M8.25 4.5L13.75 10L8.25 15.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
