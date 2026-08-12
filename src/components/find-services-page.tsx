@@ -504,30 +504,48 @@ function GigDetailsModal({
         onClick={onClose}
       >
         <article
-          className="relative grid max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl md:grid-cols-[0.9fr_1.1fr]"
+          className="relative grid max-h-[88vh] w-full max-w-4xl overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(243,248,255,0.97))] shadow-[0_32px_90px_rgba(15,23,42,0.22)] md:grid-cols-[1.02fr_0.98fr]"
           onClick={(event) => event.stopPropagation()}
         >
           <button
             type="button"
             onClick={onClose}
             aria-label="Close gig details"
-            className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-500 shadow-sm transition hover:text-slate-900"
+            className="absolute right-5 top-5 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/80 bg-white/95 text-slate-500 shadow-[0_10px_26px_rgba(15,23,42,0.1)] transition hover:border-slate-300 hover:text-slate-900"
           >
             <CloseIcon className="h-4 w-4" />
           </button>
-          <div className="relative min-h-[220px] bg-slate-100 p-4 md:min-h-[400px]">
-            <Image src={gig.image} alt={gig.title} fill className="object-contain p-4" sizes="(min-width: 768px) 340px, 100vw" />
+          <div className="relative min-h-[260px] overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(63,94,251,0.16),transparent_34%),linear-gradient(160deg,#edf4ff_0%,#f8fbff_46%,#eef8f6_100%)] p-5 md:min-h-[440px] md:p-7">
+            <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
+            <div className="relative flex h-full min-h-[220px] items-center justify-center overflow-hidden rounded-[26px] border border-white/80 bg-white/90 shadow-[0_20px_44px_rgba(15,23,42,0.09)] md:min-h-[360px]">
+              <Image
+                src={gig.image}
+                alt={gig.title}
+                fill
+                className="object-contain p-5 md:p-7"
+                sizes="(min-width: 768px) 420px, 100vw"
+              />
+            </div>
           </div>
-          <div className="min-w-0 overflow-y-auto p-5 md:p-6">
-            <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#1453c4]">
+          <div className="min-w-0 overflow-y-auto p-6 md:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <span className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-[#1453c4] shadow-sm">
               {gig.category}
-            </span>
-            <h2 className="mt-3 break-words text-xl font-bold leading-7 text-slate-900">{gig.title}</h2>
-            <p className="mt-3 line-clamp-3 break-words text-sm leading-6 text-slate-600">
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-100 bg-amber-50 px-3 py-1.5 text-xs font-bold text-slate-700">
+                <StarIcon className="h-3.5 w-3.5 text-amber-400" />
+                {gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} rating` : "New"}
+              </span>
+            </div>
+
+            <h2 className="mt-4 break-words text-[1.85rem] font-black leading-[1.08] tracking-tight text-slate-900">
+              {gig.title}
+            </h2>
+            <p className="mt-3 line-clamp-3 break-words text-[15px] leading-7 text-slate-600">
               {gig.summary || gig.description}
             </p>
 
-            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
               <InfoItem label="Price" value={formatPrice(gig.price)} />
               <InfoItem label="Availability" value={availability || "Flexible"} />
               <InfoItem label="Provider" value={gig.providerName} />
@@ -537,17 +555,17 @@ function GigDetailsModal({
               />
             </dl>
 
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href={previewHref}
-                className="inline-flex h-10 items-center justify-center rounded-lg bg-[#2f66e7] px-5 text-sm font-semibold text-white transition hover:bg-[#2557cf]"
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-[#2f66e7] px-6 text-sm font-semibold text-white transition hover:bg-[#2557cf]"
               >
                 View Full Details
               </Link>
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Close
               </button>
@@ -561,9 +579,9 @@ function GigDetailsModal({
 
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-slate-50 px-3 py-2">
-      <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</dt>
-      <dd className="mt-1 break-words text-sm font-semibold text-slate-800">{value}</dd>
+    <div className="rounded-[20px] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] px-4 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.03)]">
+      <dt className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</dt>
+      <dd className="mt-1.5 break-words text-[15px] font-semibold leading-6 text-slate-800">{value}</dd>
     </div>
   );
 }

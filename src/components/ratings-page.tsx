@@ -202,14 +202,14 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
             <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#1453c4]">
-              {currentRoleLabel} Reputation
+              {currentRoleLabel} Review Hub
             </span>
             <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-[2rem]">
               Ratings &amp; Reviews
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500 sm:text-[15px]">
-              Manage your reputation, review partner feedback, and keep every completed
-              swap easy to revisit from one place.
+              Track your review history, partner feedback, and completed swap
+              ratings from one clear place.
             </p>
           </div>
 
@@ -235,25 +235,25 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
         </div>
       </header>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-        <article className="rounded-[1.3rem] border border-slate-200/80 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.035)] sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.7fr)]">
+        <article className="rounded-[1.2rem] border border-slate-200/80 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.03)] sm:p-5">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
                 Feedback View
               </p>
-              <h2 className="mt-2 text-lg font-bold text-slate-900">
+              <h2 className="mt-1.5 text-[1.05rem] font-bold text-slate-900">
                 Switch between received and given reviews
               </h2>
             </div>
-            <p className="text-sm text-slate-500">
+            <p className="max-w-[16rem] text-sm leading-6 text-slate-500">
               {tab === "received"
                 ? "See what others said about your completed swaps."
                 : "Review the feedback you already shared with partners."}
             </p>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3.5 grid gap-3 sm:grid-cols-2">
             <TabSummaryCard
               title="Reviews Received"
               description="Ratings from your swap partners after finished work."
@@ -273,18 +273,18 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
           </div>
         </article>
 
-        <article className="rounded-[1.3rem] border border-slate-200/80 bg-white p-5 shadow-[0_14px_34px_rgba(15,23,42,0.035)] sm:p-6">
+        <article className="rounded-[1.2rem] border border-slate-200/80 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.03)] sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
                 Review Summary
               </p>
-              <h2 className="mt-2 text-lg font-bold text-slate-900">
+              <h2 className="mt-1.5 text-[1.05rem] font-bold text-slate-900">
                 Received rating breakdown
               </h2>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center">
-              <p className="text-2xl font-bold leading-none text-slate-900">{totalReceived}</p>
+            <div className="rounded-[0.95rem] border border-slate-200 bg-slate-50 px-3 py-2 text-center">
+              <p className="text-[1.55rem] font-bold leading-none text-slate-900">{totalReceived}</p>
               <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                 Reviews
               </p>
@@ -295,7 +295,7 @@ export default function RatingsPageContent({ role }: RatingsPageContentProps) {
             <RatingStars rating={avgRating === "-" ? 0 : Number(avgRating)} />
           </div>
 
-          <div className="mt-5 space-y-3">
+          <div className="mt-3.5 space-y-2">
             {dist.map(({ star, pct, count }) => (
               <div
                 key={star}
@@ -493,12 +493,12 @@ function TabSummaryCard({
   return (
     <button
       onClick={onClick}
-      className={`rounded-2xl border px-4 py-4 text-left transition ${active ? activeClasses : "border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white"}`}
+      className={`rounded-2xl border px-4 py-3 text-left transition ${active ? activeClasses : "border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white"}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-bold text-slate-900">{title}</p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+          <p className="mt-1 text-[12px] leading-5 text-slate-500">{description}</p>
         </div>
         <span
           className={`inline-flex min-w-9 items-center justify-center rounded-full px-2.5 py-1 text-xs font-bold ${active ? countClasses : "bg-slate-200 text-slate-600"}`}
