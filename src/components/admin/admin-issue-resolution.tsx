@@ -45,9 +45,11 @@ type ReportRecord = {
   reporterRole?: string;
   targetUserId?: string;
   targetUserName?: string;
+  targetUserEmail?: string;
   targetUserRole?: string;
   reportedUserId?: string;
   reportedUserName?: string;
+  reportedUserEmail?: string;
   reportedUser?: string;
   requestId?: string;
   orderId?: string;
@@ -82,6 +84,7 @@ type ReportRecord = {
 };
 
 type UserAvatarMap = Record<string, string>;
+type UserEmailMap = Record<string, string>;
 
 const statusFilters = ["All Reports", "Pending", "Warn", "Suspend", "Resolve", "Reject"];
 const REPORTS_PER_PAGE = 6;
@@ -99,6 +102,7 @@ export default function AdminIssueResolution() {
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [selectedReport, setSelectedReport] = useState<ReportRecord | null>(null);
   const [userAvatars, setUserAvatars] = useState<UserAvatarMap>({});
+  const [userEmails, setUserEmails] = useState<UserEmailMap>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [previewFile, setPreviewFile] = useState<{
     title: string;
@@ -111,15 +115,21 @@ export default function AdminIssueResolution() {
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
-      const nextAvatars = snapshot.docs.reduce<UserAvatarMap>((acc, docSnap) => {
-        const data = docSnap.data() as { profileImageUrl?: string };
+      const nextAvatars: UserAvatarMap = {};
+      const nextEmails: UserEmailMap = {};
+
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data() as { profileImageUrl?: string; email?: string };
         if (typeof data.profileImageUrl === "string" && data.profileImageUrl.trim()) {
-          acc[docSnap.id] = data.profileImageUrl;
+          nextAvatars[docSnap.id] = data.profileImageUrl;
         }
-        return acc;
-      }, {});
+        if (typeof data.email === "string" && data.email.trim()) {
+          nextEmails[docSnap.id] = data.email.trim();
+        }
+      });
 
       setUserAvatars(nextAvatars);
+      setUserEmails(nextEmails);
     });
 
     return () => unsubscribe();
@@ -647,6 +657,8 @@ export default function AdminIssueResolution() {
             setNotes((current) => ({ ...current, [selectedReport.id]: value }))
           }
           busyKey={busyKey}
+          reporterEmail={selectedReport.reporterEmail}
+          reportedUserEmail={reportedUserEmail(selectedReport, userEmails)}
           onPreviewFile={setPreviewFile}
           onClose={() => setSelectedReport(null)}
           onWarn={async () => {
@@ -861,6 +873,8 @@ function ReportActionModal({
   note,
   onNoteChange,
   busyKey,
+  reporterEmail,
+  reportedUserEmail,
   onPreviewFile,
   onClose,
   onWarn,
@@ -874,6 +888,8 @@ function ReportActionModal({
   note: string;
   onNoteChange: (value: string) => void;
   busyKey: string;
+  reporterEmail?: string;
+  reportedUserEmail?: string;
   onPreviewFile: (file: {
     title: string;
     url: string;
@@ -892,6 +908,16 @@ function ReportActionModal({
   const actionHistory = report.actionHistory || [];
   const reviewMode =
     normalizeModerationStatus(report.status || "") === "warn" && responseHistory.length > 0;
+  const reporterEmailHref = buildReportMailto(report, {
+    email: reporterEmail,
+    roleLabel: "Reporter",
+    name: report.reporterName || "Reporter",
+  });
+  const reportedUserEmailHref = buildReportMailto(report, {
+    email: reportedUserEmail,
+    roleLabel: "Reported user",
+    name: reportedUserName(report),
+  });
 
   return (
     <ModalPortal>
@@ -1050,7 +1076,36 @@ function ReportActionModal({
           </div>
 
           <div className="mt-5">
-            <label className="mb-2 block text-sm font-semibold text-slate-700">Message to Reported User</label>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <label className="block text-sm font-semibold text-slate-700">Message to Reported User</label>
+              <div className="flex flex-wrap items-center gap-2">
+                {reporterEmailHref ? (
+                  <a
+                    href={reporterEmailHref}
+                    title={reporterEmail}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-bold text-[#1d4ed8] transition hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus:ring-4 focus:ring-blue-100"
+                  >
+                    <MailIcon />
+                    Email Reporter
+                  </a>
+                ) : null}
+                {reportedUserEmailHref ? (
+                  <a
+                    href={reportedUserEmailHref}
+                    title={reportedUserEmail}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+                  >
+                    <MailIcon />
+                    Email Reported User
+                  </a>
+                ) : null}
+                {!reporterEmailHref && !reportedUserEmailHref ? (
+                  <span className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-400">
+                    No email available
+                  </span>
+                ) : null}
+              </div>
+            </div>
             <textarea
               value={note}
               onChange={(event) => onNoteChange(event.target.value)}
@@ -1148,6 +1203,45 @@ function reportedUserId(report: ReportRecord) {
 
 function reportedUserName(report: ReportRecord) {
   return report.targetUserName || report.reportedUserName || report.reportedUser || "Reported user";
+}
+
+function reportedUserEmail(report: ReportRecord, userEmails: UserEmailMap) {
+  const targetId = reportedUserId(report);
+  return (
+    report.targetUserEmail ||
+    report.reportedUserEmail ||
+    (targetId ? userEmails[targetId] : "") ||
+    ""
+  ).trim();
+}
+
+function buildReportMailto(
+  report: ReportRecord,
+  recipient: {
+    email?: string;
+    roleLabel: string;
+    name: string;
+  },
+) {
+  const email = typeof recipient.email === "string" ? recipient.email.trim() : "";
+
+  if (!email) {
+    return "";
+  }
+
+  const reportReference = formatReportId(report.reportCode || report.id);
+  const issue = report.issueType || report.category || "Issue";
+  const subject = `${reportReference} - ${issue} follow-up`;
+  const body = [
+    `Report ID: ${reportReference}`,
+    `${recipient.roleLabel}: ${recipient.name}`,
+    `Email: ${email}`,
+    "",
+    "Message:",
+    "",
+  ].join("\n");
+
+  return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 function formatDate(value: TimestampLike) {
@@ -1352,6 +1446,15 @@ function CloseIcon() {
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M18 6 6 18" />
       <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
     </svg>
   );
 }
