@@ -10,7 +10,7 @@ import { db } from "@/lib/firebase";
 import { buildGigRatingSummary, requestMatchesGig } from "@/lib/gig-ratings";
 import { ensureGigTitlePrefix } from "@/lib/gig-titles";
 import { formatRatingLabel } from "@/lib/ratings";
-import { scopedHref, type SiteRole } from "@/lib/role-routes";
+import { scopedHref, resolveRole, type Role, type SiteRole } from "@/lib/role-routes";
 import type { UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { createNotification } from "@/lib/notifications";
@@ -42,6 +42,7 @@ type GigPreviewData = {
   providerId: string;
   providerName: string;
   providerDegree: string;
+  providerRole?: Role;
   university: string;
   proficiency: string;
   skill: string;
@@ -206,6 +207,7 @@ export default function GigPreviewPage({
             providerId: publicGig.providerId || providerId || "guest-provider",
             providerName: publicGig.providerName || "Campus Student",
             providerDegree: publicGig.degreeName || publicGig.yearOfStudy || "Verified Student",
+            providerRole: "provider",
             university: publicGig.university || "Sri Lankan University",
             proficiency: "Skilled",
             skill: publicGig.title || publicGig.category || "Student Support",
@@ -309,6 +311,7 @@ export default function GigPreviewPage({
           providerId: user.uid,
           providerName: user.name || "Anonymous Member",
           providerDegree: user.degree || "Undergraduate",
+          providerRole: resolveRole(user.role, "provider"),
           university: user.university || "Sri Lankan University",
           proficiency: profile?.proficiency || "Skilled",
           skill,
@@ -491,7 +494,7 @@ export default function GigPreviewPage({
         type: "request",
         icon: "request",
         tone: "blue",
-        href: `${scopedHref("/chats", "provider")}?chatId=${chatId}`,
+        href: `${scopedHref("/chats", gig.providerRole || "provider")}?chatId=${chatId}`,
       });
 
       const nextRequestRole = userProfile.role === "provider" ? "both" : activeRole;

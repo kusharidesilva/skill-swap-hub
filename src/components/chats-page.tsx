@@ -147,12 +147,16 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
       const currentRole = resolveChatRole(userProfile?.role);
       const threadKey = gigIdParam || (subjectParam ? `subject-${slugSegment(subjectParam)}` : null);
       const requestedServiceContext: ServiceContext = {
-        gigId: gigIdParam || undefined,
         title: subjectParam || "Service Chat",
         category: categoryParam || "",
         price: priceParam || "",
-        providerName: providerNameParam || undefined,
       };
+      if (gigIdParam) {
+        requestedServiceContext.gigId = gigIdParam;
+      }
+      if (providerNameParam) {
+        requestedServiceContext.providerName = providerNameParam;
+      }
 
       try {
         const q = query(

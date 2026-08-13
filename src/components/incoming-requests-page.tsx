@@ -50,6 +50,7 @@ interface RequestData {
   status: string;
   providerId?: string;
   providerName?: string;
+  gigId?: string;
   revisionNotes?: string;
   review?: {
     rating: number;
@@ -277,6 +278,7 @@ export default function IncomingRequestsPageContent({
             status: normalizeDirectRequestStatus(data.requestStatus),
             providerId: data.providerId,
             providerName: data.providerName,
+            gigId: data.gigId || "",
             updatedAt: data.updatedAt,
             createdAt: data.createdAt,
             providerDoneReminderSentAt: data.providerDoneReminderSentAt,
@@ -551,7 +553,7 @@ function NewRequestsView({
   return (
     <div className="space-y-5">
       {filteredRequests.length > 0 ? (
-        <div className="grid items-start gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid max-w-[1200px] items-start justify-start gap-3 md:grid-cols-[repeat(auto-fit,minmax(280px,380px))]">
           {filteredRequests.map((request) => {
             const isGeneralRequest = request.providerId === "general";
             const buyerStatusLabel =
@@ -566,7 +568,7 @@ function NewRequestsView({
             return (
               <article
                 key={request.id}
-                className="group flex min-h-[286px] flex-col overflow-hidden rounded-[22px] border border-slate-200/90 bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] p-3.5 shadow-[0_12px_26px_rgba(15,23,42,0.05)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_18px_34px_rgba(15,23,42,0.08)]"
+                className="group flex min-h-[260px] w-full flex-col overflow-hidden rounded-[18px] border border-slate-200/90 bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] p-3.5 shadow-[0_10px_22px_rgba(15,23,42,0.045)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(15,23,42,0.075)]"
               >
                 <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
                   <div className="flex min-w-0 items-center gap-2.5">
@@ -609,8 +611,8 @@ function NewRequestsView({
                 </div>
 
                 <div className="flex min-h-0 flex-1 flex-col pt-3">
-                  <div className="mt-2.5 flex items-start gap-2">
-                    <p className="line-clamp-2 text-[1.08rem] font-black leading-[1.25] tracking-tight text-[#1453c4]">
+                  <div className="mt-1.5 flex items-start gap-2">
+                    <p className="line-clamp-2 text-[0.98rem] font-black leading-[1.25] tracking-tight text-[#1453c4]">
                       {ensureGigTitlePrefix(request.title)}
                     </p>
                     <span className="mt-0.5 inline-flex shrink-0 rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-[#1453c4]">
@@ -618,13 +620,13 @@ function NewRequestsView({
                     </span>
                   </div>
 
-                  <div className="mt-2.5 rounded-[18px] border border-slate-100 bg-slate-50/75 p-3">
+                  <div className="mt-2 rounded-[16px] border border-slate-100 bg-slate-50/75 p-2.5">
                     <p className="line-clamp-2 text-[12.5px] leading-5 text-slate-600">
                       {request.description}
                     </p>
                   </div>
 
-                  <div className="mt-2.5 grid grid-cols-2 gap-2">
+                  <div className="mt-2 grid grid-cols-2 gap-2">
                     <div className="min-w-0 rounded-[16px] border border-slate-100 bg-white px-3 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.04)]">
                       <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
                         Price
@@ -663,7 +665,7 @@ function NewRequestsView({
                       </button>
                     )}
                     <Link
-                      href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(request.buyerId)}&subject=${encodeURIComponent(request.title)}`}
+                      href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(request.buyerId)}&subject=${encodeURIComponent(request.title)}${request.gigId ? `&gigId=${encodeURIComponent(request.gigId)}&category=${encodeURIComponent(request.category)}&providerName=${encodeURIComponent(request.providerName || userProfile?.name || "Provider")}` : ""}`}
                       className="inline-flex items-center justify-center rounded-[14px] border border-[#c7d7ff] bg-blue-50/60 px-2 py-2 text-[11.5px] font-bold text-[#1453c4] transition hover:border-[#1453c4] hover:bg-blue-50"
                     >
                       Chat
@@ -994,7 +996,7 @@ function AcceptedView({
                   ))}
                 <div className="flex gap-2">
                   <Link
-                    href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(item.buyerId)}&subject=${encodeURIComponent(item.title)}`}
+                    href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(item.buyerId)}&subject=${encodeURIComponent(item.title)}${item.gigId ? `&gigId=${encodeURIComponent(item.gigId)}&category=${encodeURIComponent(item.category)}&providerName=${encodeURIComponent(item.providerName || "Provider")}` : ""}`}
                     className="flex-1 rounded-lg border border-[#1453c4] px-3 py-2 text-center text-xs font-semibold text-[#1453c4] hover:bg-blue-50"
                   >
                     Chat
@@ -1063,14 +1065,14 @@ function CompletedView({ requests }: { requests: RequestData[] }) {
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid max-w-[1200px] justify-start gap-3 md:grid-cols-[repeat(auto-fit,minmax(280px,380px))]">
       {requests.length > 0 ? (
         requests.map((item) => (
           <article
             key={item.id}
-            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+            className="w-full rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm"
           >
-            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-2.5">
+            <div className="flex items-start justify-between gap-2.5 border-b border-slate-100 pb-2">
               <div>
                 <p className="text-xs font-bold text-slate-900">
                   {item.buyerName}
@@ -1086,16 +1088,16 @@ function CompletedView({ requests }: { requests: RequestData[] }) {
               </span>
             </div>
 
-            <p className="mt-3.5 text-[9px] font-bold uppercase tracking-wide text-slate-400">
+            <p className="mt-3 text-[9px] font-bold uppercase tracking-wide text-slate-400">
               Exchanged Skill
             </p>
-            <p className="mt-0.5 text-xs font-bold text-emerald-700">
+            <p className="mt-0.5 line-clamp-1 text-xs font-bold text-emerald-700">
               {item.title}
             </p>
 
             {/* Buyer review of provider */}
             {item.review ? (
-              <div className="mt-3.5 rounded-lg bg-amber-50/50 border border-amber-100 p-3">
+              <div className="mt-3 rounded-lg bg-amber-50/50 border border-amber-100 p-2.5">
                 <div className="flex items-center justify-between">
                   <p className="font-bold text-xs text-slate-700">
                     {"Buyer's Review"}
@@ -1105,19 +1107,19 @@ function CompletedView({ requests }: { requests: RequestData[] }) {
                     {"☆".repeat(5 - item.review.rating)}
                   </p>
                 </div>
-                <p className="mt-1 italic text-xs text-slate-600 leading-relaxed">
+                <p className="mt-1 line-clamp-2 italic text-xs text-slate-600 leading-relaxed">
                   &ldquo;{item.review.comment}&rdquo;
                 </p>
               </div>
             ) : (
-              <div className="mt-3.5 rounded-lg bg-slate-50 p-3 text-xs italic text-slate-400">
+              <div className="mt-3 rounded-lg bg-slate-50 p-2.5 text-xs italic text-slate-400">
                 Buyer has not reviewed yet.
               </div>
             )}
 
             {/* Provider review of buyer */}
             {item.providerReview ? (
-              <div className="mt-2.5 rounded-lg bg-blue-50/60 border border-blue-100 p-3">
+              <div className="mt-2.5 rounded-lg bg-blue-50/60 border border-blue-100 p-2.5">
                 <div className="flex items-center justify-between">
                   <p className="font-bold text-xs text-blue-700">
                     Your Review of Buyer
@@ -1127,7 +1129,7 @@ function CompletedView({ requests }: { requests: RequestData[] }) {
                     {"☆".repeat(5 - item.providerReview.rating)}
                   </p>
                 </div>
-                <p className="mt-1 italic text-xs text-slate-600 leading-relaxed">
+                <p className="mt-1 line-clamp-2 italic text-xs text-slate-600 leading-relaxed">
                   &ldquo;{item.providerReview.comment}&rdquo;
                 </p>
               </div>

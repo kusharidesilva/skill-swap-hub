@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -68,12 +68,6 @@ export default function RequestServiceContent({
   role = "buyer",
 }: RequestServiceContentProps) {
   const { userProfile, loading, refreshProfile } = useAuth();
-  const workspaceLabel =
-    role === "both"
-      ? "Request Workspace"
-      : role === "provider"
-        ? "Provider Request Workspace"
-        : "Buyer Workspace";
 
   const targetProviderId = "general";
   const providerName = "General / Public Request";
@@ -102,38 +96,8 @@ export default function RequestServiceContent({
   }
 
   return (
-    <div className="flex w-full flex-col gap-6 pb-10">
-      <section className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(238,244,255,0.98),rgba(255,255,255,0.94),rgba(232,245,255,0.98))] shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-        <div className="grid gap-6 px-6 py-6 sm:px-8 sm:py-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-end">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700 shadow-sm">
-              <SparkIcon className="h-3.5 w-3.5" />
-              {workspaceLabel}
-            </div>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-[2.2rem]">
-              Request a service with a cleaner, faster workflow
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-[15px]">
-              Post a public request, share your budget and deadline, and keep recent requests neatly organized in one place so providers can respond quickly.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <InfoTile
-              icon={<LayersIcon className="h-4 w-4" />}
-              label="Structured form"
-              value="Category, date, budget, and notes are grouped for quick scanning."
-            />
-            <InfoTile
-              icon={<PulseIcon className="h-4 w-4" />}
-              label="Recent activity"
-              value="Track the latest provider updates and review actions from one panel."
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="grid items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_380px]">
+    <div className="flex w-full flex-col gap-4 pb-10">
+      <section className="grid w-full max-w-[1120px] items-start gap-4 2xl:grid-cols-[minmax(0,700px)_360px]">
         <RequestForm
           buyerProfile={userProfile}
           providerId={targetProviderId}
@@ -297,29 +261,25 @@ function RequestForm({
   };
 
   return (
-    <section className="overflow-hidden rounded-[26px] border border-slate-200/80 bg-white shadow-[0_18px_56px_rgba(15,23,42,0.06)]">
-      <div className="border-b border-slate-200/80 bg-[linear-gradient(180deg,#ffffff,rgba(245,248,255,0.96))] px-5 py-5 sm:px-7">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <section className="overflow-hidden rounded-[18px] border border-slate-200/80 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
+      <div className="border-b border-slate-200/80 bg-[linear-gradient(180deg,#ffffff,rgba(245,248,255,0.96))] px-4 py-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-slate-950">
+            <h2 className="text-[1.12rem] font-bold tracking-tight text-slate-950">
               New Service Request
             </h2>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-0.5 text-[11px] leading-4 text-slate-600">
               Fill in the details below. Only the interface has changed, your request flow stays the same.
             </p>
-          </div>
-          <div className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
-            <ShieldIcon className="h-3.5 w-3.5 text-blue-600" />
-            Visible to verified providers
           </div>
         </div>
       </div>
 
-      <div className="px-5 py-5 sm:px-7 sm:py-6">
+      <div className="px-4 py-3">
         <form
           onSubmit={handleSubmit(onSubmit, onInvalidSubmit)}
           noValidate
-          className="grid gap-5"
+          className="grid gap-3"
         >
           {feedback && (
             <div
@@ -333,8 +293,8 @@ function RequestForm({
             </div>
           )}
 
-          <div className="grid gap-5 rounded-[24px] border border-slate-200/80 bg-slate-50/55 p-4 sm:p-5">
-            <div className="grid gap-5">
+          <div className="grid gap-3 rounded-[15px] border border-slate-200/80 bg-slate-50/55 p-3">
+            <div className="grid gap-3">
               <SelectField
                 label="Service Category *"
                 value={selectedCategory}
@@ -346,14 +306,14 @@ function RequestForm({
                 }
                 options={serviceCategories}
                 placeholder="Select a service category"
-                className="min-h-12 rounded-xl border-slate-200 bg-white px-4 text-sm shadow-sm"
-                labelClassName="text-[12px] uppercase tracking-[0.14em] text-slate-500"
+                className="min-h-9 rounded-lg border-slate-200 bg-white px-3 text-[13px] shadow-sm"
+                labelClassName="text-[10px] uppercase tracking-[0.12em] text-slate-500"
                 error={errors.category?.message}
               />
 
-              <div className="grid gap-4 lg:grid-cols-2">
-                <label className="grid min-w-0 gap-2">
-                  <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+              <div className="grid gap-3 lg:grid-cols-2">
+                <label className="grid min-w-0 gap-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                     Required Date <span className="text-red-500">*</span>
                   </span>
                   <input
@@ -369,8 +329,8 @@ function RequestForm({
                   )}
                 </label>
 
-                <label className="grid min-w-0 gap-2">
-                  <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                <label className="grid min-w-0 gap-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                     Budget Price (Optional, LKR)
                   </span>
                   <input
@@ -386,22 +346,22 @@ function RequestForm({
               </div>
             </div>
 
-            <label className="grid min-w-0 gap-2">
-              <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            <label className="grid min-w-0 gap-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                 Request Note <span className="text-red-500">*</span>
               </span>
               <textarea
-                rows={6}
+                rows={4}
                 {...register("requestNote")}
                 placeholder="Describe what service you need, the event/task details, and any deadline."
                 aria-invalid={Boolean(errors.requestNote)}
-                className={`w-full resize-none rounded-2xl border px-4 py-3 text-sm leading-7 text-slate-700 outline-none transition placeholder:text-slate-400 focus:ring-4 ${
+                className={`min-h-[76px] w-full resize-none rounded-[13px] border px-3 py-2 text-[13px] leading-5 text-slate-700 outline-none transition placeholder:text-slate-400 focus:ring-4 ${
                   errors.requestNote
                     ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100"
                     : "border-slate-200 bg-white shadow-sm focus:border-[#2f66e7] focus:ring-blue-100"
                 }`}
               />
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-slate-500">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-medium text-slate-500">
                 <p>Minimum 10 characters.</p>
                 <p>Tip: include the scope, expected output, and deadline.</p>
               </div>
@@ -413,19 +373,19 @@ function RequestForm({
             </label>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-[22px] border border-slate-200/80 bg-slate-50/55 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex flex-col gap-2 rounded-[13px] border border-slate-200/80 bg-slate-50/55 p-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-[13px] font-semibold text-slate-900">
                 Ready to publish?
               </p>
-              <p className="mt-1 text-xs leading-6 text-slate-500">
+              <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
                 Providers will be able to review the request after you submit it.
               </p>
             </div>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#2f66e7] px-6 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(47,102,231,0.28)] transition hover:bg-[#2557cf] disabled:opacity-60 sm:w-auto sm:min-w-[220px]"
+              className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-[#2f66e7] px-4 text-[13px] font-semibold text-white shadow-[0_8px_16px_rgba(47,102,231,0.18)] transition hover:bg-[#2557cf] disabled:opacity-60 sm:w-auto sm:min-w-[150px]"
             >
               {isSubmitting ? "Submitting..." : "Submit Request"}
             </button>
@@ -723,11 +683,11 @@ function RecentRequestsPanel({
 
   if (loading) {
     return (
-      <aside className="min-w-0 rounded-[26px] border border-slate-200/80 bg-white p-5 shadow-[0_18px_56px_rgba(15,23,42,0.06)] 2xl:sticky 2xl:top-6">
-        <h2 className="text-xl font-bold tracking-tight text-slate-950">
+      <aside className="min-w-0 rounded-[18px] border border-slate-200/80 bg-white p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] 2xl:sticky 2xl:top-5">
+        <h2 className="text-[1.12rem] font-bold tracking-tight text-slate-950">
           Recent Requests
         </h2>
-        <div className="mt-5 flex min-h-[220px] items-center justify-center rounded-[20px] border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
+        <div className="mt-3 flex min-h-[120px] items-center justify-center rounded-[15px] border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
           Loading requests...
         </div>
       </aside>
@@ -735,90 +695,97 @@ function RecentRequestsPanel({
   }
 
   return (
-    <aside className="min-w-0 rounded-[26px] border border-slate-200/80 bg-white p-5 shadow-[0_18px_56px_rgba(15,23,42,0.06)] 2xl:sticky 2xl:top-6">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200/80 pb-4">
+    <aside className="min-w-0 rounded-[18px] border border-slate-200/80 bg-white p-3.5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] 2xl:sticky 2xl:top-5">
+      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-200/80 pb-3">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-950">
+          <h2 className="text-[1.12rem] font-bold tracking-tight text-slate-950">
             Recent Requests
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
             Keep track of provider progress and next actions.
           </p>
         </div>
         {requests.length > 0 && (
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-3 py-2 text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-700">
-              Active total
-            </p>
-            <p className="text-lg font-bold text-blue-900">{requests.length}</p>
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-[linear-gradient(135deg,rgba(239,246,255,0.96),rgba(255,255,255,0.98))] px-2.5 py-1.5 shadow-sm">
+            <span className="inline-flex h-7 min-w-[2rem] items-center justify-center rounded-full bg-[#2f66e7] px-2 text-[13px] font-bold text-white">
+              {requests.length}
+            </span>
+            <div className="pr-1">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Active requests
+              </p>
+              <p className="text-[11px] font-semibold text-slate-700">
+                In progress now
+              </p>
+            </div>
           </div>
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
           Latest request status
         </p>
         {requests.length > 0 && (
           <Link
             href={allRequestsHref}
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-xs font-bold text-[#2f66e7] shadow-sm transition-colors hover:bg-white"
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-[10px] font-bold text-[#2f66e7] shadow-sm transition-colors hover:bg-white"
           >
             View All Requests ({requests.length}) →
           </Link>
         )}
       </div>
 
-      <div className="scrollbar-none mt-4 grid max-h-[720px] gap-4 overflow-y-auto pr-1">
+      <div className="scrollbar-none mt-3 grid max-h-[330px] gap-2.5 overflow-y-auto pr-0.5">
         {displayedRequests.length > 0 ? (
           displayedRequests.map((item) => {
             const badge = getStatusBadge(item.status);
             return (
               <article
                 key={item.id}
-                className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff,rgba(248,250,255,0.96))] shadow-[0_14px_36px_rgba(15,23,42,0.06)]"
+                className="overflow-hidden rounded-[15px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff,rgba(248,250,255,0.96))] shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
               >
-                <div className="border-b border-slate-200/70 px-5 py-4">
-                  <div className="flex items-start justify-between gap-3">
+                <div className="border-b border-slate-200/70 px-3 py-2.5">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <span className="inline-flex max-w-full items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                      <span className="inline-flex max-w-full items-center rounded-full border border-blue-100 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
                         <span className="truncate">{item.category}</span>
                       </span>
-                      <h3 className="mt-3 text-xl font-bold leading-tight text-slate-950">
+                      <h3 className="mt-1.5 text-[15px] font-bold leading-tight text-slate-950">
                         {item.title}
                       </h3>
                     </div>
-                    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-right shadow-sm">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    <div className="rounded-[12px] border border-slate-200 bg-white px-2 py-1.5 text-right shadow-sm">
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">
                         Provider
                       </p>
-                      <p className="text-xs font-semibold text-slate-600">
+                      <p className="text-[11px] font-semibold text-slate-600">
                         {item.providerName.split(" ")[0]}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     <span
-                      className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${badge.style}`}
+                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${badge.style}`}
                     >
                       {badge.label}
                     </span>
                     {item.budget ? (
-                      <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                      <span className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
                         {item.budget}
                       </span>
                     ) : null}
                     {item.time ? (
-                      <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                      <span className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
                         Due: {item.time}
                       </span>
                     ) : null}
                   </div>
                 </div>
 
-                <div className="px-5 py-4">
-                  <p className="text-sm leading-7 text-slate-600 line-clamp-4">
+                <div className="px-3 py-2.5">
+                  <p className="text-[12px] leading-5 text-slate-600 line-clamp-2">
                     {item.description}
                   </p>
 
@@ -834,23 +801,23 @@ function RecentRequestsPanel({
                   {item.status === "done" &&
                     !activeReviewId &&
                     !activeRevisionId && (
-                      <div className="mt-5 rounded-[20px] border border-emerald-100 bg-emerald-50/60 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                      <div className="mt-3 rounded-[14px] border border-emerald-100 bg-emerald-50/60 p-2.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700">
                           Action required
                         </p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                        <p className="mt-1 text-[12px] font-semibold leading-5 text-slate-900">
                           Provider finished the work. Review it and choose the next step.
                         </p>
-                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                           <button
                             onClick={() => setActiveReviewId(item.id)}
-                            className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
+                            className="inline-flex h-8 min-w-[132px] flex-1 items-center justify-center whitespace-nowrap rounded-lg bg-emerald-600 px-3 text-[10px] font-bold leading-none text-white transition hover:bg-emerald-700"
                           >
                             ✓ Accept & Complete
                           </button>
                           <button
                             onClick={() => setActiveRevisionId(item.id)}
-                            className="rounded-xl border border-red-300 bg-white px-4 py-3 text-sm font-bold text-red-700 transition hover:bg-red-50"
+                            className="inline-flex h-8 min-w-[118px] flex-1 items-center justify-center whitespace-nowrap rounded-lg border border-red-300 bg-white px-3 text-[10px] font-bold leading-none text-red-700 transition hover:bg-red-50"
                           >
                             Request Revision
                           </button>
@@ -1063,82 +1030,6 @@ function ChatIcon({ className }: { className?: string }) {
       strokeWidth={2}
     >
       <path d="M4 5h16v11H7l-3 3z" />
-    </svg>
-  );
-}
-
-function InfoTile({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-[22px] border border-white/80 bg-white/80 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur">
-      <div className="flex items-center gap-2 text-blue-700">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50">
-          {icon}
-        </span>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-          {label}
-        </p>
-      </div>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{value}</p>
-    </div>
-  );
-}
-
-function SparkIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m12 3 1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8Z" />
-      <path d="M19 4v3" />
-      <path d="M20.5 5.5h-3" />
-    </svg>
-  );
-}
-
-function LayersIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m12 4 8 4-8 4-8-4 8-4Z" />
-      <path d="m4 12 8 4 8-4" />
-      <path d="m4 16 8 4 8-4" />
-    </svg>
-  );
-}
-
-function PulseIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 12h4l2-5 4 10 2-5h6" />
     </svg>
   );
 }

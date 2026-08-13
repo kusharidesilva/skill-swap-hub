@@ -393,7 +393,7 @@ export default function AllRequestServicePage({
       </section>
 
       {/* Request cards */}
-      <section className="grid gap-6 xl:grid-cols-3 xl:auto-rows-fr">
+      <section className="grid gap-4 xl:grid-cols-3 xl:auto-rows-fr">
         {visibleRequests.map((request) => (
           <RequestCard key={request.id} request={request} role={role} />
         ))}
@@ -527,42 +527,42 @@ function RequestCard({
   };
 
   return (
-    <article className="flex h-full min-h-[620px] flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
-      <div className="flex items-start justify-between gap-4">
+    <article className="flex h-full min-h-[430px] flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.035)]">
+      <div className="flex items-start justify-between gap-3">
         <span
-          className={`flex h-9 w-9 items-center justify-center rounded-lg ${iconClassName}`}
+          className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconClassName}`}
         >
           <RequestIcon tone={request.iconTone} />
         </span>
         <span
-          className={`rounded-full px-3 py-1 text-sm font-medium ${statusClassName}`}
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClassName}`}
         >
           {request.status}
         </span>
       </div>
 
-      <h3 className="mt-5 text-xl font-semibold leading-8 text-slate-900">
+      <h3 className="mt-3 line-clamp-2 text-[1.05rem] font-semibold leading-6 text-slate-900">
         {request.title}
       </h3>
-      <p className="mt-1 text-sm font-medium text-teal-700">
+      <p className="mt-1 line-clamp-1 text-sm font-medium text-teal-700">
         {request.subject}
       </p>
 
-      <div className="mt-4 flex items-center gap-3 rounded-xl bg-slate-50 p-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-sm font-bold text-white">
+      <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-slate-50 p-2.5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-xs font-bold text-white">
           {providerInitial}
         </span>
         <div className="min-w-0">
-          <p className="truncate text-xs font-semibold text-slate-500">
+          <p className="truncate text-[10px] font-semibold text-slate-500">
             Provider
           </p>
-          <p className="truncate text-sm font-bold text-slate-900">
+          <p className="truncate text-[13px] font-bold text-slate-900">
             {request.providerName}
           </p>
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 text-sm text-slate-600">
+      <div className="mt-3 grid gap-2 text-[13px] text-slate-600">
         <MetaRow
           icon={<CalendarIcon className="h-4 w-4" />}
           text={request.meta[0]}
@@ -586,41 +586,41 @@ function RequestCard({
       </div>
 
       {request.rawStatus === "revision" && request.revisionNotes && (
-        <div className="mt-4 rounded-lg border border-rose-100 bg-rose-50 p-3 text-xs text-rose-700">
+        <div className="mt-3 rounded-lg border border-rose-100 bg-rose-50 p-2.5 text-[11px] text-rose-700">
           <span className="block font-bold">Your revision note:</span>
-          <p className="mt-1 leading-5">
+          <p className="mt-1 line-clamp-2 leading-5">
             &ldquo;{request.revisionNotes}&rdquo;
           </p>
         </div>
       )}
 
       {request.review && (
-        <div className="mt-4 rounded-lg border border-emerald-100 bg-emerald-50/60 p-3 text-xs text-emerald-800">
+        <div className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50/60 p-2.5 text-[11px] text-emerald-800">
           <span className="block font-bold">Your review:</span>
           <span className="font-bold text-amber-600">
             {"★".repeat(request.review.rating)}
             {"☆".repeat(5 - request.review.rating)}
           </span>
-          <p className="mt-1 italic">&ldquo;{request.review.comment}&rdquo;</p>
+          <p className="mt-1 line-clamp-2 italic">&ldquo;{request.review.comment}&rdquo;</p>
         </div>
       )}
 
       {request.providerReview && (
-        <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-800">
+        <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/60 p-2.5 text-[11px] text-blue-800">
           <span className="block font-bold">Provider reply:</span>
           <span className="font-bold text-blue-500">
             {"★".repeat(request.providerReview.rating)}
             {"☆".repeat(5 - request.providerReview.rating)}
           </span>
-          <p className="mt-1 italic">
+          <p className="mt-1 line-clamp-2 italic">
             &ldquo;{request.providerReview.comment}&rdquo;
           </p>
         </div>
       )}
 
-      <div className="mt-auto border-t border-slate-200 pt-6">
+      <div className="mt-auto border-t border-slate-200 pt-3">
         {needsBuyerReview ? (
-          <div className="grid gap-3">
+          <div className="grid gap-2">
             <p className="text-xs font-semibold text-slate-500">
               Provider finished. Check the work and complete the request.
             </p>
@@ -631,7 +631,7 @@ function RequestCard({
                   setActiveReview(true);
                   setActiveRevision(false);
                 }}
-                className="inline-flex h-10 items-center justify-center rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white transition hover:bg-emerald-700"
+                className="inline-flex h-9 items-center justify-center rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white transition hover:bg-emerald-700"
               >
                 Accept & Review
               </button>
@@ -641,18 +641,18 @@ function RequestCard({
                   setActiveRevision(true);
                   setActiveReview(false);
                 }}
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-red-300 px-3 text-xs font-bold text-red-700 transition hover:bg-red-50"
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-red-300 px-3 text-xs font-bold text-red-700 transition hover:bg-red-50"
               >
                 Has Errors / Revise
               </button>
             </div>
           </div>
         ) : isWaitingProviderReview ? (
-          <div className="grid gap-3 rounded-xl border border-amber-200 bg-amber-50/50 p-3">
+          <div className="grid gap-2 rounded-xl border border-amber-200 bg-amber-50/50 p-2.5">
             <p className="text-xs font-bold text-amber-800">
               Waiting for provider reply
             </p>
-            <p className="text-xs leading-5 text-slate-600">
+            <p className="line-clamp-2 text-xs leading-5 text-slate-600">
               Your review was sent. This request will move to Completed after
               the provider reviews you back.
             </p>
@@ -688,17 +688,17 @@ function RequestCard({
         )}
 
         {activeReview && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/40 p-3">
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/40 p-2.5">
             <p className="text-xs font-bold text-slate-800">
               Rate provider session
             </p>
-            <div className="mt-2 flex gap-1.5">
+            <div className="mt-1.5 flex gap-1.5">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   type="button"
                   key={star}
                   onClick={() => setReviewRating(star)}
-                  className={`text-2xl leading-none ${
+                  className={`text-xl leading-none ${
                     reviewRating >= star ? "text-amber-500" : "text-slate-300"
                   }`}
                 >
@@ -711,9 +711,9 @@ function RequestCard({
               value={reviewComment}
               onChange={(event) => setReviewComment(event.target.value)}
               placeholder="Share your review..."
-              className="mt-3 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-[#2f66e7] focus:ring-2 focus:ring-blue-100"
+              className="mt-2 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-[#2f66e7] focus:ring-2 focus:ring-blue-100"
             />
-            <div className="mt-3 flex justify-end gap-2">
+            <div className="mt-2 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setActiveReview(false)}
@@ -734,7 +734,7 @@ function RequestCard({
         )}
 
         {activeRevision && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50/40 p-3">
+          <div className="mt-3 rounded-xl border border-red-200 bg-red-50/40 p-2.5">
             <p className="text-xs font-bold text-slate-800">
               Describe the changes needed
             </p>
@@ -743,9 +743,9 @@ function RequestCard({
               value={revisionText}
               onChange={(event) => setRevisionText(event.target.value)}
               placeholder="List what needs to be fixed..."
-              className="mt-3 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-[#2f66e7] focus:ring-2 focus:ring-blue-100"
+              className="mt-2 w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-[#2f66e7] focus:ring-2 focus:ring-blue-100"
             />
-            <div className="mt-3 flex justify-end gap-2">
+            <div className="mt-2 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setActiveRevision(false)}
