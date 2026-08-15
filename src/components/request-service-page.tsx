@@ -27,7 +27,16 @@ import ModalPortal from "@/components/ui/modal-portal";
 const requestServiceSchema = z.object({
   category: z.string().trim().min(1, "Service category is required."),
   requiredDate: z.string().trim().min(1, "Required date is required."),
-  budgetPrice: z.string().trim().optional().or(z.literal("")),
+  budgetPrice: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => {
+      if (!value) return true;
+      const parsedValue = Number(value);
+      return Number.isFinite(parsedValue) && parsedValue > 0;
+    }, "Enter a valid budget amount."),
   requestNote: z
     .string()
     .trim()
@@ -140,6 +149,7 @@ function RequestForm({
     formState: { errors },
   } = useForm<RequestServiceFormValues>({
     resolver: zodResolver(requestServiceSchema),
+    mode: "onChange",
     defaultValues: {
       category: "",
       requiredDate: "",
@@ -342,6 +352,11 @@ function RequestForm({
                     aria-invalid={Boolean(errors.budgetPrice)}
                     className={getFieldClassName(Boolean(errors.budgetPrice))}
                   />
+                  {errors.budgetPrice && (
+                    <p className="text-xs font-medium text-red-600">
+                      {errors.budgetPrice.message}
+                    </p>
+                  )}
                 </label>
               </div>
             </div>
