@@ -526,43 +526,50 @@ function RequestCard({
     }
   };
 
+  const showFooterSection =
+    needsBuyerReview ||
+    isWaitingProviderReview ||
+    canOpenChat ||
+    activeReview ||
+    activeRevision;
+
   return (
-    <article className="flex h-full min-h-[430px] flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.035)]">
-      <div className="flex items-start justify-between gap-3">
+    <article className="flex h-full min-h-[324px] flex-col rounded-2xl border border-slate-200 bg-white p-2.5 shadow-[0_8px_18px_rgba(15,23,42,0.025)]">
+      <div className="flex items-start justify-between gap-2">
         <span
-          className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconClassName}`}
+          className={`flex h-7.5 w-7.5 items-center justify-center rounded-lg ${iconClassName}`}
         >
           <RequestIcon tone={request.iconTone} />
         </span>
         <span
-          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClassName}`}
+          className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${statusClassName}`}
         >
           {request.status}
         </span>
       </div>
 
-      <h3 className="mt-3 line-clamp-2 text-[1.05rem] font-semibold leading-6 text-slate-900">
+      <h3 className="mt-1.5 line-clamp-2 text-[0.92rem] font-semibold leading-5 text-slate-900">
         {request.title}
       </h3>
-      <p className="mt-1 line-clamp-1 text-sm font-medium text-teal-700">
+      <p className="mt-0.5 line-clamp-1 text-[12px] font-medium text-teal-700">
         {request.subject}
       </p>
 
-      <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-slate-50 p-2.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-xs font-bold text-white">
+      <div className="mt-1.5 flex items-center gap-1.5 rounded-xl bg-slate-50 p-1.5">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2f66e7] text-[10px] font-bold text-white">
           {providerInitial}
         </span>
         <div className="min-w-0">
           <p className="truncate text-[10px] font-semibold text-slate-500">
             Provider
           </p>
-          <p className="truncate text-[13px] font-bold text-slate-900">
+          <p className="truncate text-[12px] font-bold text-slate-900">
             {request.providerName}
           </p>
         </div>
       </div>
 
-      <div className="mt-3 grid gap-2 text-[13px] text-slate-600">
+      <div className="mt-1.5 grid gap-1 text-[11.5px] text-slate-600">
         <MetaRow
           icon={<CalendarIcon className="h-4 w-4" />}
           text={request.meta[0]}
@@ -586,7 +593,7 @@ function RequestCard({
       </div>
 
       {request.rawStatus === "revision" && request.revisionNotes && (
-        <div className="mt-3 rounded-lg border border-rose-100 bg-rose-50 p-2.5 text-[11px] text-rose-700">
+        <div className="mt-1.5 rounded-lg border border-rose-100 bg-rose-50 p-1.5 text-[10px] text-rose-700">
           <span className="block font-bold">Your revision note:</span>
           <p className="mt-1 line-clamp-2 leading-5">
             &ldquo;{request.revisionNotes}&rdquo;
@@ -595,7 +602,7 @@ function RequestCard({
       )}
 
       {request.review && (
-        <div className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50/60 p-2.5 text-[11px] text-emerald-800">
+        <div className="mt-1.5 rounded-lg border border-emerald-100 bg-emerald-50/60 p-1.5 text-[9.5px] text-emerald-800">
           <span className="block font-bold">Your review:</span>
           <span className="font-bold text-amber-600">
             {"★".repeat(request.review.rating)}
@@ -606,7 +613,7 @@ function RequestCard({
       )}
 
       {request.providerReview && (
-        <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/60 p-2.5 text-[11px] text-blue-800">
+        <div className="mt-1.5 rounded-lg border border-blue-100 bg-blue-50/60 p-1.5 text-[9.5px] text-blue-800">
           <span className="block font-bold">Provider reply:</span>
           <span className="font-bold text-blue-500">
             {"★".repeat(request.providerReview.rating)}
@@ -618,8 +625,9 @@ function RequestCard({
         </div>
       )}
 
-      <div className="mt-auto border-t border-slate-200 pt-3">
-        {needsBuyerReview ? (
+      {showFooterSection && (
+        <div className="mt-auto border-t border-slate-200 pt-2">
+          {needsBuyerReview ? (
           <div className="grid gap-2">
             <p className="text-xs font-semibold text-slate-500">
               Provider finished. Check the work and complete the request.
@@ -641,13 +649,13 @@ function RequestCard({
                   setActiveRevision(true);
                   setActiveReview(false);
                 }}
-                className="inline-flex h-9 items-center justify-center rounded-lg border border-red-300 px-3 text-xs font-bold text-red-700 transition hover:bg-red-50"
+                className="inline-flex h-9 items-center justify-center rounded-lg bg-red-600 px-2 text-center text-[11px] font-bold leading-[1.1] text-white transition hover:bg-red-700"
               >
                 Has Errors / Revise
               </button>
             </div>
           </div>
-        ) : isWaitingProviderReview ? (
+          ) : isWaitingProviderReview ? (
           <div className="grid gap-2 rounded-xl border border-amber-200 bg-amber-50/50 p-2.5">
             <p className="text-xs font-bold text-amber-800">
               Waiting for provider reply
@@ -663,31 +671,16 @@ function RequestCard({
               Open Session Chat
             </Link>
           </div>
-        ) : canOpenChat ? (
+          ) : canOpenChat ? (
           <Link
             href={chatHref}
             className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#2f66e7] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2557cf]"
           >
             Open Session Chat
           </Link>
-        ) : (
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              className="text-base font-medium text-[#0f4cbf] transition hover:text-[#0c3f9d]"
-            >
-              {request.primaryLabel}
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-10 min-w-20 items-center justify-center rounded-lg bg-[#e3e4f2] px-4 text-sm font-medium text-slate-700 transition hover:bg-[#d5d8ea]"
-            >
-              {request.secondaryLabel}
-            </button>
-          </div>
-        )}
+          ) : null}
 
-        {activeReview && (
+          {activeReview && (
           <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/40 p-2.5">
             <p className="text-xs font-bold text-slate-800">
               Rate provider session
@@ -731,9 +724,9 @@ function RequestCard({
               </button>
             </div>
           </div>
-        )}
+          )}
 
-        {activeRevision && (
+          {activeRevision && (
           <div className="mt-3 rounded-xl border border-red-200 bg-red-50/40 p-2.5">
             <p className="text-xs font-bold text-slate-800">
               Describe the changes needed
@@ -763,8 +756,9 @@ function RequestCard({
               </button>
             </div>
           </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </article>
   );
 }
