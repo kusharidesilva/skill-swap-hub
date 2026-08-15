@@ -645,31 +645,46 @@ function NewRequestsView({
                     </div>
                   </div>
 
-                  <div
-                    className={`mt-auto grid gap-2 border-t border-slate-100 pt-3 ${
-                      isGeneralRequest ? "grid-cols-2" : "grid-cols-3"
-                    }`}
-                  >
-                    <button
-                      onClick={() => handleDecision(request.id, "working")}
-                      className="rounded-[14px] bg-emerald-600 px-2 py-2 text-[10.5px] font-bold text-white shadow-[0_10px_20px_rgba(5,150,105,0.16)] transition hover:bg-emerald-700"
-                    >
-                      Accept Swap
-                    </button>
-                    {!isGeneralRequest && (
-                      <button
-                        onClick={() => handleDecision(request.id, "rejected")}
-                        className="rounded-[14px] border border-rose-200 bg-white px-2 py-2 text-[10.5px] font-bold text-rose-600 transition hover:bg-rose-50"
-                      >
-                        Decline
-                      </button>
+                  <div className="mt-auto border-t border-slate-100 pt-2.5">
+                    {isGeneralRequest ? (
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          onClick={() => handleDecision(request.id, "working")}
+                          className="inline-flex min-h-[40px] items-center justify-center rounded-[12px] bg-emerald-600 px-3 py-2 text-center text-[10.5px] font-semibold leading-tight text-white shadow-[0_8px_16px_rgba(5,150,105,0.12)] transition hover:bg-emerald-700"
+                        >
+                          Accept Swap
+                        </button>
+                        <Link
+                          href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(request.buyerId)}&subject=${encodeURIComponent(request.title)}${request.gigId ? `&gigId=${encodeURIComponent(request.gigId)}&category=${encodeURIComponent(request.category)}&providerName=${encodeURIComponent(request.providerName || userProfile?.name || "Provider")}` : ""}`}
+                          className="inline-flex min-h-[40px] items-center justify-center rounded-[12px] border border-[#c7d7ff] bg-blue-50/70 px-3 py-2 text-center text-[10.5px] font-semibold leading-tight text-[#1453c4] transition hover:border-[#1453c4] hover:bg-blue-100/70"
+                        >
+                          Chat
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <button
+                          onClick={() => handleDecision(request.id, "working")}
+                          className="inline-flex min-h-[40px] w-full items-center justify-center rounded-[12px] bg-emerald-600 px-3 py-2 text-center text-[10.5px] font-semibold leading-tight text-white shadow-[0_8px_16px_rgba(5,150,105,0.12)] transition hover:bg-emerald-700"
+                        >
+                          Accept Swap
+                        </button>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <button
+                            onClick={() => handleDecision(request.id, "rejected")}
+                            className="inline-flex min-h-[40px] items-center justify-center rounded-[12px] border border-rose-200 bg-rose-50 px-3 py-2 text-center text-[10.5px] font-semibold leading-tight text-rose-600 transition hover:border-rose-300 hover:bg-rose-100/80"
+                          >
+                            Decline
+                          </button>
+                          <Link
+                            href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(request.buyerId)}&subject=${encodeURIComponent(request.title)}${request.gigId ? `&gigId=${encodeURIComponent(request.gigId)}&category=${encodeURIComponent(request.category)}&providerName=${encodeURIComponent(request.providerName || userProfile?.name || "Provider")}` : ""}`}
+                            className="inline-flex min-h-[40px] items-center justify-center rounded-[12px] border border-[#c7d7ff] bg-blue-50/70 px-3 py-2 text-center text-[10.5px] font-semibold leading-tight text-[#1453c4] transition hover:border-[#1453c4] hover:bg-blue-100/70"
+                          >
+                            Chat
+                          </Link>
+                        </div>
+                      </div>
                     )}
-                    <Link
-                      href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(request.buyerId)}&subject=${encodeURIComponent(request.title)}${request.gigId ? `&gigId=${encodeURIComponent(request.gigId)}&category=${encodeURIComponent(request.category)}&providerName=${encodeURIComponent(request.providerName || userProfile?.name || "Provider")}` : ""}`}
-                      className="inline-flex items-center justify-center rounded-[14px] border border-[#c7d7ff] bg-blue-50/60 px-2 py-2 text-[11.5px] font-bold text-[#1453c4] transition hover:border-[#1453c4] hover:bg-blue-50"
-                    >
-                      Chat
-                    </Link>
                   </div>
                 </div>
               </article>
@@ -1199,36 +1214,70 @@ function CompletedView({ requests }: { requests: RequestData[] }) {
 
 function DeclinedView({ requests }: { requests: RequestData[] }) {
   return (
-    <section className="space-y-4">
+    <section className="grid grid-cols-1 gap-5 xl:grid-cols-2 2xl:grid-cols-3">
       {requests.length > 0 ? (
         requests.map((item) => (
           <article
             key={item.id}
-            className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200 bg-white p-5 gap-4 shadow-sm"
+            className="flex h-full flex-col rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-[0_18px_40px_rgba(148,163,184,0.14)] transition-shadow hover:shadow-[0_22px_48px_rgba(148,163,184,0.18)]"
           >
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-lg font-bold text-slate-600">
-                {item.buyerName.charAt(0).toUpperCase()}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3.5">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl font-bold text-slate-600">
+                  {item.buyerName.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-[1.05rem] font-bold text-slate-900">
+                      {item.buyerName}
+                    </p>
+                    {item.buyerAccountType ? (
+                      <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        {item.buyerAccountType}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {item.category || "Direct skill request"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-bold text-slate-900">
-                  {item.buyerName}
-                </p>
-                <p className="text-xs text-slate-500">{item.title}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Declined Direct Skill Swap Request
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 self-end sm:self-auto">
-              <span className="rounded bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 border border-rose-100">
+              <span className="inline-flex shrink-0 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700">
                 Declined
               </span>
+            </div>
+
+            <div className="mt-5 rounded-[22px] border border-slate-200/80 bg-slate-50/65 p-4">
+              <p className="line-clamp-2 text-[1.02rem] font-bold text-slate-900">
+                {item.title}
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                Declined Direct Skill Swap Request
+              </p>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-[18px] border border-slate-200 bg-white px-3.5 py-3">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  Request Type
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-700">
+                  {item.serviceType || "Direct request"}
+                </p>
+              </div>
+              <div className="rounded-[18px] border border-slate-200 bg-white px-3.5 py-3">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  Budget
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-700">
+                  {item.budget || "Discuss in chat"}
+                </p>
+              </div>
             </div>
           </article>
         ))
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500 shadow-sm">
+        <div className="col-span-full rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500 shadow-sm">
           No declined requests found.
         </div>
       )}
