@@ -7,7 +7,7 @@ import {
   AVAILABILITY_DAYS,
   AVAILABILITY_TIME_SLOTS,
   ISSUE_TYPES,
-  SERVICE_CATEGORIES,
+  MANAGED_SERVICE_CATEGORIES,
   YEAR_OF_STUDY_OPTIONS,
 } from "@/lib/platform";
 import { UNIVERSITIES } from "@/lib/universities";
@@ -34,7 +34,7 @@ type LookupRecord = {
 };
 
 const lookupDefaults: Record<LookupCollection, readonly string[]> = {
-  serviceCategories: SERVICE_CATEGORIES,
+  serviceCategories: MANAGED_SERVICE_CATEGORIES,
   universities: UNIVERSITIES,
   issueTypes: ISSUE_TYPES,
   yearOfStudyOptions: YEAR_OF_STUDY_OPTIONS,
@@ -128,7 +128,8 @@ export function useLookupOptions(collectionName: LookupCollection) {
         const nextOptions = snapshot.docs
           .map((docSnap) => {
             const data = docSnap.data() as LookupRecord;
-            return isLookupActive(data) ? readLookupName(data, docSnap.id) : "";
+            const name = isLookupActive(data) ? readLookupName(data, docSnap.id) : "";
+            return name;
           })
           .filter(Boolean);
 
@@ -147,14 +148,15 @@ export function useLookupOptions(collectionName: LookupCollection) {
   }, [collectionName, isStaticCollection]);
 
   return useMemo(() => {
+    if (isStaticCollection) {
+      return uniqueOptions(sortLookupOptions(collectionName, defaults));
+    }
+
     const remoteOptions =
       remoteState?.collectionName === collectionName ? remoteState.options : [];
 
     return uniqueOptions(
-      sortLookupOptions(
-        collectionName,
-        isStaticCollection ? defaults : remoteOptions.length ? remoteOptions : defaults,
-      ),
+      sortLookupOptions(collectionName, remoteOptions),
     );
   }, [collectionName, defaults, isStaticCollection, remoteState]);
 }

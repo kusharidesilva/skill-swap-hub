@@ -116,7 +116,7 @@ export default function NotificationsPage() {
     );
 
     return () => unsubscribe();
-  }, [userProfile]);
+  }, [itemsPerPage, userProfile]);
 
   useEffect(() => {
     const updateItemsPerPage = () => {

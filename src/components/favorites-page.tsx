@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { ensureGigTitlePrefix } from "@/lib/gig-titles";
-import { SERVICE_CATEGORIES } from "@/lib/platform";
+import { useLookupOptions } from "@/lib/lookups";
 import { formatRatingLabel } from "@/lib/ratings";
 import { doc, updateDoc } from "firebase/firestore";
 import ModalPortal from "@/components/ui/modal-portal";
@@ -30,12 +30,12 @@ type SavedSkill = {
   availability?: string | string[];
 };
 
-const filterOptions = ["All", ...SERVICE_CATEGORIES];
-
 export default function FavoritesPage() {
   const { userProfile, loading, refreshProfile } = useAuth();
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
+  const categoryOptions = useLookupOptions("serviceCategories");
+  const filterOptions = useMemo(() => ["All", ...categoryOptions], [categoryOptions]);
 
   // Favorites are stored inside the user's profile, so no extra query is needed.
   const savedSkills = useMemo(() => {

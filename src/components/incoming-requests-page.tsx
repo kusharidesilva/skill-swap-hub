@@ -21,7 +21,7 @@ import { createNotification } from "@/lib/notifications";
 import SelectField from "@/components/ui/select-field";
 import { useLookupOptions } from "@/lib/lookups";
 import { ensureGigTitlePrefix } from "@/lib/gig-titles";
-import { toMillis } from "@/lib/moderation";
+import { toMillis, type TimestampLike } from "@/lib/moderation";
 
 type IncomingRequestsTab = "new" | "accepted" | "completed" | "declined";
 
@@ -60,10 +60,48 @@ interface RequestData {
     rating: number;
     comment: string;
   };
-  updatedAt?: { toMillis?: () => number; toDate?: () => Date };
-  createdAt?: { toMillis?: () => number; toDate?: () => Date };
-  providerDoneReminderSentAt?: { toMillis?: () => number; toDate?: () => Date };
+  updatedAt?: TimestampLike;
+  createdAt?: TimestampLike;
+  acceptedAt?: TimestampLike;
+  deliveredAt?: TimestampLike;
+  providerReviewedAt?: TimestampLike;
+  buyerReviewedAt?: TimestampLike;
+  reviewSubmittedAt?: TimestampLike;
+  reviewedAt?: TimestampLike;
+  completedAt?: TimestampLike;
+  providerDoneReminderSentAt?: TimestampLike;
 }
+
+const getLatestIncomingRequestMillis = (request: RequestData) =>
+  Math.max(
+    toMillis(request.providerReviewedAt),
+    toMillis(request.reviewSubmittedAt),
+    toMillis(request.reviewedAt),
+    toMillis(request.buyerReviewedAt),
+    toMillis(request.completedAt),
+    toMillis(request.deliveredAt),
+    toMillis(request.acceptedAt),
+    toMillis(request.updatedAt),
+    toMillis(request.createdAt),
+    0,
+  );
+
+const getRequestCreatedMillis = (request: RequestData) =>
+  toMillis(request.createdAt) || toMillis(request.updatedAt) || 0;
+
+const sortIncomingRequestsLatestFirst = (items: RequestData[]) =>
+  [...items].sort((a, b) => {
+    const timeDifference =
+      getLatestIncomingRequestMillis(b) - getLatestIncomingRequestMillis(a);
+    return timeDifference || b.id.localeCompare(a.id);
+  });
+
+const sortIncomingRequestsOldestFirst = (items: RequestData[]) =>
+  [...items].sort((a, b) => {
+    const timeDifference =
+      getRequestCreatedMillis(a) - getRequestCreatedMillis(b);
+    return timeDifference || a.id.localeCompare(b.id);
+  });
 
 type BuyerRequestMeta = {
   profileImageUrl: string;
@@ -409,33 +447,39 @@ export default function IncomingRequestsPageContent({
       {/* Only the selected workflow stage is rendered below. */}
       {activeTab === "new" && (
         <NewRequestsView
-          requests={requests.filter((r) => r.status === "pending")}
+          requests={sortIncomingRequestsOldestFirst(
+            requests.filter((r) => r.status === "pending"),
+          )}
           role={role}
           userProfile={userProfile}
         />
       )}
       {activeTab === "accepted" && (
         <AcceptedView
-          requests={requests.filter(
-            (r) =>
-              r.status === "working" ||
-              r.status === "revision" ||
-              r.status === "done" ||
-              r.status === "review_pending" ||
-              (r.status === "completed" &&
-                Boolean(r.review) &&
-                !r.providerReview),
+          requests={sortIncomingRequestsLatestFirst(
+            requests.filter(
+              (r) =>
+                r.status === "working" ||
+                r.status === "revision" ||
+                r.status === "done" ||
+                r.status === "review_pending" ||
+                (r.status === "completed" &&
+                  Boolean(r.review) &&
+                  !r.providerReview),
+            ),
           )}
           role={role}
         />
       )}
       {activeTab === "completed" && (
         <CompletedView
-          requests={requests.filter(
-            (r) =>
-              r.status === "completed" &&
-              Boolean(r.review) &&
-              Boolean(r.providerReview),
+          requests={sortIncomingRequestsLatestFirst(
+            requests.filter(
+              (r) =>
+                r.status === "completed" &&
+                Boolean(r.review) &&
+                Boolean(r.providerReview),
+            ),
           )}
         />
       )}
@@ -646,7 +690,7 @@ function NewRequestsView({
                   </div>
 
                   <div className="mt-auto border-t border-slate-100 pt-2.5">
-                    {isGeneralRequest ? (
+                    <div className="space-y-1.5">
                       <div className="grid grid-cols-2 gap-1.5">
                         <button
                           onClick={() => handleDecision(request.id, "working")}
@@ -654,37 +698,20 @@ function NewRequestsView({
                         >
                           Accept Swap
                         </button>
-                        <Link
-                          href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(request.buyerId)}&subject=${encodeURIComponent(request.title)}${request.gigId ? `&gigId=${encodeURIComponent(request.gigId)}&category=${encodeURIComponent(request.category)}&providerName=${encodeURIComponent(request.providerName || userProfile?.name || "Provider")}` : ""}`}
-                          className="inline-flex min-h-[40px] items-center justify-center rounded-[12px] border border-[#c7d7ff] bg-blue-50/70 px-3 py-2 text-center text-[10.5px] font-semibold leading-tight text-[#1453c4] transition hover:border-[#1453c4] hover:bg-blue-100/70"
-                        >
-                          Chat
-                        </Link>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5">
                         <button
-                          onClick={() => handleDecision(request.id, "working")}
-                          className="inline-flex min-h-[40px] w-full items-center justify-center rounded-[12px] bg-emerald-600 px-3 py-2 text-center text-[10.5px] font-semibold leading-tight text-white shadow-[0_8px_16px_rgba(5,150,105,0.12)] transition hover:bg-emerald-700"
+                          onClick={() => handleDecision(request.id, "rejected")}
+                          className="inline-flex min-h-[40px] items-center justify-center rounded-[12px] border border-rose-200 bg-rose-50 px-3 py-2 text-center text-[10.5px] font-semibold leading-tight text-rose-600 transition hover:border-rose-300 hover:bg-rose-100/80"
                         >
-                          Accept Swap
+                          Decline
                         </button>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          <button
-                            onClick={() => handleDecision(request.id, "rejected")}
-                            className="inline-flex min-h-[40px] items-center justify-center rounded-[12px] border border-rose-200 bg-rose-50 px-3 py-2 text-center text-[10.5px] font-semibold leading-tight text-rose-600 transition hover:border-rose-300 hover:bg-rose-100/80"
-                          >
-                            Decline
-                          </button>
-                          <Link
-                            href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(request.buyerId)}&subject=${encodeURIComponent(request.title)}${request.gigId ? `&gigId=${encodeURIComponent(request.gigId)}&category=${encodeURIComponent(request.category)}&providerName=${encodeURIComponent(request.providerName || userProfile?.name || "Provider")}` : ""}`}
-                            className="inline-flex min-h-[40px] items-center justify-center rounded-[12px] border border-[#c7d7ff] bg-blue-50/70 px-3 py-2 text-center text-[10.5px] font-semibold leading-tight text-[#1453c4] transition hover:border-[#1453c4] hover:bg-blue-100/70"
-                          >
-                            Chat
-                          </Link>
-                        </div>
                       </div>
-                    )}
+                      <Link
+                        href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(request.buyerId)}&subject=${encodeURIComponent(request.title)}${request.gigId ? `&gigId=${encodeURIComponent(request.gigId)}&category=${encodeURIComponent(request.category)}&providerName=${encodeURIComponent(request.providerName || userProfile?.name || "Provider")}` : ""}`}
+                        className="inline-flex min-h-[40px] w-full items-center justify-center rounded-[12px] border border-[#c7d7ff] bg-blue-50/70 px-3 py-2 text-center text-[10.5px] font-semibold leading-tight text-[#1453c4] transition hover:border-[#1453c4] hover:bg-blue-100/70"
+                      >
+                        Chat
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </article>

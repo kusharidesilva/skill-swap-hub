@@ -1,4 +1,4 @@
-export const SERVICE_CATEGORIES = [
+export const MANAGED_SERVICE_CATEGORIES = [
   "Photography",
   "Videography",
   "Event Decoration",
@@ -6,8 +6,10 @@ export const SERVICE_CATEGORIES = [
   "Content Writing",
   "Graphic Design",
   "Video Editing",
-  "Dancing",
-  "Singing",
+] as const;
+
+export const SERVICE_CATEGORIES = [
+  ...MANAGED_SERVICE_CATEGORIES,
   "Other",
 ] as const;
 
@@ -141,12 +143,6 @@ export function inferServiceCategory(value: string): ServiceCategory {
   }
   if (["graphic", "logo", "poster", "design"].some((term) => text.includes(term))) {
     return "Graphic Design";
-  }
-  if (["dance", "dancing"].some((term) => text.includes(term))) {
-    return "Dancing";
-  }
-  if (["sing", "vocal", "music"].some((term) => text.includes(term))) {
-    return "Singing";
   }
   return "Other";
 }

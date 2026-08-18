@@ -16,7 +16,7 @@ import {
   AVAILABILITY_DAYS,
   AVAILABILITY_TIME_SLOTS,
   ISSUE_TYPES,
-  SERVICE_CATEGORIES,
+  MANAGED_SERVICE_CATEGORIES,
 } from "@/lib/platform";
 import { UNIVERSITIES } from "@/lib/universities";
 
@@ -46,7 +46,7 @@ const addAndManageGroups: Record<AddAndManageGroupKey, AddAndManageGroup> = {
     key: "serviceCategories",
     title: "Service Categories",
     singular: "category",
-    defaults: SERVICE_CATEGORIES,
+    defaults: MANAGED_SERVICE_CATEGORIES,
   },
   universities: {
     key: "universities",

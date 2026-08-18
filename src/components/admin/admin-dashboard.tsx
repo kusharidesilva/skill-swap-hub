@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "r
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { isPendingAdminReport, normalizeAdminRole } from "@/lib/admin-panel";
-import { SERVICE_CATEGORIES } from "@/lib/platform";
+import { useLookupOptions } from "@/lib/lookups";
 
 type TimestampLike =
   | { toDate?: () => Date; seconds?: number; nanoseconds?: number; _seconds?: number; _nanoseconds?: number }
@@ -146,6 +146,7 @@ export default function AdminDashboard() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [activityRange, setActivityRange] = useState<ActivityRange>("months");
   const [activityNow, setActivityNow] = useState(() => new Date());
+  const serviceCategories = useLookupOptions("serviceCategories");
 
   useEffect(() => {
     const requiredSources = new Set(["users", "providerVerifications"]);
@@ -324,16 +325,25 @@ export default function AdminDashboard() {
   }, [activityBuckets, activityNow, dashboardGigs, users]);
 
   const topCategories = useMemo<CategoryRow[]>(() => {
+    const managedCategories = new Map(
+      serviceCategories.map((category) => [category.trim().toLowerCase(), category]),
+    );
     const counts = new Map<string, number>();
+
     activeGigs.forEach((gig) => {
-      const category = gig.category && SERVICE_CATEGORIES.includes(gig.category as never)
-        ? gig.category
-        : "Other";
+      const category = gig.category
+        ? managedCategories.get(gig.category.trim().toLowerCase())
+        : undefined;
+      if (!category) return;
       counts.set(category, (counts.get(category) || 0) + 1);
     });
 
-    const total = Math.max(activeGigs.length, 1);
-    return [...SERVICE_CATEGORIES]
+    const total = Math.max(
+      [...counts.values()].reduce((sum, count) => sum + count, 0),
+      1,
+    );
+
+    return serviceCategories
       .map((category, index) => ({
         label: category,
         value: `${Math.round(((counts.get(category) || 0) / total) * 100)}%`,
@@ -342,7 +352,7 @@ export default function AdminDashboard() {
       }))
       .filter((category) => category.value !== "0%")
       .slice(0, 4);
-  }, [activeGigs]);
+  }, [activeGigs, serviceCategories]);
 
   const actions: ActionRow[] = [
     ...pendingVerifications.slice(0, 2).map((item) => ({

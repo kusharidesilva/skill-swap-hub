@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import NextImage from "next/image";
+import { useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
@@ -80,9 +81,8 @@ function compressImageToBase64(
   });
 }
 
-function areSameSelections(current: string[], next: string[]) {
-  if (current.length !== next.length) return false;
-  return current.every((value) => next.includes(value));
+function areSameSelections(left: string[], right: string[]) {
+  return left.length === right.length && left.every((value) => right.includes(value));
 }
 
 export default function ProfileSettings({ role }: { role: Role }) {
@@ -97,7 +97,7 @@ export default function ProfileSettings({ role }: { role: Role }) {
         </div>
       </div>
     );
-  }
+  } 
 
   if (!userProfile) {
     return (
@@ -133,14 +133,14 @@ function ProfileSettingsForm({
   const isStudentAccount = userProfile.accountType === "student";
   const canChangeEmail = isNonStudentBuyer || role === "admin";
   const showOffered = role === "provider" || role === "both";
-  const showNeeded = role === "buyer" || role === "both";
   const showAvailability = role === "provider" || role === "both";
   const serviceCategories = useLookupOptions("serviceCategories");
   const availabilityDayOptions = useLookupOptions("availabilityDays");
   const timeSlotOptions = useLookupOptions("availabilityTimeSlots");
-  const weeklyAvailabilityDays = availabilityDayOptions.length
-    ? availabilityDayOptions
-    : [...AVAILABILITY_DAYS];
+  const weeklyAvailabilityDays = useMemo(
+    () => (availabilityDayOptions.length ? availabilityDayOptions : [...AVAILABILITY_DAYS]),
+    [availabilityDayOptions],
+  );
 
   const description =
     role === "both"
@@ -154,11 +154,9 @@ function ProfileSettingsForm({
   // Basic profile fields are initialized from the shared auth profile.
   const [name, setName] = useState(userProfile.name || "");
   const [email, setEmail] = useState(userProfile.email || "");
-  const [university, setUniversity] = useState(userProfile.university || "");
-  const [degree, setDegree] = useState(userProfile.degree || "");
-  const [yearOfStudy, setYearOfStudy] = useState(
-    userProfile.yearOfStudy || "1st Year",
-  );
+  const [university] = useState(userProfile.university || "");
+  const [degree] = useState(userProfile.degree || "");
+  const [yearOfStudy] = useState(userProfile.yearOfStudy || "1st Year");
   const [emailPassword, setEmailPassword] = useState("");
   const [bio, setBio] = useState(userProfile.providerProfile?.bio || "");
   const [profileImageUrl, setProfileImageUrl] = useState(
@@ -175,20 +173,17 @@ function ProfileSettingsForm({
     userProfile.neededSkills || [],
   );
   const [newOfferedSkill, setNewOfferedSkill] = useState("");
-  const [newNeededSkill, setNewNeededSkill] = useState("");
 
   // Availability is stored as a list of selected time slots.
   const [availability, setAvailability] = useState<string[]>(
     userProfile.providerProfile?.availability || [],
   );
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
 
   // These switches map directly to the nested Firestore settings object.
-  const [emailNotifications, setEmailNotifications] = useState(
+  const [emailNotifications] = useState(
     userProfile.settings?.emailNotifications ?? true,
   );
-  const [pushNotifications, setPushNotifications] = useState(
+  const [pushNotifications] = useState(
     userProfile.settings?.pushNotifications ?? false,
   );
   const [profileVisibility, setProfileVisibility] = useState(
@@ -230,12 +225,33 @@ function ProfileSettingsForm({
       ),
     [availability, timeSlotOptions, weeklyAvailabilityDays],
   );
-  useEffect(() => {
+
+  const selectedDays = useMemo(() => {
     if (!availability.length) {
-      return;
+      return [] as string[];
     }
 
     const nextDays = new Set<string>();
+
+    availability.forEach((slot) => {
+      const normalizedSlot = slot.trim();
+      const matchingDay = weeklyAvailabilityDays.find((day) =>
+        normalizedSlot.startsWith(`${day} `),
+      );
+
+      if (matchingDay) {
+        nextDays.add(matchingDay);
+      }
+    });
+
+    return Array.from(nextDays);
+  }, [availability, weeklyAvailabilityDays]);
+
+  const selectedPeriods = useMemo(() => {
+    if (!availability.length) {
+      return [] as string[];
+    }
+
     const nextPeriods = new Set<string>();
 
     availability.forEach((slot) => {
@@ -243,25 +259,18 @@ function ProfileSettingsForm({
       const matchingDay = weeklyAvailabilityDays.find((day) =>
         normalizedSlot.startsWith(`${day} `),
       );
-      if (!matchingDay) return;
+
+      if (!matchingDay) {
+        return;
+      }
 
       const period = normalizedSlot.slice(matchingDay.length).trim();
-      nextDays.add(matchingDay);
-
       if (availabilityPeriods.includes(period)) {
         nextPeriods.add(period);
       }
     });
 
-    const nextDaysList = Array.from(nextDays);
-    const nextPeriodsList = Array.from(nextPeriods);
-
-    setSelectedDays((current) =>
-      areSameSelections(current, nextDaysList) ? current : nextDaysList,
-    );
-    setSelectedPeriods((current) =>
-      areSameSelections(current, nextPeriodsList) ? current : nextPeriodsList,
-    );
+    return Array.from(nextPeriods);
   }, [availability, availabilityPeriods, weeklyAvailabilityDays]);
 
   // Build one update payload so Firestore receives an atomic profile change.
@@ -422,14 +431,6 @@ function ProfileSettingsForm({
     setNewOfferedSkill("");
   };
 
-  const addNeededSkill = (skill: string) => {
-    const trimmed = skill.trim();
-    if (trimmed && !neededSkills.includes(trimmed)) {
-      setNeededSkills([...neededSkills, trimmed]);
-    }
-    setNewNeededSkill("");
-  };
-
   const syncAvailability = (days: string[], periods: string[]) => {
     const combinations = days.flatMap((day) =>
       periods.map((period) => `${day} ${period}`),
@@ -442,7 +443,6 @@ function ProfileSettingsForm({
       ? selectedDays.filter((value) => value !== day)
       : [...selectedDays, day];
 
-    setSelectedDays(nextDays);
     syncAvailability(nextDays, selectedPeriods);
   };
 
@@ -451,7 +451,6 @@ function ProfileSettingsForm({
       ? selectedPeriods.filter((value) => value !== period)
       : [...selectedPeriods, period];
 
-    setSelectedPeriods(nextPeriods);
     syncAvailability(selectedDays, nextPeriods);
   };
 
@@ -498,10 +497,13 @@ function ProfileSettingsForm({
                 title="Change profile image"
               >
                 {profileImageUrl ? (
-                  <img
+                  <NextImage
                     src={profileImageUrl}
                     alt={name || "Profile"}
+                    width={56}
+                    height={56}
                     className="h-full w-full object-cover"
+                    unoptimized
                   />
                 ) : (
                   <span className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-blue-500 to-[#2b62e6] text-lg font-bold text-white">
@@ -1155,42 +1157,6 @@ function LoginSecurity({
   );
 }
 
-function NotificationSettings({
-  emailNotifications,
-  pushNotifications,
-  onEmailNotificationsChange,
-  onPushNotificationsChange,
-}: {
-  emailNotifications: boolean;
-  pushNotifications: boolean;
-  onEmailNotificationsChange: (checked: boolean) => void;
-  onPushNotificationsChange: (checked: boolean) => void;
-}) {
-  return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
-      <SectionTitle
-        icon={<BellIcon className="h-4 w-4" />}
-        title="Notifications"
-      />
-
-      <div className="mt-4 grid gap-4">
-        <ToggleRow
-          title="Email Notifications"
-          description="Weekly summaries and messages"
-          checked={emailNotifications}
-          onChange={onEmailNotificationsChange}
-        />
-        <ToggleRow
-          title="System Notifications"
-          description="Real-time alerts for matches & swaps"
-          checked={pushNotifications}
-          onChange={onPushNotificationsChange}
-        />
-      </div>
-    </section>
-  );
-}
-
 function PrivacySettings({
   profileVisibility,
   onProfileVisibilityChange,
@@ -1422,20 +1388,6 @@ function InfoIcon({ className }: IconProps) {
       <circle cx="12" cy="12" r="9" />
       <path d="M12 10v6" />
       <path d="M12 7h.01" />
-    </svg>
-  );
-}
-
-function CheckIcon({ className }: IconProps) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={3}
-    >
-      <path d="M5 13l4 4L19 7" />
     </svg>
   );
 }
