@@ -1086,7 +1086,7 @@ function ReportActionModal({
                     className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-bold text-[#1d4ed8] transition hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus:ring-4 focus:ring-blue-100"
                   >
                     <MailIcon />
-                    Email Reporter
+                    Contact Reporter
                   </a>
                 ) : null}
                 {reportedUserEmailHref ? (
@@ -1096,7 +1096,7 @@ function ReportActionModal({
                     className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 focus:outline-none focus:ring-4 focus:ring-emerald-100"
                   >
                     <MailIcon />
-                    Email Reported User
+                    Contact Reported User
                   </a>
                 ) : null}
                 {!reporterEmailHref && !reportedUserEmailHref ? (
