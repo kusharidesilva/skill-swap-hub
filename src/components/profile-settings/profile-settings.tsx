@@ -81,10 +81,6 @@ function compressImageToBase64(
   });
 }
 
-function areSameSelections(left: string[], right: string[]) {
-  return left.length === right.length && left.every((value) => right.includes(value));
-}
-
 export default function ProfileSettings({ role }: { role: Role }) {
   const { userProfile, loading, refreshProfile } = useAuth();
 
@@ -169,7 +165,7 @@ function ProfileSettingsForm({
   const [offeredSkills, setOfferedSkills] = useState<string[]>(
     userProfile.providerProfile?.skills || [],
   );
-  const [neededSkills, setNeededSkills] = useState<string[]>(
+  const [neededSkills] = useState<string[]>(
     userProfile.neededSkills || [],
   );
   const [newOfferedSkill, setNewOfferedSkill] = useState("");
