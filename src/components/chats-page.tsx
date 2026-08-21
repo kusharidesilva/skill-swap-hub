@@ -110,6 +110,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   const categoryParam = searchParams.get("category");
   const priceParam = searchParams.get("price");
   const providerNameParam = searchParams.get("providerName");
+  const searchParamsString = searchParams.toString();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -165,6 +166,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
         );
         const snap = await getDocs(q);
         let existingChatId: string | null = null;
+        let latestExistingChatMs = -1;
 
         snap.forEach((d) => {
           const data = d.data();
@@ -175,12 +177,21 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
               data.serviceContext?.gigId === gigIdParam
             : true;
           if (matchesPeer && matchesThread) {
-            existingChatId = d.id;
+            const updatedAt = data.updatedAt;
+            const updatedAtMs = updatedAt
+              ? (updatedAt.toDate ? updatedAt.toDate() : new Date(updatedAt)).getTime()
+              : 0;
+
+            if (updatedAtMs > latestExistingChatMs) {
+              existingChatId = d.id;
+              latestExistingChatMs = updatedAtMs;
+            }
           }
         });
 
         if (existingChatId) {
           setActiveId(existingChatId);
+          replaceWithChatId(existingChatId);
         } else {
           // Store a small peer snapshot so the chat list can render quickly.
           const peerSnap = await getDoc(doc(db, "users", peerId));
@@ -228,14 +239,27 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           });
 
           setActiveId(newChatId);
+          replaceWithChatId(newChatId);
         }
       } catch (err) {
         console.error("Error initializing conversation:", err);
       }
     }
 
+    function replaceWithChatId(chatId: string) {
+      const nextParams = new URLSearchParams(searchParamsString);
+      nextParams.set("chatId", chatId);
+      nextParams.delete("peerId");
+      nextParams.delete("subject");
+      nextParams.delete("gigId");
+      nextParams.delete("category");
+      nextParams.delete("price");
+      nextParams.delete("providerName");
+      router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
+    }
+
     initializeConversation();
-  }, [categoryParam, chatIdParam, gigIdParam, peerIdParam, priceParam, providerNameParam, subjectParam, userProfile]);
+  }, [categoryParam, chatIdParam, gigIdParam, pathname, peerIdParam, priceParam, providerNameParam, router, searchParamsString, subjectParam, userProfile]);
 
   // Listen to every conversation that includes the current user.
   useEffect(() => {

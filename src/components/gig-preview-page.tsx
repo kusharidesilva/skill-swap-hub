@@ -14,7 +14,7 @@ import { scopedHref, resolveRole, type Role, type SiteRole } from "@/lib/role-ro
 import type { UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { createNotification } from "@/lib/notifications";
-import { inferServiceCategory } from "@/lib/platform";
+import { AVAILABILITY_DAYS, inferServiceCategory } from "@/lib/platform";
 import { getGigCoverForCategory } from "@/lib/gig-covers";
 import ReviewFeedbackCard from "@/components/reviews/review-card";
 
@@ -896,10 +896,10 @@ function ReviewCard({
 function QuickFactsCard({ gig }: { gig: GigPreviewData }) {
   const facts = [
     { label: "Category", value: gig.category },
-    { label: "Availability", value: gig.availability },
     { label: "Delivery", value: gig.delivery },
     { label: "Price", value: formatPrice(gig.price) },
   ];
+  const availability = formatAvailabilitySummary(gig.availability);
 
   return (
     <article className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_34px_rgba(15,23,42,0.05)] lg:p-5">
@@ -914,13 +914,37 @@ function QuickFactsCard({ gig }: { gig: GigPreviewData }) {
           Essentials
         </span>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {facts.map((fact) => (
-          <div key={fact.label} className="rounded-[20px] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] px-4 py-4 shadow-[0_10px_22px_rgba(15,23,42,0.03)]">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{fact.label}</p>
-            <p className="mt-2 text-[1.02rem] font-semibold leading-7 text-slate-800">{fact.value}</p>
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.95fr)]">
+        <div className="rounded-[20px] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] px-4 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.03)]">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {facts.map((fact) => (
+              <div key={fact.label} className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{fact.label}</p>
+                <p className="mt-1.5 break-words text-[1.02rem] font-semibold leading-6 text-slate-800">{fact.value}</p>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        <div className="rounded-[20px] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] px-4 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.03)]">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Availability</p>
+          {availability.days.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {availability.days.map((day) => (
+                <span
+                  key={day.short}
+                  className={`min-w-8 rounded-full px-2 py-1 text-center text-[10px] font-bold ${
+                    day.active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
+                  }`}
+                >
+                  {day.short}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-[1.02rem] font-semibold leading-7 text-slate-800">{availability.label}</p>
+          )}
+        </div>
       </div>
     </article>
   );
@@ -968,6 +992,36 @@ function formatReviewDateLabel(value: unknown) {
 function formatAvailability(availability?: string[]) {
   if (!availability || availability.length === 0) return "Flexible";
   return availability.join(", ");
+}
+
+function formatAvailabilitySummary(value: string) {
+  const slots = value
+    .split(",")
+    .map((slot) => slot.trim())
+    .filter(Boolean);
+
+  if (slots.length === 0 || value === "Flexible") {
+    return {
+      label: value || "Flexible",
+      days: [],
+    };
+  }
+
+  const previewSlots = slots.slice(0, 2);
+  const remainingCount = Math.max(slots.length - previewSlots.length, 0);
+  const activeDays = new Set(
+    AVAILABILITY_DAYS.filter((day) =>
+      slots.some((slot) => slot.toLowerCase().startsWith(day.toLowerCase())),
+    ),
+  );
+
+  return {
+    label: `${previewSlots.join(", ")}${remainingCount > 0 ? ` +${remainingCount} more` : ""}`,
+    days: AVAILABILITY_DAYS.map((day) => ({
+      short: day.slice(0, 3),
+      active: activeDays.has(day),
+    })),
+  };
 }
 
 function normalizeSummary(summary?: string) {
