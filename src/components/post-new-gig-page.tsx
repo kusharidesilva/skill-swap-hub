@@ -205,7 +205,6 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
       ? normalizedPrice
       : "";
   const isPriceInvalid =
-    didAttemptSubmit &&
     hasPriceInput &&
     (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0);
 
@@ -546,7 +545,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                 Price (LKR) (Optional)
                 <input
                   type="number"
-                  min="0"
+                  min="1"
                   step="1"
                   className={`mt-2 h-11 w-full rounded-lg border px-4 text-base outline-none transition focus:ring-2 ${
                     isPriceInvalid
@@ -559,7 +558,9 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                 />
               </label>
               <p className={`text-xs font-medium ${isPriceInvalid ? "text-red-500" : "text-slate-400"}`}>
-                Leave this empty if you prefer to discuss the price in chat.
+                {isPriceInvalid
+                  ? "Enter a valid price greater than 0."
+                  : "Leave this empty if you prefer to discuss the price in chat."}
               </p>
             </div>
           </div>
