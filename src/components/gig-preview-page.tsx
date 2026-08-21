@@ -598,10 +598,10 @@ export default function GigPreviewPage({
 
       <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_292px] 2xl:grid-cols-[minmax(0,1fr)_304px]">
         <main className="min-w-0 space-y-3">
-          <section className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
-            <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(63,94,251,0.18),transparent_38%),linear-gradient(135deg,#eef4ff_0%,#f8fbff_40%,#edf8f6_100%)] px-5 py-5 md:px-7 md:py-7">
+          <section className="h-full overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
+            <div className="relative flex h-full overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(63,94,251,0.18),transparent_38%),linear-gradient(135deg,#eef4ff_0%,#f8fbff_40%,#edf8f6_100%)] px-5 py-5 md:px-7 md:py-7">
               <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
-              <div className="relative h-[300px] w-full overflow-hidden rounded-[26px] border border-white/80 bg-white shadow-[0_24px_42px_rgba(15,23,42,0.08)] md:h-[390px]">
+              <div className="relative h-[300px] w-full overflow-hidden rounded-[26px] border border-white/80 bg-white shadow-[0_24px_42px_rgba(15,23,42,0.08)] md:h-[390px] xl:h-full xl:min-h-[390px]">
                 <Image
                   src={gig.image}
                   alt={gig.title}
@@ -631,41 +631,6 @@ export default function GigPreviewPage({
           </section>
 
           <ProviderCard gig={gig} role={role} summary={gig.summary} />
-
-          <div className="pt-2">
-            <QuickFactsCard gig={gig} />
-          </div>
-
-          <div className="space-y-3">
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <InfoCard
-                icon={<CheckCircleIcon className="h-4 w-4 text-[#1453c4]" />}
-                title="What I Will Do"
-                titleClass="text-[#1453c4]"
-                items={[
-                  `Help with ${gig.skill}`,
-                  `Explain concepts at ${gig.proficiency.toLowerCase()} level`,
-                  "Review your work and suggest improvements",
-                  "Share useful notes, references, or files",
-                  "Support revisions after your first feedback",
-                ]}
-              />
-              <InfoCard
-                icon={<CheckCircleIcon className="h-4 w-4 text-teal-700" />}
-                title="Why Swap With Me"
-                titleClass="text-teal-700"
-                items={[
-                  `${gig.providerDegree} background`,
-                  `Available: ${compactAvailability}`,
-                  "Clear communication between buyer and provider",
-                  "Focused help based on your exact task",
-                ]}
-              />
-            </div>
-
-            <ReviewsSection reviews={gig.reviewCards} />
-          </div>
         </main>
 
         <aside className="min-w-0 self-start space-y-3 xl:sticky xl:top-3">
@@ -680,6 +645,40 @@ export default function GigPreviewPage({
             onMessageProvider={handleMessageProvider}
           />
         </aside>
+
+        <div className="min-w-0 space-y-3">
+          <div className="pt-2">
+            <QuickFactsCard gig={gig} />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <InfoCard
+              icon={<CheckCircleIcon className="h-4 w-4 text-[#1453c4]" />}
+              title="What I Will Do"
+              titleClass="text-[#1453c4]"
+              items={[
+                `Help with ${gig.skill}`,
+                `Explain concepts at ${gig.proficiency.toLowerCase()} level`,
+                "Review your work and suggest improvements",
+                "Share useful notes, references, or files",
+                "Support revisions after your first feedback",
+              ]}
+            />
+            <InfoCard
+              icon={<CheckCircleIcon className="h-4 w-4 text-teal-700" />}
+              title="Why Swap With Me"
+              titleClass="text-teal-700"
+              items={[
+                `${gig.providerDegree} background`,
+                `Available: ${compactAvailability}`,
+                "Clear communication between buyer and provider",
+                "Focused help based on your exact task",
+              ]}
+            />
+          </div>
+
+          <ReviewsSection reviews={gig.reviewCards} />
+        </div>
       </div>
     </div>
   );
@@ -721,17 +720,13 @@ function ProviderCard({
               {gig.university} <span className="px-1.5 text-slate-300">|</span> {gig.providerDegree}
               <span className="px-1.5 text-slate-300">|</span> {gig.proficiency}
             </p>
-            <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-teal-700">
-              <StarIcon className="h-3.5 w-3.5" />
-              {gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} (${gig.reviews} reviews)` : "New"}
-            </p>
           </div>
         </div>
         <div className="mt-4 border-t border-slate-200 pt-4">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
             About this gig
           </p>
-          <p className="mt-2 line-clamp-4 overflow-hidden break-words text-sm leading-7 text-slate-700">
+          <p className="mt-2 break-words text-sm leading-7 text-slate-700">
             {summary}
           </p>
         </div>
