@@ -13,6 +13,7 @@ type GigPreviewByRolePageProps = {
     gigId?: string | string[]; 
     providerId?: string | string[]; 
     skillIndex?: string | string[]; 
+    coverImage?: string | string[];
   }>; 
 };
 
@@ -24,6 +25,7 @@ export default async function GigPreviewByRolePage({ params, searchParams }: Gig
   const gigId = query.gigId;
   const selectedGigId = typeof gigId === "string" ? gigId : undefined;
   const providerId = typeof query.providerId === "string" ? query.providerId : undefined;
+  const coverImage = typeof query.coverImage === "string" ? query.coverImage : undefined;
   const skillIndex = 
     typeof query.skillIndex === "string" ? Number.parseInt(query.skillIndex, 10) : undefined; 
 
@@ -48,6 +50,7 @@ export default async function GigPreviewByRolePage({ params, searchParams }: Gig
       gigId={selectedGigId}
       providerId={providerId}
       skillIndex={Number.isFinite(skillIndex) ? skillIndex : undefined}
+      coverImage={coverImage}
     />
   );
 

@@ -17,7 +17,7 @@ import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS, inferServiceCategory } from
 import { useLookupOptions } from "@/lib/lookups";
 import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
-import ModalPortal from "@/components/ui/modal-portal";
+import SharedGigDetailsModal from "@/components/gig-details-modal";
 import { getGigCoverForCategory } from "@/lib/gig-covers";
 
 type GigCardData = {
@@ -261,7 +261,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
 
   const previewHref = (gig: GigCardData) =>
     role
-      ? `/gig-preview/${role}?source=find&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=${gig.skillIndex}${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}`
+      ? `/gig-preview/${role}?source=find&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=${gig.skillIndex}${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}&coverImage=${encodeURIComponent(gig.image)}`
       : "/get-started";
 
   return (
@@ -490,141 +490,23 @@ function GigCard({
       </div>
     </article>
     {detailsOpen ? (
-      <GigDetailsModal
-        gig={gig}
-        availability={availability}
+      <SharedGigDetailsModal
+        gig={{
+          title: gig.title,
+          category: gig.category,
+          price: formatPrice(gig.price),
+          providerName: gig.providerName,
+          ratingLabel: gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} rating` : "New",
+          summary: gig.summary,
+          description: gig.description,
+          availability: gig.availability,
+          image: gig.image,
+        }}
         previewHref={previewHref}
         onClose={() => setDetailsOpen(false)}
       />
     ) : null}
     </>
-  );
-}
-
-function GigDetailsModal({
-  gig,
-  availability,
-  previewHref,
-  onClose,
-}: {
-  gig: GigCardData;
-  availability: string;
-  previewHref: string;
-  onClose: () => void;
-}) {
-  const modalFacts = [
-    { label: "Category", value: gig.category },
-    { label: "Price", value: formatPrice(gig.price) },
-    { label: "Provider", value: gig.providerName },
-    {
-      label: "Rating",
-      value: gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} (${gig.reviews} reviews)` : "New",
-    },
-  ];
-  const availabilitySummary = formatAvailabilitySummary(gig.availability);
-
-  return (
-    <ModalPortal>
-      <div
-        className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-slate-950/40 px-4 py-6 backdrop-blur-md sm:items-center"
-        onClick={onClose}
-      >
-        <article
-          className="relative grid max-h-[calc(100dvh-3rem)] w-full max-w-4xl overflow-y-auto rounded-[30px] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(243,248,255,0.97))] shadow-[0_32px_90px_rgba(15,23,42,0.22)] md:grid-cols-[1.02fr_0.98fr]"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close gig details"
-            className="absolute right-5 top-5 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/80 bg-white/95 text-slate-500 shadow-[0_10px_26px_rgba(15,23,42,0.1)] transition hover:border-slate-300 hover:text-slate-900"
-          >
-            <CloseIcon className="h-4 w-4" />
-          </button>
-          <div className="relative min-h-[260px] overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(63,94,251,0.16),transparent_34%),linear-gradient(160deg,#edf4ff_0%,#f8fbff_46%,#eef8f6_100%)] p-5 md:min-h-[440px] md:p-7">
-            <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
-            <div className="relative flex h-full min-h-[220px] items-center justify-center overflow-hidden rounded-[26px] border border-white/80 bg-white/90 shadow-[0_20px_44px_rgba(15,23,42,0.09)] md:min-h-[360px]">
-              <Image
-                src={gig.image}
-                alt={gig.title}
-                fill
-                className="object-contain p-5 md:p-7"
-                sizes="(min-width: 768px) 420px, 100vw"
-              />
-            </div>
-          </div>
-          <div className="min-w-0 p-6 md:p-8">
-            <div className="flex items-start justify-between gap-4">
-              <span className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-[#1453c4] shadow-sm">
-              {gig.category}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-100 bg-amber-50 px-3 py-1.5 text-xs font-bold text-slate-700">
-                <StarIcon className="h-3.5 w-3.5 text-amber-400" />
-                {gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} rating` : "New"}
-              </span>
-            </div>
-
-            <h2 className="mt-4 break-words text-[1.85rem] font-black leading-[1.08] tracking-tight text-slate-900">
-              {gig.title}
-            </h2>
-            <p className="mt-3 line-clamp-3 break-words text-[15px] leading-7 text-slate-600">
-              {gig.summary || gig.description}
-            </p>
-
-            <div className="mt-6 space-y-3">
-              <div className="rounded-[20px] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] px-4 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.03)]">
-                <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                  {modalFacts.map((fact) => (
-                    <div key={fact.label} className="min-w-0">
-                      <dt className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{fact.label}</dt>
-                      <dd className="mt-1.5 break-words text-[15px] font-semibold leading-6 text-slate-800">{fact.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-
-              <div className="rounded-[20px] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] px-4 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.03)]">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Availability</p>
-                {availabilitySummary.days.length > 0 ? (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {availabilitySummary.days.map((day) => (
-                      <span
-                        key={day.short}
-                        className={`min-w-8 rounded-full px-2 py-1 text-center text-[10px] font-bold ${
-                          day.active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
-                        }`}
-                      >
-                        {day.short}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-1.5 break-words text-[15px] font-semibold leading-6 text-slate-800">
-                    {availability || "Flexible"}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href={previewHref}
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-[#2f66e7] px-6 text-sm font-semibold text-white transition hover:bg-[#2557cf]"
-              >
-                View Full Details
-              </Link>
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </article>
-      </div>
-    </ModalPortal>
   );
 }
 
@@ -851,34 +733,6 @@ function formatAvailabilityPreview(value: string | string[] | undefined) {
   return cleanSlots.length > 2 ? `${preview}, ...` : preview;
 }
 
-function formatAvailabilitySummary(value: string | string[] | undefined) {
-  const slots = Array.isArray(value)
-    ? value
-    : String(value || "")
-        .split(",")
-        .map((item) => item.trim());
-  const cleanSlots = slots.filter(Boolean);
-
-  if (cleanSlots.length === 0) {
-    return {
-      days: [],
-    };
-  }
-
-  const activeDays = new Set(
-    AVAILABILITY_DAYS.filter((day) =>
-      cleanSlots.some((slot) => slot.toLowerCase().startsWith(day.toLowerCase())),
-    ),
-  );
-
-  return {
-    days: AVAILABILITY_DAYS.map((day) => ({
-      short: day.slice(0, 3),
-      active: activeDays.has(day),
-    })),
-  };
-}
-
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -891,15 +745,6 @@ function SearchIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <circle cx="11" cy="11" r="7" />
       <path d="M20 20l-3-3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M6 6l12 12" strokeLinecap="round" />
-      <path d="M18 6L6 18" strokeLinecap="round" />
     </svg>
   );
 }

@@ -24,6 +24,7 @@ type GigPreviewPageProps = {
   gigId?: string;
   providerId?: string;
   skillIndex?: number;
+  coverImage?: string;
   embedded?: boolean;
   onGuestAction?: () => void;
 };
@@ -91,6 +92,7 @@ export default function GigPreviewPage({
   gigId,
   providerId,
   skillIndex = 0,
+  coverImage,
   embedded = false,
   onGuestAction,
 }: GigPreviewPageProps) {
@@ -202,6 +204,12 @@ export default function GigPreviewPage({
             delivery?: string;
           };
 
+          const matchedProviderCover = await resolveProviderGigCover(publicGig.providerId || providerId, {
+            gigId,
+            title: publicGig.title || "",
+            category: publicGig.category || "",
+          });
+
           const publicGigDetails: GigPreviewData = {
             gigId: publicGig.gigId || gigId,
             providerId: publicGig.providerId || providerId || "guest-provider",
@@ -224,8 +232,10 @@ export default function GigPreviewPage({
             reviews: 0,
             reviewCards: [],
             image:
-              publicGig.sampleWorkUrl ||
+              matchedProviderCover ||
               publicGig.image ||
+              publicGig.sampleWorkUrl ||
+              coverImage ||
               getGigCoverForCategory(publicGig.category, publicGig.title, Math.max(skillIndex, 0)),
             value: "20",
             delivery: publicGig.delivery || "Flexible",
@@ -253,18 +263,25 @@ export default function GigPreviewPage({
         const profile = user.providerProfile;
         const skills = profile?.skills?.length ? profile.skills : ["Student Support"];
         const profileGigs = profile?.gigs || [];
-        const matchedGigIndex = gigId
-          ? profileGigs.findIndex((item) => item.id === gigId)
-          : -1;
+        const normalizedGigSnap = gigId ? await getDoc(doc(db, "gigs", gigId)) : null;
+        const normalizedGig = normalizedGigSnap?.exists() ? normalizedGigSnap.data() : null;
+        const matchedGigIndex = findMatchingProviderGigIndex(profileGigs, {
+          gigId,
+          title: String(normalizedGig?.title || ""),
+          category: String(normalizedGig?.category || ""),
+        });
         const resolvedSkillIndex =
           matchedGigIndex >= 0
             ? matchedGigIndex
             : Math.min(Math.max(skillIndex, 0), Math.max(skills.length - 1, 0));
         const safeSkillIndex = resolvedSkillIndex;
-        const skill = skills[safeSkillIndex] || profileGigs[safeSkillIndex]?.title || skills[0];
-        const storedGig = profileGigs[safeSkillIndex];
-        const normalizedGigSnap = gigId ? await getDoc(doc(db, "gigs", gigId)) : null;
-        const normalizedGig = normalizedGigSnap?.exists() ? normalizedGigSnap.data() : null;
+        const storedGig = gigId && matchedGigIndex < 0 ? undefined : profileGigs[safeSkillIndex];
+        const skill = String(
+          normalizedGig?.title ||
+          skills[safeSkillIndex] ||
+          storedGig?.title ||
+          skills[0],
+        );
 
         const requestsQuery = query(
           collection(db, "requests"),
@@ -337,10 +354,12 @@ export default function GigPreviewPage({
           reviewCards,
           image:
             String(
-              normalizedGig?.sampleWorkUrl ||
-              normalizedGig?.image ||
               storedGig?.image ||
+              storedGig?.sampleWorkUrl ||
               (profile?.gigImages && profile.gigImages[safeSkillIndex]) ||
+              coverImage ||
+              normalizedGig?.image ||
+              normalizedGig?.sampleWorkUrl ||
               getGigCoverForCategory(
                 String(normalizedGig?.category || storedGig?.category || inferCategory(skill)),
                 String(normalizedGig?.title || storedGig?.title || skill),
@@ -369,7 +388,7 @@ export default function GigPreviewPage({
       active = false;
       if (unsubscribeRatings) unsubscribeRatings();
     };
-  }, [gigId, providerId, role, skillIndex]);
+  }, [coverImage, gigId, providerId, role, skillIndex]);
 
   // Package details are derived from the current gig rather than stored separately.
   const packageItems = useMemo(
@@ -381,6 +400,7 @@ export default function GigPreviewPage({
     ],
     [gig.proficiency, gig.skill],
   );
+  const compactAvailability = formatCompactAvailability(gig.availability);
 
   const isOwnGig = userProfile && userProfile.uid === gig.providerId;
   const isGuestView = role === "guest";
@@ -637,8 +657,8 @@ export default function GigPreviewPage({
                 titleClass="text-teal-700"
                 items={[
                   `${gig.providerDegree} background`,
-                  `Available: ${gig.availability}`,
-                  "Clear student-to-student communication",
+                  `Available: ${compactAvailability}`,
+                  "Clear communication between buyer and provider",
                   "Focused help based on your exact task",
                 ]}
               />
@@ -747,7 +767,7 @@ function PackageCard({
         </p>
         <p className="mt-1.5 text-[1.08rem] font-black leading-tight text-white">Premium Student Swap</p>
         <p className="mt-1.5 text-[12px] font-medium leading-5 text-blue-100">
-          Clear pricing, quick communication, and focused student-to-student support.
+          Clear pricing, quick communication, and focused support for your task.
         </p>
       </div>
 
@@ -1022,6 +1042,90 @@ function formatAvailabilitySummary(value: string) {
       active: activeDays.has(day),
     })),
   };
+}
+
+function formatCompactAvailability(value: string) {
+  const availability = formatAvailabilitySummary(value);
+  const activeDays = availability.days
+    .filter((day) => day.active)
+    .map((day) => day.short);
+
+  return activeDays.length > 0 ? activeDays.join(", ") : availability.label;
+}
+
+type ProviderGigMatchTarget = {
+  gigId?: string;
+  title?: string;
+  category?: string;
+};
+
+type ProviderGigMatchItem = {
+  id?: string;
+  title?: string;
+  category?: string;
+  image?: string;
+  sampleWorkUrl?: string;
+};
+
+async function resolveProviderGigCover(
+  providerId: string | undefined,
+  target: ProviderGigMatchTarget,
+) {
+  if (!providerId) return "";
+
+  const providerSnap = await getDoc(doc(db, "users", providerId));
+  if (!providerSnap.exists()) return "";
+
+  const profile = (providerSnap.data() as UserProfile).providerProfile;
+  const profileGigs = profile?.gigs || [];
+  const matchIndex = findMatchingProviderGigIndex(profileGigs, target);
+  if (matchIndex < 0) return "";
+
+  const matchedGig = profileGigs[matchIndex] as ProviderGigMatchItem;
+  return matchedGig.image || matchedGig.sampleWorkUrl || profile?.gigImages?.[matchIndex] || "";
+}
+
+function findMatchingProviderGigIndex(
+  profileGigs: ProviderGigMatchItem[],
+  target: ProviderGigMatchTarget,
+) {
+  const targetTitle = normalizeGigMatchText(target.title);
+  const targetCategory = normalizeGigMatchText(target.category);
+
+  if (target.gigId) {
+    const idMatchIndex = profileGigs.findIndex((gig) => gig.id === target.gigId);
+    if (idMatchIndex >= 0) return idMatchIndex;
+  }
+
+  if (targetTitle) {
+    const titleMatchIndex = profileGigs.findIndex((gig) => {
+      const gigTitle = normalizeGigMatchText(gig.title);
+      if (!gigTitle) return false;
+      return (
+        gigTitle === targetTitle ||
+        (Math.min(gigTitle.length, targetTitle.length) > 8 &&
+          (gigTitle.includes(targetTitle) || targetTitle.includes(gigTitle)))
+      );
+    });
+    if (titleMatchIndex >= 0) return titleMatchIndex;
+  }
+
+  if (targetCategory) {
+    const categoryMatches = profileGigs
+      .map((gig, index) => ({ index, category: normalizeGigMatchText(gig.category) }))
+      .filter((item) => item.category === targetCategory);
+    if (categoryMatches.length === 1) return categoryMatches[0].index;
+  }
+
+  return -1;
+}
+
+function normalizeGigMatchText(value?: string) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^i\s+will\s+(do\s+)?/, "")
+    .replace(/[^a-z0-9]+/g, "");
 }
 
 function normalizeSummary(summary?: string) {

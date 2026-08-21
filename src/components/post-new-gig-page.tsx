@@ -16,7 +16,8 @@ import { useLookupOptions } from "@/lib/lookups";
 import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
 
 const DELIVERY_OPTIONS = ["1 Day", "2 Days", "3 Days", "5 Days", "7 Days", "14 Days"];
-const MAX_SAMPLE_IMAGE_BYTES = 2 * 1024 * 1024;
+const MAX_SAMPLE_IMAGE_MB = 5;
+const MAX_SAMPLE_IMAGE_BYTES = MAX_SAMPLE_IMAGE_MB * 1024 * 1024;
 const SAMPLE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 type PostNewGigPageProps = {
   role: "provider" | "both";
@@ -215,7 +216,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
       !SAMPLE_IMAGE_TYPES.has(selectedImageFile.type) ||
       selectedImageFile.size > MAX_SAMPLE_IMAGE_BYTES
     ) {
-      throw new Error("Sample work image must be PNG, JPG, or WEBP and under 2 MB.");
+      throw new Error(`Sample work image must be PNG, JPG, or WEBP and under ${MAX_SAMPLE_IMAGE_MB} MB.`);
     }
 
     const safeName = selectedImageFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
@@ -734,7 +735,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                 </div>
                 <p className="mt-2 text-lg font-semibold text-slate-800">Upload Custom Image</p>
                 <p className="text-xs text-slate-500">
-                  Support JPG, PNG. Image will be converted for profile display.
+                  Supports JPG, PNG, or WEBP up to {MAX_SAMPLE_IMAGE_MB} MB.
                 </p>
                 <input
                   type="file"
@@ -746,8 +747,9 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                     if (!SAMPLE_IMAGE_TYPES.has(file.type) || file.size > MAX_SAMPLE_IMAGE_BYTES) {
                       setFeedback({
                         type: "error",
-                        msg: "Sample work image must be PNG, JPG, or WEBP and under 2 MB.",
+                        msg: `Sample work image must be PNG, JPG, or WEBP and under ${MAX_SAMPLE_IMAGE_MB} MB.`,
                       });
+                      event.target.value = "";
                       return;
                     }
 
