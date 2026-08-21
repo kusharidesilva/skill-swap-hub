@@ -416,6 +416,11 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
       .sort((left, right) => right.updatedAtMs - left.updatedAtMs);
   }, [activePeerId, conversations]);
 
+  const visiblePeerThreads = useMemo(
+    () => dedupeThreadsByService(peerThreads),
+    [peerThreads],
+  );
+
   // Switching conversations also switches this message listener.
   useEffect(() => {
     if (!currentChatId) return;
@@ -675,7 +680,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
 
             <MobileThreadRail
               activeConversationId={currentChatId}
-              threads={peerThreads}
+              threads={visiblePeerThreads}
               onSelectConversation={selectConversation}
             />
 
@@ -725,7 +730,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           <ServiceThreadsPanel
             activeConversationId={currentChatId}
             peerName={activeConversation.name}
-            threads={peerThreads}
+            threads={visiblePeerThreads}
             onSelectConversation={selectConversation}
           />
         ) : null}
@@ -965,7 +970,7 @@ function ChatHeader({
               })()}
             </div>
             <p className="mt-1 max-w-full truncate text-[13px] font-medium text-slate-500">
-              {conversation.university} | {conversation.serviceContext?.title || conversation.skill}
+              {formatConversationMeta(conversation)}
             </p>
           </div>
         </div>
@@ -1339,6 +1344,38 @@ function resolveChatRole(value: unknown): Role {
 
 function formatRoleLabel(role: Role) {
   return getRoleBadge(role).label;
+}
+
+function formatConversationMeta(conversation: Conversation) {
+  const serviceLabel = conversation.serviceContext?.title || conversation.skill;
+
+  if (conversation.peerRole === "buyer") {
+    return serviceLabel;
+  }
+
+  return `${conversation.university} | ${serviceLabel}`;
+}
+
+function dedupeThreadsByService(threads: Conversation[]) {
+  const seenThreadKeys = new Set<string>();
+
+  return threads.filter((thread) => {
+    const normalizedKey =
+      [
+        thread.serviceContext?.gigId?.trim().toLowerCase(),
+        thread.serviceContext?.title?.trim().toLowerCase(),
+        thread.skill.trim().toLowerCase(),
+      ]
+        .filter(Boolean)
+        .join("::") || thread.id;
+
+    if (seenThreadKeys.has(normalizedKey)) {
+      return false;
+    }
+
+    seenThreadKeys.add(normalizedKey);
+    return true;
+  });
 }
 
 function resolveVerificationLabel(role: Role, verifiedStudentProvider: boolean) {

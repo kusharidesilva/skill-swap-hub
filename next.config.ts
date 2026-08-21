@@ -4,12 +4,17 @@ const nextConfig: NextConfig = {
   // Compile React components for automatic rendering optimizations.
   reactCompiler: true,
   images: {
-    // Provider fallback avatars are the only approved remote image source.
+    // Remote images are limited to the providers this app actually stores.
     remotePatterns: [
       {
         protocol: "https",
         hostname: "ui-avatars.com",
         pathname: "/api/**",
+      },
+      {
+        protocol: "https",
+        hostname: "firebasestorage.googleapis.com",
+        pathname: "/v0/b/skill-swap-hub-eca37.firebasestorage.app/o/**",
       },
     ],
   },
