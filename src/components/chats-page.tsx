@@ -110,6 +110,8 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   const categoryParam = searchParams.get("category");
   const priceParam = searchParams.get("price");
   const providerNameParam = searchParams.get("providerName");
+  const requestIdParam = searchParams.get("requestId");
+  const starterMessageParam = searchParams.get("starterMessage");
   const searchParamsString = searchParams.toString();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -140,12 +142,13 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   useEffect(() => {
     if (chatIdParam || !userProfile || !peerIdParam) return;
 
+    const currentUid = String(userProfile.uid);
+    const currentName = String(userProfile.name || "Student");
+    const currentUniv = String(userProfile.university || "");
+    const currentRole = resolveChatRole(userProfile.role);
+
     async function initializeConversation() {
       const peerId = String(peerIdParam);
-      const currentUid = String(userProfile?.uid);
-      const currentName = String(userProfile?.name || "Student");
-      const currentUniv = String(userProfile?.university || "");
-      const currentRole = resolveChatRole(userProfile?.role);
       const threadKey = gigIdParam || (subjectParam ? `subject-${slugSegment(subjectParam)}` : null);
       const requestedServiceContext: ServiceContext = {
         title: subjectParam || "Service Chat",
@@ -190,6 +193,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
         });
 
         if (existingChatId) {
+          await sendStarterMessageIfNeeded(existingChatId);
           setActiveId(existingChatId);
           replaceWithChatId(existingChatId);
         } else {
@@ -238,6 +242,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
             updatedAt: serverTimestamp(),
           });
 
+          await sendStarterMessageIfNeeded(newChatId);
           setActiveId(newChatId);
           replaceWithChatId(newChatId);
         }
@@ -255,11 +260,55 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
       nextParams.delete("category");
       nextParams.delete("price");
       nextParams.delete("providerName");
+      nextParams.delete("requestId");
+      nextParams.delete("starterMessage");
       router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
     }
 
+    async function sendStarterMessageIfNeeded(chatId: string) {
+      const starterMessage = starterMessageParam?.trim();
+      if (!requestIdParam || !starterMessage || !userProfile) return;
+
+      const starterMessageRef = doc(
+        db,
+        `chats/${chatId}/messages`,
+        `starter-${slugSegment(requestIdParam)}-${currentUid}`,
+      );
+      const starterMessageSnap = await getDoc(starterMessageRef);
+      if (starterMessageSnap.exists()) return;
+
+      await setDoc(starterMessageRef, {
+        senderId: currentUid,
+        senderName: currentName,
+        senderRole: currentRole,
+        text: starterMessage,
+        attachments: [],
+        requestId: requestIdParam,
+        createdAt: serverTimestamp(),
+      });
+
+      await updateDoc(doc(db, "chats", chatId), {
+        lastMessage: starterMessage,
+        updatedAt: serverTimestamp(),
+      });
+    }
+
     initializeConversation();
-  }, [categoryParam, chatIdParam, gigIdParam, pathname, peerIdParam, priceParam, providerNameParam, router, searchParamsString, subjectParam, userProfile]);
+  }, [
+    categoryParam,
+    chatIdParam,
+    gigIdParam,
+    pathname,
+    peerIdParam,
+    priceParam,
+    providerNameParam,
+    requestIdParam,
+    router,
+    searchParamsString,
+    starterMessageParam,
+    subjectParam,
+    userProfile,
+  ]);
 
   // Listen to every conversation that includes the current user.
   useEffect(() => {

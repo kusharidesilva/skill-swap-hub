@@ -322,6 +322,27 @@ export default function AdminVerifications() {
             Review uploaded student proof documents and approve verified students as service providers.
           </p>
         </div>
+        <div className="grid shrink-0 gap-4 sm:grid-cols-[minmax(0,275px)_auto] lg:justify-end">
+          <SelectField
+            label="Verification Status"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={verificationFilters}
+            title="Filter verification requests"
+            wrapperClassName="min-w-0"
+            labelClassName="mb-0 text-sm font-medium text-slate-600"
+            className="h-12 rounded-xl border-slate-200 px-4 text-sm font-medium text-slate-700 shadow-sm"
+          />
+          <button
+            type="button"
+            onClick={() => setStatusFilter(verificationFilters[0])}
+            className="mt-7 inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 sm:w-12"
+            aria-label="Clear verification filters"
+            title="Clear filters"
+          >
+            <FilterResetIcon />
+          </button>
+        </div>
       </section>
 
       <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -335,33 +356,6 @@ export default function AdminVerifications() {
           {error}
         </p>
       ) : null}
-
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-4 sm:grid-cols-[minmax(0,260px)_auto]">
-          <SelectField
-            label="Verification Status"
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={verificationFilters}
-            title="Filter verification requests"
-            wrapperClassName="min-w-0"
-            labelClassName="mb-0 text-sm font-medium text-slate-600"
-            className="h-12 rounded-xl border-slate-200 px-4 text-sm font-medium text-slate-700 shadow-sm"
-          />
-          <div className="grid min-w-0 gap-1.5">
-            <span className="text-sm font-medium text-slate-600">Clear</span>
-            <button
-              type="button"
-              onClick={() => setStatusFilter(verificationFilters[0])}
-              className="inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 sm:w-12"
-              aria-label="Clear verification filters"
-              title="Clear filters"
-            >
-              <FilterResetIcon />
-            </button>
-          </div>
-        </div>
-      </section>
 
       <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {loading ? (

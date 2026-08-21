@@ -103,6 +103,9 @@ const sortIncomingRequestsOldestFirst = (items: RequestData[]) =>
     return timeDifference || a.id.localeCompare(b.id);
   });
 
+const GENERAL_REQUEST_STARTER_MESSAGE =
+  "Hi, I saw your request and I can help with this. Can we discuss the details?";
+
 type BuyerRequestMeta = {
   profileImageUrl: string;
   accountType: string;
@@ -701,7 +704,7 @@ function NewRequestsView({
                         </button>
                       </div>
                       <Link
-                        href={`${scopedHref("/chats", role)}?peerId=${encodeURIComponent(request.buyerId)}&subject=${encodeURIComponent(request.title)}${request.gigId ? `&gigId=${encodeURIComponent(request.gigId)}&category=${encodeURIComponent(request.category)}&providerName=${encodeURIComponent(request.providerName || userProfile?.name || "Provider")}` : ""}`}
+                        href={buildIncomingRequestChatHref(request, role, userProfile?.name)}
                         className="inline-flex min-h-[40px] w-full items-center justify-center rounded-[12px] border border-[#c7d7ff] bg-blue-50/70 px-3 py-2 text-center text-[10.5px] font-semibold leading-tight text-[#1453c4] transition hover:border-[#1453c4] hover:bg-blue-100/70"
                       >
                         Chat
@@ -720,6 +723,28 @@ function NewRequestsView({
       )}
     </div>
   );
+}
+
+function buildIncomingRequestChatHref(
+  request: RequestData,
+  role: "provider" | "both",
+  providerName?: string,
+) {
+  const params = new URLSearchParams({
+    peerId: request.buyerId,
+    subject: request.title,
+  });
+
+  if (request.gigId) {
+    params.set("gigId", request.gigId);
+    params.set("category", request.category);
+    params.set("providerName", request.providerName || providerName || "Provider");
+  } else if (request.serviceType === "General Request") {
+    params.set("requestId", request.id);
+    params.set("starterMessage", GENERAL_REQUEST_STARTER_MESSAGE);
+  }
+
+  return `${scopedHref("/chats", role)}?${params.toString()}`;
 }
 
 function HeaderCategoryFilter() {

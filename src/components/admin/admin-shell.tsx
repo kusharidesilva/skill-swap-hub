@@ -260,7 +260,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             <h2 className="text-[25px] font-medium text-slate-900">{title}</h2>
           </div>
           <div className="flex items-center gap-3">
-            <div ref={notificationMenuRef} className="relative">
+            <div ref={notificationMenuRef} className={`relative ${notificationMenuOpen ? "z-[220]" : ""}`}>
               <button
                 type="button"
                 onClick={() => setNotificationMenuOpen((value) => !value)}
@@ -287,7 +287,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               </button>
 
               {notificationMenuOpen ? (
-                <div className="absolute right-0 top-14 z-20 w-80 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_20px_45px_rgba(15,23,42,0.12)]">
+                <div className="absolute right-0 top-14 z-[220] w-80 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_20px_45px_rgba(15,23,42,0.12)]">
                   <div className="border-b border-slate-100 px-2 pb-3">
                     <p className="text-sm font-semibold text-slate-900">Admin notifications</p>
                     <p className="mt-1 text-xs text-slate-500">
@@ -324,7 +324,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               ) : null}
             </div>
 
-            <div ref={menuRef} className="relative">
+            <div ref={menuRef} className={`relative ${menuOpen ? "z-[220]" : ""}`}>
               <button
                 type="button"
                 onClick={() => setMenuOpen((value) => !value)}
@@ -348,7 +348,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               </button>
 
               {menuOpen ? (
-                <div className="absolute right-0 top-14 z-20 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.12)]">
+                <div className="absolute right-0 top-14 z-[220] w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_20px_45px_rgba(15,23,42,0.12)]">
                   <Link
                     href="/admin/settings"
                     onClick={() => setMenuOpen(false)}
