@@ -9,7 +9,7 @@ import { ensureGigTitlePrefix } from "@/lib/gig-titles";
 import { useLookupOptions } from "@/lib/lookups";
 import { formatRatingLabel } from "@/lib/ratings";
 import { doc, updateDoc } from "firebase/firestore";
-import ModalPortal from "@/components/ui/modal-portal";
+import SharedGigDetailsModal from "@/components/gig-details-modal";
 import { isRole, type Role } from "@/lib/role-routes";
 
 type SavedSkill = {
@@ -220,8 +220,8 @@ function SavedSkillCard({
   const displayTitle = ensureGigTitlePrefix(skill.title);
   const activeRole: Role = isRole(role) ? role : "buyer";
   const previewHref = skill.gigId
-    ? `/gig-preview/${activeRole}?source=favorites&providerId=${encodeURIComponent(skill.providerId)}&gigId=${encodeURIComponent(skill.gigId)}`
-    : `/gig-preview/${activeRole}?source=favorites&providerId=${encodeURIComponent(skill.providerId)}`;
+    ? `/gig-preview/${activeRole}?source=favorites&providerId=${encodeURIComponent(skill.providerId)}&gigId=${encodeURIComponent(skill.gigId)}&coverImage=${encodeURIComponent(skill.image)}`
+    : `/gig-preview/${activeRole}?source=favorites&providerId=${encodeURIComponent(skill.providerId)}&coverImage=${encodeURIComponent(skill.image)}`;
   const availability = Array.isArray(skill.availability)
     ? skill.availability.join(", ")
     : skill.availability || "Flexible schedule";
@@ -320,98 +320,22 @@ function SavedSkillCard({
         </div>
       </article>
       {detailsOpen ? (
-        <SavedGigDetailsModal
-          skill={skill}
-          availability={availability}
-          priceLabel={priceLabel}
+        <SharedGigDetailsModal
+          gig={{
+            title: displayTitle,
+            category: skill.category,
+            price: priceLabel,
+            providerName: skill.instructor,
+            ratingLabel,
+            summary: skill.description,
+            availability: skill.availability || availability,
+            image: skill.image,
+          }}
           previewHref={previewHref}
           onClose={() => setDetailsOpen(false)}
         />
       ) : null}
     </>
-  );
-}
-
-function SavedGigDetailsModal({
-  skill,
-  availability,
-  priceLabel,
-  previewHref,
-  onClose,
-}: {
-  skill: SavedSkill;
-  availability: string;
-  priceLabel: string;
-  previewHref: string;
-  onClose: () => void;
-}) {
-  const ratingLabel = formatRatingLabel(skill.rating);
-  const displayTitle = ensureGigTitlePrefix(skill.title);
-
-  return (
-    <ModalPortal>
-      <div
-        className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md"
-        onClick={onClose}
-      >
-        <article
-          className="relative grid max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl md:grid-cols-[0.9fr_1.1fr]"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close gig details"
-            className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-500 shadow-sm transition hover:text-slate-900"
-          >
-            <CloseIcon className="h-4 w-4" />
-          </button>
-          <div className="relative min-h-[220px] bg-slate-100 p-4 md:min-h-[400px]">
-            <Image
-              src={skill.image}
-              alt={displayTitle}
-              fill
-              className="object-contain p-4"
-              sizes="(min-width: 768px) 340px, 100vw"
-            />
-          </div>
-          <div className="min-w-0 overflow-y-auto p-5 md:p-6">
-            <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#1453c4]">
-              {skill.category}
-            </span>
-            <h2 className="mt-3 break-words text-xl font-bold leading-7 text-slate-900">{displayTitle}</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              {skill.description || "Gig details will be shared when you open the full gig preview."}
-            </p>
-
-            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-              <InfoItem label="Price" value={priceLabel} />
-              <InfoItem label="Availability" value={availability || "Flexible"} />
-              <InfoItem label="Provider" value={skill.instructor} />
-              <InfoItem label="Rating" value={ratingLabel} />
-              <InfoItem label="Saved on" value={skill.savedAt} />
-              <InfoItem label="University" value={skill.university || "Campus student"} />
-            </dl>
-
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Close
-              </button>
-              <Link
-                href={previewHref}
-                className="inline-flex h-10 items-center justify-center rounded-lg bg-[#2f66e7] px-5 text-sm font-semibold text-white transition hover:bg-[#2557cf]"
-              >
-                Request Now
-              </Link>
-            </div>
-          </div>
-        </article>
-      </div>
-    </ModalPortal>
   );
 }
 
@@ -452,24 +376,6 @@ function StarIcon({ className }: { className?: string }) {
       aria-hidden="true"
     >
       <path d="M12 3.2 14.7 8.7l6.1.9-4.4 4.3 1 6.1-5.4-2.9L6.6 20l1-6.1-4.4-4.3 6.1-.9z" />
-    </svg>
-  );
-}
-
-function InfoItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-slate-50 px-3 py-2">
-      <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</dt>
-      <dd className="mt-1 break-words text-sm font-semibold text-slate-800">{value}</dd>
-    </div>
-  );
-}
-
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M6 6l12 12" strokeLinecap="round" />
-      <path d="M18 6L6 18" strokeLinecap="round" />
     </svg>
   );
 }

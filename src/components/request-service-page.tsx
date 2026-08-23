@@ -26,7 +26,11 @@ import ModalPortal from "@/components/ui/modal-portal";
 
 const requestServiceSchema = z.object({
   category: z.string().trim().min(1, "Service category is required."),
-  requiredDate: z.string().trim().min(1, "Required date is required."),
+  requiredDate: z
+    .string()
+    .trim()
+    .min(1, "Required date is required.")
+    .refine((value) => isTodayOrFutureDate(value), "Required date cannot be in the past."),
   budgetPrice: z
     .string()
     .trim()
@@ -328,6 +332,7 @@ function RequestForm({
                   </span>
                   <input
                     type="date"
+                    min={getTodayDateInputValue()}
                     {...register("requiredDate")}
                     aria-invalid={Boolean(errors.requiredDate)}
                     className={getFieldClassName(Boolean(errors.requiredDate))}
@@ -345,7 +350,7 @@ function RequestForm({
                   </span>
                   <input
                     type="number"
-                    min="0"
+                    min="1"
                     step="1"
                     placeholder="e.g., 5000"
                     {...register("budgetPrice")}
@@ -1024,6 +1029,25 @@ function RecentRequestsPanel({
 
 const fieldClassName =
   "h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100";
+
+function getTodayDateInputValue() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function isTodayOrFutureDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return false;
+
+  const selectedDate = new Date(year, month - 1, day).getTime();
+  const today = new Date();
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+
+  return selectedDate >= todayDate;
+}
 
 function slugify(value: string) {
   return value

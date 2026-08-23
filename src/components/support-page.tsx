@@ -1,38 +1,66 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 import ScrollReveal from "@/components/scroll-reveal";
+import ModalPortal from "@/components/ui/modal-portal";
 
 const categories = [
   {
     title: "Account & Profile",
     description:
-      "Guidance on creating an account, verifying email, uploading student proof, updating profile details, adding services, and managing account settings.",
+      "Guidance on creating a buyer or student account, completing email or proof verification, updating profile details, and setting up a provider profile after approval.",
     tone: "bg-[#e7edff] text-[#2452da]",
     cardTone: "bg-white",
     icon: "user",
+    details: [
+      "Create an account as a student or non-student buyer.",
+      "Students submit university details and a student proof document for admin review.",
+      "Approved students can set up provider skills, availability, bio, and service details.",
+      "Profile settings let users update account details after registration.",
+    ],
   },
   {
     title: "Safety & Security",
     description:
-      "Learn how provider verification, private chat, ratings, reviews, and report options help maintain a trusted service environment.",
+      "Learn how student verification, private chat, ratings, reviews, and report options help maintain a safer and more trusted exchange environment.",
     tone: "bg-[#ffe8e3] text-[#f06447]",
     cardTone: "bg-[#f4f5ff]",
     icon: "shield",
+    details: [
+      "Student provider access is controlled through admin approval.",
+      "Private chat keeps service discussions between the two users.",
+      "Reports can be submitted with evidence when an eligible completed exchange exists.",
+      "Admin review helps handle reports, verification issues, and unsafe behavior.",
+    ],
   },
   {
     title: "Skill Swapping",
     description:
-      "Understand how to post skill offers, request services, find matching providers, filter by ratings, and start a skill exchange with confidence.",
+      "Understand how to browse gig profiles, filter providers, post service requests, and connect with verified student providers through the platform.",
     tone: "bg-[#77efe0] text-[#087e78]",
     cardTone: "bg-[#ecfbfa]",
     icon: "swap",
+    details: [
+      "Providers publish active gig profiles with category, price, availability, and summary.",
+      "Buyers can browse, search, filter, save gigs, and request a provider.",
+      "Requests and direct gig requests connect users into a service conversation.",
+      "Completed exchanges support ratings and reviews for future trust.",
+    ],
   },
   {
     title: "Payments & Private Agreements",
     description:
-      "Skill Swap Hub does not process payments. If users agree on a paid service, payment discussions and slip sharing happen privately inside chat.",
+      "Skill Swap Hub does not process payments. If two users agree on a paid service, pricing, payment, and any payment proof stay private between them.",
     tone: "bg-[#ffe9dc] text-[#bf642e]",
     cardTone: "bg-white",
     icon: "wallet",
+    details: [
+      "Skill Swap Hub does not process payments or store bank transaction flows.",
+      "Any paid-service agreement is discussed privately between the users.",
+      "Payment proof or slips should only be shared in private chat when both users agree.",
+      "If a payment-related issue happens, keep evidence and use the report flow when eligible.",
+    ],
   },
 ];
 
@@ -40,79 +68,83 @@ const faqs = [
   {
     question: "How do I verify my account?",
     answer:
-      "Non-students verify ownership of their normal email through Firebase. Students upload proof such as a student ID or confirmation letter, then wait for admin approval before using provider features.",
+      "Non-student buyers verify their email before using the platform. Student registrations include proof such as a student ID or confirmation letter, and provider access only opens after admin approval.",
   },
   {
     question: "Is Skill Swap Hub only for university students?",
     answer:
-      "Buyers can be students or non-students. Only verified university students can become providers, and admin approval is required before they can sell services.",
-  },
-  {
-    question: "How can I find a provider for a service?",
-    answer:
-      "You can search by skill name, category, university, availability, rating, and review count. This helps you select the most suitable provider for your required skill or service.",
+      "No. Buyers can be students or non-students. Only verified university students can become providers, and they must be approved before they can publish gigs or accept service requests.",
   },
   {
     question: "How do ratings and reviews help?",
     answer:
-      "Ratings and reviews show how reliable a provider is based on previous exchanges. Users can use that feedback to choose better service providers and avoid low-quality services.",
-  },
-  {
-    question: "Does the platform handle payments?",
-    answer:
-      "No. Skill Swap Hub does not process bank transactions. If two users agree on a paid service, payment is handled outside the platform and the payment slip can be shared privately inside chat.",
+      "Ratings and reviews are shown after completed exchanges, helping users understand provider reliability, service quality, and past buyer experiences before requesting support.",
   },
   {
     question:
       "What happens if a provider takes money but does not complete the service?",
     answer:
-      "The affected user can give a low rating, write a review, and report the issue. These ratings and reports help others identify unreliable providers.",
+      "Skill Swap Hub does not handle refunds or payment recovery directly because payments happen outside the platform. Save your chat messages and payment proof, then contact admin through support so the case can be reviewed.",
   },
   {
     question: "Can admin see private chats?",
     answer:
-      "No. Admin does not normally view private chats. Admin can only review evidence if a student submits a report.",
+      "No. Admin does not normally monitor private chats. Admin only reviews the evidence that users choose to submit through the reporting flow.",
   },
   {
     question: "Can I request services from students at other universities?",
     answer:
       "Yes. The platform supports service requests and skill exchanges with verified student providers from different Sri Lankan universities.",
   },
+  {
+    question: "How can I find a provider for a service?",
+    answer:
+      "You can browse gig profiles and search by skill or gig name, then narrow results using category, university, rating, and availability filters to find a suitable provider.",
+  },
+  {
+    question: "Does the platform handle payments?",
+    answer:
+      "No. Skill Swap Hub does not process payments or bank transactions. If two users agree on a paid service, payment is handled privately outside the platform.",
+  },
 ];
 
 export default function SupportPage() {
+  const [activeCategory, setActiveCategory] = useState<(typeof categories)[number] | null>(null);
+
   return (
     <main className="ssh-page-main bg-white">
       {/* Help page introduction */}
       <section className="ssh-support-hero bg-[#eef1ff]">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-6 py-14 text-center lg:py-20">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-10 text-center sm:gap-4 sm:px-6 sm:py-14 lg:py-20">
           <span className="ssh-highlight-badge inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold text-[#0f8a6b]">
             Support Center
           </span>
-          <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl">
+          <h1 className="max-w-4xl text-2xl font-semibold leading-tight text-slate-900 sm:text-4xl">
             Skill Swap Hub Help & Support
           </h1>
-          <p className="max-w-2xl text-sm text-slate-600">
-            Find simple guides for account setup, email verification, student
-            proof review, skill swapping, private chat, ratings, reviews, and
-            safe communication across the platform.
+          <p className="max-w-2xl text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
+            Find simple guides for account setup, email or student proof
+            verification, provider approval, service requests, ratings,
+            reviews, reports, and safer communication across the platform.
           </p>
         </div>
       </section>
 
       {/* Support categories */}
       <section className="ssh-section-clear bg-white">
-        <div className="mx-auto max-w-6xl px-6 py-14">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
           <ScrollReveal delayMs={30}>
-            <h2 className="text-[18px] font-semibold leading-none text-slate-900 sm:text-[19px]">
+            <h2 className="text-center text-2xl font-semibold leading-tight text-slate-900 sm:text-left sm:text-[1.7rem]">
               Information Categories
             </h2>
           </ScrollReveal>
-          <div className="mt-8 grid gap-5 md:grid-cols-2">
+          <div className="mt-6 grid gap-4 sm:mt-8 sm:gap-5 md:grid-cols-2">
             {categories.map((item, index) => (
               <ScrollReveal key={item.title} delayMs={80 + index * 60}>
-                <div
-                  className={`ssh-card flex items-start gap-4 rounded-[14px] border border-[#d7def1] px-7 py-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${item.cardTone}`}
+                <button
+                  type="button"
+                  onClick={() => setActiveCategory(item)}
+                  className={`ssh-card flex w-full cursor-pointer flex-col items-start gap-3 rounded-[14px] border border-[#d7def1] px-5 py-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-100 min-[460px]:flex-row min-[460px]:gap-4 sm:px-7 sm:py-6 ${item.cardTone}`}
                 >
                   <div
                     className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] ${item.tone}`}
@@ -122,7 +154,7 @@ export default function SupportPage() {
                       className="h-[17px] w-[17px]"
                     />
                   </div>
-                  <div className="max-w-[25rem]">
+                  <div className="min-w-0 max-w-[25rem]">
                     <h3 className="text-[16px] font-semibold leading-[1.25] text-slate-900">
                       {item.title}
                     </h3>
@@ -130,7 +162,7 @@ export default function SupportPage() {
                       {item.description}
                     </p>
                   </div>
-                </div>
+                </button>
               </ScrollReveal>
             ))}
           </div>
@@ -140,8 +172,8 @@ export default function SupportPage() {
       {/* Frequently asked questions */}
       <section className="ssh-section-clear bg-white">
         <ScrollReveal delayMs={30}>
-          <div className="mx-auto max-w-4xl px-6 pb-6 pt-4 text-center">
-            <h2 className="text-xl font-semibold text-slate-900">
+          <div className="mx-auto max-w-4xl px-4 pb-6 pt-2 text-center sm:px-6 sm:pt-4">
+            <h2 className="text-2xl font-semibold leading-tight text-slate-900 sm:text-[1.7rem]">
               Frequently Asked Questions
             </h2>
             <p className="mt-2 text-sm text-slate-600">
@@ -149,8 +181,8 @@ export default function SupportPage() {
             </p>
           </div>
         </ScrollReveal>
-        <div className="mx-auto max-w-4xl px-6 pb-12">
-          <div className="space-y-6 border-l-2 border-slate-200 pl-6">
+        <div className="mx-auto max-w-4xl px-4 pb-10 sm:px-6 sm:pb-12">
+          <div className="space-y-5 border-l-2 border-slate-200 pl-4 sm:space-y-6 sm:pl-6">
             {faqs.map((faq, index) => (
               <ScrollReveal key={faq.question} delayMs={70 + index * 45}>
                 <div
@@ -172,19 +204,19 @@ export default function SupportPage() {
 
       {/* Contact support options */}
       <section id="contact-section" className="ssh-section-clear bg-white pb-16 scroll-mt-20">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <ScrollReveal delayMs={70}>
-            <div className="ssh-cta-panel grid gap-8 rounded-[30px] bg-[#1654d1] px-10 py-10 text-white shadow-lg lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+            <div className="ssh-cta-panel grid gap-7 rounded-[24px] bg-[#1654d1] px-5 py-7 text-white shadow-lg sm:rounded-[30px] sm:px-8 sm:py-9 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:px-10 lg:py-10">
             <div className="max-w-[35rem]">
-              <h2 className="text-[20px] font-semibold leading-tight sm:text-[21px]">
+              <h2 className="text-[22px] font-semibold leading-tight sm:text-[24px]">
                 Contact Information
               </h2>
               <p className="mt-4 max-w-[32rem] text-[14px] leading-[1.6] text-white/82">
-                Our support team is available to help users with account
-                issues, verification problems, reports, and platform-related
+                Our support team can help with account access, verification
+                status, reporting guidance, and general platform-related
                 questions.
               </p>
-              <div className="mt-8 grid gap-x-8 gap-y-5 text-[14px] text-white/95 sm:grid-cols-2">
+              <div className="mt-6 grid gap-x-8 gap-y-4 text-[14px] text-white/95 sm:mt-8 sm:grid-cols-2 sm:gap-y-5">
                 <div className="flex items-center gap-3">
                   <MailIcon className="h-[18px] w-[18px] shrink-0" />
                   <span>support@skillswap.lk</span>
@@ -197,6 +229,10 @@ export default function SupportPage() {
                   <ClockIcon className="h-[18px] w-[18px] shrink-0" />
                   <span>Mon-Fri: 9AM - 6PM</span>
                 </div>
+                <div className="flex items-center gap-3">
+                  <ChatSupportIcon className="h-[18px] w-[18px] shrink-0" />
+                  <span>Report & Verification Support</span>
+                </div>
               </div>
             </div>
             <div className="overflow-hidden rounded-[18px] bg-white/10 lg:justify-self-end">
@@ -205,13 +241,67 @@ export default function SupportPage() {
                 alt="Support team assisting a student"
                 width={420}
                 height={250}
-                className="h-[210px] w-full object-cover sm:h-[230px] lg:h-[182px] lg:w-[330px]"
+                className="h-[190px] w-full object-cover sm:h-[230px] lg:h-[182px] lg:w-[330px]"
               />
             </div>
             </div>
           </ScrollReveal>
         </div>
       </section>
+
+      {activeCategory ? (
+        <ModalPortal>
+          <div
+            className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-lg sm:px-5 sm:py-8"
+            onClick={() => setActiveCategory(null)}
+            role="presentation"
+          >
+            <div
+              className="relative max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-5 text-left shadow-[0_28px_90px_rgba(15,23,42,0.24)] sm:p-7"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="category-dialog-title"
+            >
+              <button
+                type="button"
+                onClick={() => setActiveCategory(null)}
+                aria-label="Close details"
+                className="absolute right-4 top-4 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-100"
+              >
+                <CloseIcon className="h-4 w-4" />
+              </button>
+              <div
+                className={`flex h-12 w-12 items-center justify-center rounded-2xl ${activeCategory.tone}`}
+              >
+                <CategoryIcon
+                  type={activeCategory.icon}
+                  className="h-[19px] w-[19px]"
+                />
+              </div>
+              <h2
+                id="category-dialog-title"
+                className="mt-5 pr-12 text-lg font-semibold leading-tight text-slate-900 sm:text-xl"
+              >
+                {activeCategory.title}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {activeCategory.description}
+              </p>
+              <div className="mt-5 space-y-3">
+                {activeCategory.details.map((detail) => (
+                  <div
+                    key={detail}
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm leading-6 text-slate-700 sm:px-4"
+                  >
+                    {detail}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      ) : null}
     </main>
   );
 }
@@ -346,6 +436,37 @@ function ClockIcon({ className }: { className?: string }) {
     >
       <circle cx="12" cy="12" r="8" />
       <path d="M12 8v4.5l3 1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function CloseIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path d="M6 6l12 12" strokeLinecap="round" />
+      <path d="M18 6L6 18" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ChatSupportIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path d="M5 6.5h14v9H9l-4 3v-12z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 10h6" strokeLinecap="round" />
+      <path d="M9 13h4" strokeLinecap="round" />
     </svg>
   );
 }

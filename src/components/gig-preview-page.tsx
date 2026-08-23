@@ -14,7 +14,7 @@ import { scopedHref, resolveRole, type Role, type SiteRole } from "@/lib/role-ro
 import type { UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { createNotification } from "@/lib/notifications";
-import { inferServiceCategory } from "@/lib/platform";
+import { AVAILABILITY_DAYS, inferServiceCategory } from "@/lib/platform";
 import { getGigCoverForCategory } from "@/lib/gig-covers";
 import ReviewFeedbackCard from "@/components/reviews/review-card";
 
@@ -24,6 +24,7 @@ type GigPreviewPageProps = {
   gigId?: string;
   providerId?: string;
   skillIndex?: number;
+  coverImage?: string;
   embedded?: boolean;
   onGuestAction?: () => void;
 };
@@ -91,6 +92,7 @@ export default function GigPreviewPage({
   gigId,
   providerId,
   skillIndex = 0,
+  coverImage,
   embedded = false,
   onGuestAction,
 }: GigPreviewPageProps) {
@@ -202,6 +204,12 @@ export default function GigPreviewPage({
             delivery?: string;
           };
 
+          const matchedProviderCover = await resolveProviderGigCover(publicGig.providerId || providerId, {
+            gigId,
+            title: publicGig.title || "",
+            category: publicGig.category || "",
+          });
+
           const publicGigDetails: GigPreviewData = {
             gigId: publicGig.gigId || gigId,
             providerId: publicGig.providerId || providerId || "guest-provider",
@@ -224,8 +232,10 @@ export default function GigPreviewPage({
             reviews: 0,
             reviewCards: [],
             image:
-              publicGig.sampleWorkUrl ||
+              matchedProviderCover ||
               publicGig.image ||
+              publicGig.sampleWorkUrl ||
+              coverImage ||
               getGigCoverForCategory(publicGig.category, publicGig.title, Math.max(skillIndex, 0)),
             value: "20",
             delivery: publicGig.delivery || "Flexible",
@@ -253,18 +263,25 @@ export default function GigPreviewPage({
         const profile = user.providerProfile;
         const skills = profile?.skills?.length ? profile.skills : ["Student Support"];
         const profileGigs = profile?.gigs || [];
-        const matchedGigIndex = gigId
-          ? profileGigs.findIndex((item) => item.id === gigId)
-          : -1;
+        const normalizedGigSnap = gigId ? await getDoc(doc(db, "gigs", gigId)) : null;
+        const normalizedGig = normalizedGigSnap?.exists() ? normalizedGigSnap.data() : null;
+        const matchedGigIndex = findMatchingProviderGigIndex(profileGigs, {
+          gigId,
+          title: String(normalizedGig?.title || ""),
+          category: String(normalizedGig?.category || ""),
+        });
         const resolvedSkillIndex =
           matchedGigIndex >= 0
             ? matchedGigIndex
             : Math.min(Math.max(skillIndex, 0), Math.max(skills.length - 1, 0));
         const safeSkillIndex = resolvedSkillIndex;
-        const skill = skills[safeSkillIndex] || profileGigs[safeSkillIndex]?.title || skills[0];
-        const storedGig = profileGigs[safeSkillIndex];
-        const normalizedGigSnap = gigId ? await getDoc(doc(db, "gigs", gigId)) : null;
-        const normalizedGig = normalizedGigSnap?.exists() ? normalizedGigSnap.data() : null;
+        const storedGig = gigId && matchedGigIndex < 0 ? undefined : profileGigs[safeSkillIndex];
+        const skill = String(
+          normalizedGig?.title ||
+          skills[safeSkillIndex] ||
+          storedGig?.title ||
+          skills[0],
+        );
 
         const requestsQuery = query(
           collection(db, "requests"),
@@ -337,10 +354,12 @@ export default function GigPreviewPage({
           reviewCards,
           image:
             String(
-              normalizedGig?.sampleWorkUrl ||
-              normalizedGig?.image ||
               storedGig?.image ||
+              storedGig?.sampleWorkUrl ||
               (profile?.gigImages && profile.gigImages[safeSkillIndex]) ||
+              coverImage ||
+              normalizedGig?.image ||
+              normalizedGig?.sampleWorkUrl ||
               getGigCoverForCategory(
                 String(normalizedGig?.category || storedGig?.category || inferCategory(skill)),
                 String(normalizedGig?.title || storedGig?.title || skill),
@@ -369,7 +388,7 @@ export default function GigPreviewPage({
       active = false;
       if (unsubscribeRatings) unsubscribeRatings();
     };
-  }, [gigId, providerId, role, skillIndex]);
+  }, [coverImage, gigId, providerId, role, skillIndex]);
 
   // Package details are derived from the current gig rather than stored separately.
   const packageItems = useMemo(
@@ -381,6 +400,7 @@ export default function GigPreviewPage({
     ],
     [gig.proficiency, gig.skill],
   );
+  const compactAvailability = formatCompactAvailability(gig.availability);
 
   const isOwnGig = userProfile && userProfile.uid === gig.providerId;
   const isGuestView = role === "guest";
@@ -578,10 +598,10 @@ export default function GigPreviewPage({
 
       <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_292px] 2xl:grid-cols-[minmax(0,1fr)_304px]">
         <main className="min-w-0 space-y-3">
-          <section className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
-            <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(63,94,251,0.18),transparent_38%),linear-gradient(135deg,#eef4ff_0%,#f8fbff_40%,#edf8f6_100%)] px-5 py-5 md:px-7 md:py-7">
+          <section className="h-full overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
+            <div className="relative flex h-full overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(63,94,251,0.18),transparent_38%),linear-gradient(135deg,#eef4ff_0%,#f8fbff_40%,#edf8f6_100%)] px-5 py-5 md:px-7 md:py-7">
               <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
-              <div className="relative h-[300px] w-full overflow-hidden rounded-[26px] border border-white/80 bg-white shadow-[0_24px_42px_rgba(15,23,42,0.08)] md:h-[390px]">
+              <div className="relative h-[300px] w-full overflow-hidden rounded-[26px] border border-white/80 bg-white shadow-[0_24px_42px_rgba(15,23,42,0.08)] md:h-[390px] xl:h-full xl:min-h-[390px]">
                 <Image
                   src={gig.image}
                   alt={gig.title}
@@ -611,41 +631,6 @@ export default function GigPreviewPage({
           </section>
 
           <ProviderCard gig={gig} role={role} summary={gig.summary} />
-
-          <div className="pt-2">
-            <QuickFactsCard gig={gig} />
-          </div>
-
-          <div className="space-y-3">
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <InfoCard
-                icon={<CheckCircleIcon className="h-4 w-4 text-[#1453c4]" />}
-                title="What I Will Do"
-                titleClass="text-[#1453c4]"
-                items={[
-                  `Help with ${gig.skill}`,
-                  `Explain concepts at ${gig.proficiency.toLowerCase()} level`,
-                  "Review your work and suggest improvements",
-                  "Share useful notes, references, or files",
-                  "Support revisions after your first feedback",
-                ]}
-              />
-              <InfoCard
-                icon={<CheckCircleIcon className="h-4 w-4 text-teal-700" />}
-                title="Why Swap With Me"
-                titleClass="text-teal-700"
-                items={[
-                  `${gig.providerDegree} background`,
-                  `Available: ${gig.availability}`,
-                  "Clear student-to-student communication",
-                  "Focused help based on your exact task",
-                ]}
-              />
-            </div>
-
-            <ReviewsSection reviews={gig.reviewCards} />
-          </div>
         </main>
 
         <aside className="min-w-0 self-start space-y-3 xl:sticky xl:top-3">
@@ -660,6 +645,40 @@ export default function GigPreviewPage({
             onMessageProvider={handleMessageProvider}
           />
         </aside>
+
+        <div className="min-w-0 space-y-3">
+          <div className="pt-2">
+            <QuickFactsCard gig={gig} />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <InfoCard
+              icon={<CheckCircleIcon className="h-4 w-4 text-[#1453c4]" />}
+              title="What I Will Do"
+              titleClass="text-[#1453c4]"
+              items={[
+                `Help with ${gig.skill}`,
+                `Explain concepts at ${gig.proficiency.toLowerCase()} level`,
+                "Review your work and suggest improvements",
+                "Share useful notes, references, or files",
+                "Support revisions after your first feedback",
+              ]}
+            />
+            <InfoCard
+              icon={<CheckCircleIcon className="h-4 w-4 text-teal-700" />}
+              title="Why Swap With Me"
+              titleClass="text-teal-700"
+              items={[
+                `${gig.providerDegree} background`,
+                `Available: ${compactAvailability}`,
+                "Clear communication between buyer and provider",
+                "Focused help based on your exact task",
+              ]}
+            />
+          </div>
+
+          <ReviewsSection reviews={gig.reviewCards} />
+        </div>
       </div>
     </div>
   );
@@ -701,17 +720,13 @@ function ProviderCard({
               {gig.university} <span className="px-1.5 text-slate-300">|</span> {gig.providerDegree}
               <span className="px-1.5 text-slate-300">|</span> {gig.proficiency}
             </p>
-            <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-teal-700">
-              <StarIcon className="h-3.5 w-3.5" />
-              {gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} (${gig.reviews} reviews)` : "New"}
-            </p>
           </div>
         </div>
         <div className="mt-4 border-t border-slate-200 pt-4">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
             About this gig
           </p>
-          <p className="mt-2 line-clamp-4 overflow-hidden break-words text-sm leading-7 text-slate-700">
+          <p className="mt-2 break-words text-sm leading-7 text-slate-700">
             {summary}
           </p>
         </div>
@@ -747,7 +762,7 @@ function PackageCard({
         </p>
         <p className="mt-1.5 text-[1.08rem] font-black leading-tight text-white">Premium Student Swap</p>
         <p className="mt-1.5 text-[12px] font-medium leading-5 text-blue-100">
-          Clear pricing, quick communication, and focused student-to-student support.
+          Clear pricing, quick communication, and focused support for your task.
         </p>
       </div>
 
@@ -896,10 +911,10 @@ function ReviewCard({
 function QuickFactsCard({ gig }: { gig: GigPreviewData }) {
   const facts = [
     { label: "Category", value: gig.category },
-    { label: "Availability", value: gig.availability },
     { label: "Delivery", value: gig.delivery },
     { label: "Price", value: formatPrice(gig.price) },
   ];
+  const availability = formatAvailabilitySummary(gig.availability);
 
   return (
     <article className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_34px_rgba(15,23,42,0.05)] lg:p-5">
@@ -914,13 +929,37 @@ function QuickFactsCard({ gig }: { gig: GigPreviewData }) {
           Essentials
         </span>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {facts.map((fact) => (
-          <div key={fact.label} className="rounded-[20px] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] px-4 py-4 shadow-[0_10px_22px_rgba(15,23,42,0.03)]">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{fact.label}</p>
-            <p className="mt-2 text-[1.02rem] font-semibold leading-7 text-slate-800">{fact.value}</p>
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.95fr)]">
+        <div className="rounded-[20px] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] px-4 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.03)]">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {facts.map((fact) => (
+              <div key={fact.label} className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{fact.label}</p>
+                <p className="mt-1.5 break-words text-[1.02rem] font-semibold leading-6 text-slate-800">{fact.value}</p>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        <div className="rounded-[20px] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] px-4 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.03)]">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Availability</p>
+          {availability.days.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {availability.days.map((day) => (
+                <span
+                  key={day.short}
+                  className={`min-w-8 rounded-full px-2 py-1 text-center text-[10px] font-bold ${
+                    day.active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
+                  }`}
+                >
+                  {day.short}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-[1.02rem] font-semibold leading-7 text-slate-800">{availability.label}</p>
+          )}
+        </div>
       </div>
     </article>
   );
@@ -968,6 +1007,120 @@ function formatReviewDateLabel(value: unknown) {
 function formatAvailability(availability?: string[]) {
   if (!availability || availability.length === 0) return "Flexible";
   return availability.join(", ");
+}
+
+function formatAvailabilitySummary(value: string) {
+  const slots = value
+    .split(",")
+    .map((slot) => slot.trim())
+    .filter(Boolean);
+
+  if (slots.length === 0 || value === "Flexible") {
+    return {
+      label: value || "Flexible",
+      days: [],
+    };
+  }
+
+  const previewSlots = slots.slice(0, 2);
+  const remainingCount = Math.max(slots.length - previewSlots.length, 0);
+  const activeDays = new Set(
+    AVAILABILITY_DAYS.filter((day) =>
+      slots.some((slot) => slot.toLowerCase().startsWith(day.toLowerCase())),
+    ),
+  );
+
+  return {
+    label: `${previewSlots.join(", ")}${remainingCount > 0 ? ` +${remainingCount} more` : ""}`,
+    days: AVAILABILITY_DAYS.map((day) => ({
+      short: day.slice(0, 3),
+      active: activeDays.has(day),
+    })),
+  };
+}
+
+function formatCompactAvailability(value: string) {
+  const availability = formatAvailabilitySummary(value);
+  const activeDays = availability.days
+    .filter((day) => day.active)
+    .map((day) => day.short);
+
+  return activeDays.length > 0 ? activeDays.join(", ") : availability.label;
+}
+
+type ProviderGigMatchTarget = {
+  gigId?: string;
+  title?: string;
+  category?: string;
+};
+
+type ProviderGigMatchItem = {
+  id?: string;
+  title?: string;
+  category?: string;
+  image?: string;
+  sampleWorkUrl?: string;
+};
+
+async function resolveProviderGigCover(
+  providerId: string | undefined,
+  target: ProviderGigMatchTarget,
+) {
+  if (!providerId) return "";
+
+  const providerSnap = await getDoc(doc(db, "users", providerId));
+  if (!providerSnap.exists()) return "";
+
+  const profile = (providerSnap.data() as UserProfile).providerProfile;
+  const profileGigs = profile?.gigs || [];
+  const matchIndex = findMatchingProviderGigIndex(profileGigs, target);
+  if (matchIndex < 0) return "";
+
+  const matchedGig = profileGigs[matchIndex] as ProviderGigMatchItem;
+  return matchedGig.image || matchedGig.sampleWorkUrl || profile?.gigImages?.[matchIndex] || "";
+}
+
+function findMatchingProviderGigIndex(
+  profileGigs: ProviderGigMatchItem[],
+  target: ProviderGigMatchTarget,
+) {
+  const targetTitle = normalizeGigMatchText(target.title);
+  const targetCategory = normalizeGigMatchText(target.category);
+
+  if (target.gigId) {
+    const idMatchIndex = profileGigs.findIndex((gig) => gig.id === target.gigId);
+    if (idMatchIndex >= 0) return idMatchIndex;
+  }
+
+  if (targetTitle) {
+    const titleMatchIndex = profileGigs.findIndex((gig) => {
+      const gigTitle = normalizeGigMatchText(gig.title);
+      if (!gigTitle) return false;
+      return (
+        gigTitle === targetTitle ||
+        (Math.min(gigTitle.length, targetTitle.length) > 8 &&
+          (gigTitle.includes(targetTitle) || targetTitle.includes(gigTitle)))
+      );
+    });
+    if (titleMatchIndex >= 0) return titleMatchIndex;
+  }
+
+  if (targetCategory) {
+    const categoryMatches = profileGigs
+      .map((gig, index) => ({ index, category: normalizeGigMatchText(gig.category) }))
+      .filter((item) => item.category === targetCategory);
+    if (categoryMatches.length === 1) return categoryMatches[0].index;
+  }
+
+  return -1;
+}
+
+function normalizeGigMatchText(value?: string) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^i\s+will\s+(do\s+)?/, "")
+    .replace(/[^a-z0-9]+/g, "");
 }
 
 function normalizeSummary(summary?: string) {

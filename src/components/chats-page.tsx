@@ -110,6 +110,9 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   const categoryParam = searchParams.get("category");
   const priceParam = searchParams.get("price");
   const providerNameParam = searchParams.get("providerName");
+  const requestIdParam = searchParams.get("requestId");
+  const starterMessageParam = searchParams.get("starterMessage");
+  const searchParamsString = searchParams.toString();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -139,12 +142,13 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
   useEffect(() => {
     if (chatIdParam || !userProfile || !peerIdParam) return;
 
+    const currentUid = String(userProfile.uid);
+    const currentName = String(userProfile.name || "Student");
+    const currentUniv = String(userProfile.university || "");
+    const currentRole = resolveChatRole(userProfile.role);
+
     async function initializeConversation() {
       const peerId = String(peerIdParam);
-      const currentUid = String(userProfile?.uid);
-      const currentName = String(userProfile?.name || "Student");
-      const currentUniv = String(userProfile?.university || "");
-      const currentRole = resolveChatRole(userProfile?.role);
       const threadKey = gigIdParam || (subjectParam ? `subject-${slugSegment(subjectParam)}` : null);
       const requestedServiceContext: ServiceContext = {
         title: subjectParam || "Service Chat",
@@ -165,6 +169,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
         );
         const snap = await getDocs(q);
         let existingChatId: string | null = null;
+        let latestExistingChatMs = -1;
 
         snap.forEach((d) => {
           const data = d.data();
@@ -175,12 +180,22 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
               data.serviceContext?.gigId === gigIdParam
             : true;
           if (matchesPeer && matchesThread) {
-            existingChatId = d.id;
+            const updatedAt = data.updatedAt;
+            const updatedAtMs = updatedAt
+              ? (updatedAt.toDate ? updatedAt.toDate() : new Date(updatedAt)).getTime()
+              : 0;
+
+            if (updatedAtMs > latestExistingChatMs) {
+              existingChatId = d.id;
+              latestExistingChatMs = updatedAtMs;
+            }
           }
         });
 
         if (existingChatId) {
+          await sendStarterMessageIfNeeded(existingChatId);
           setActiveId(existingChatId);
+          replaceWithChatId(existingChatId);
         } else {
           // Store a small peer snapshot so the chat list can render quickly.
           const peerSnap = await getDoc(doc(db, "users", peerId));
@@ -227,15 +242,73 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
             updatedAt: serverTimestamp(),
           });
 
+          await sendStarterMessageIfNeeded(newChatId);
           setActiveId(newChatId);
+          replaceWithChatId(newChatId);
         }
       } catch (err) {
         console.error("Error initializing conversation:", err);
       }
     }
 
+    function replaceWithChatId(chatId: string) {
+      const nextParams = new URLSearchParams(searchParamsString);
+      nextParams.set("chatId", chatId);
+      nextParams.delete("peerId");
+      nextParams.delete("subject");
+      nextParams.delete("gigId");
+      nextParams.delete("category");
+      nextParams.delete("price");
+      nextParams.delete("providerName");
+      nextParams.delete("requestId");
+      nextParams.delete("starterMessage");
+      router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
+    }
+
+    async function sendStarterMessageIfNeeded(chatId: string) {
+      const starterMessage = starterMessageParam?.trim();
+      if (!requestIdParam || !starterMessage || !userProfile) return;
+
+      const starterMessageRef = doc(
+        db,
+        `chats/${chatId}/messages`,
+        `starter-${slugSegment(requestIdParam)}-${currentUid}`,
+      );
+      const starterMessageSnap = await getDoc(starterMessageRef);
+      if (starterMessageSnap.exists()) return;
+
+      await setDoc(starterMessageRef, {
+        senderId: currentUid,
+        senderName: currentName,
+        senderRole: currentRole,
+        text: starterMessage,
+        attachments: [],
+        requestId: requestIdParam,
+        createdAt: serverTimestamp(),
+      });
+
+      await updateDoc(doc(db, "chats", chatId), {
+        lastMessage: starterMessage,
+        updatedAt: serverTimestamp(),
+      });
+    }
+
     initializeConversation();
-  }, [categoryParam, chatIdParam, gigIdParam, peerIdParam, priceParam, providerNameParam, subjectParam, userProfile]);
+  }, [
+    categoryParam,
+    chatIdParam,
+    gigIdParam,
+    pathname,
+    peerIdParam,
+    priceParam,
+    providerNameParam,
+    requestIdParam,
+    router,
+    searchParamsString,
+    starterMessageParam,
+    subjectParam,
+    userProfile,
+  ]);
 
   // Listen to every conversation that includes the current user.
   useEffect(() => {
@@ -415,6 +488,11 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
       .filter((conversation) => conversation.peerId === activePeerId)
       .sort((left, right) => right.updatedAtMs - left.updatedAtMs);
   }, [activePeerId, conversations]);
+
+  const visiblePeerThreads = useMemo(
+    () => dedupeThreadsByService(peerThreads),
+    [peerThreads],
+  );
 
   // Switching conversations also switches this message listener.
   useEffect(() => {
@@ -675,7 +753,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
 
             <MobileThreadRail
               activeConversationId={currentChatId}
-              threads={peerThreads}
+              threads={visiblePeerThreads}
               onSelectConversation={selectConversation}
             />
 
@@ -725,7 +803,7 @@ export default function ChatsPage({ role = "buyer" }: ChatsPageProps) {
           <ServiceThreadsPanel
             activeConversationId={currentChatId}
             peerName={activeConversation.name}
-            threads={peerThreads}
+            threads={visiblePeerThreads}
             onSelectConversation={selectConversation}
           />
         ) : null}
@@ -965,7 +1043,7 @@ function ChatHeader({
               })()}
             </div>
             <p className="mt-1 max-w-full truncate text-[13px] font-medium text-slate-500">
-              {conversation.university} | {conversation.serviceContext?.title || conversation.skill}
+              {formatConversationMeta(conversation)}
             </p>
           </div>
         </div>
@@ -1339,6 +1417,38 @@ function resolveChatRole(value: unknown): Role {
 
 function formatRoleLabel(role: Role) {
   return getRoleBadge(role).label;
+}
+
+function formatConversationMeta(conversation: Conversation) {
+  const serviceLabel = conversation.serviceContext?.title || conversation.skill;
+
+  if (conversation.peerRole === "buyer") {
+    return serviceLabel;
+  }
+
+  return `${conversation.university} | ${serviceLabel}`;
+}
+
+function dedupeThreadsByService(threads: Conversation[]) {
+  const seenThreadKeys = new Set<string>();
+
+  return threads.filter((thread) => {
+    const normalizedKey =
+      [
+        thread.serviceContext?.gigId?.trim().toLowerCase(),
+        thread.serviceContext?.title?.trim().toLowerCase(),
+        thread.skill.trim().toLowerCase(),
+      ]
+        .filter(Boolean)
+        .join("::") || thread.id;
+
+    if (seenThreadKeys.has(normalizedKey)) {
+      return false;
+    }
+
+    seenThreadKeys.add(normalizedKey);
+    return true;
+  });
 }
 
 function resolveVerificationLabel(role: Role, verifiedStudentProvider: boolean) {

@@ -5,6 +5,7 @@ type PublicGigPreviewPageProps = {
     providerId?: string | string[];
     gigId?: string | string[];
     skillIndex?: string | string[];
+    coverImage?: string | string[];
   }>;
 };
 
@@ -14,6 +15,7 @@ export default async function PublicGigPreviewPage({
   const query = await searchParams;
   const providerId = typeof query.providerId === "string" ? query.providerId : undefined;
   const gigId = typeof query.gigId === "string" ? query.gigId : undefined;
+  const coverImage = typeof query.coverImage === "string" ? query.coverImage : undefined;
   const rawSkillIndex = typeof query.skillIndex === "string" ? Number(query.skillIndex) : 0;
   const skillIndex = Number.isFinite(rawSkillIndex) ? rawSkillIndex : 0;
 
@@ -25,6 +27,7 @@ export default async function PublicGigPreviewPage({
         providerId={providerId}
         gigId={gigId}
         skillIndex={skillIndex}
+        coverImage={coverImage}
       />
     </main>
   );

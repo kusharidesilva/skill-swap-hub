@@ -69,7 +69,7 @@ service firebase.storage {
       // Providers upload sample work images for their own service gigs.
       allow read: if isAuthenticated();
       allow write: if isOwner(userId) &&
-        request.resource.size <= 2 * 1024 * 1024 &&
+        request.resource.size <= 5 * 1024 * 1024 &&
         request.resource.contentType in [
           'image/png',
           'image/jpeg',

@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { scopedHref, type Role } from "@/lib/role-routes";
 
 type NavItem = {
@@ -165,6 +165,8 @@ const navConfig: Record<Role, NavItem[]> = {
 
 export default function SideNav({ role: roleProp }: SideNavProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const previewSource = searchParams.get("source");
 
   // The explicit shell role wins; the pathname is only a safe fallback.
   const role: Role = roleProp
@@ -193,7 +195,7 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
       <nav className="flex min-h-0 flex-1 flex-col text-[14px] font-medium">
         <div className="flex flex-col gap-1">
           {effectiveDefaultItems.map((link) => (
-            <SideNavLink key={link.label} link={link} pathname={pathname} />
+            <SideNavLink key={link.label} link={link} pathname={pathname} previewSource={previewSource} />
           ))}
         </div>
 
@@ -204,7 +206,7 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
             </p>
             <div className="mt-1.5 flex flex-col gap-1">
               {effectiveProvideItems.map((link) => (
-                <SideNavLink key={link.label} link={link} pathname={pathname} />
+                <SideNavLink key={link.label} link={link} pathname={pathname} previewSource={previewSource} />
               ))}
             </div>
           </div>
@@ -217,7 +219,7 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
             </p>
             <div className="mt-1.5 flex flex-col gap-1">
               {effectiveFindItems.map((link) => (
-                <SideNavLink key={link.label} link={link} pathname={pathname} />
+                <SideNavLink key={link.label} link={link} pathname={pathname} previewSource={previewSource} />
               ))}
             </div>
           </div>
@@ -229,7 +231,7 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
           </p>
           <div className="mt-1.5 flex flex-col gap-1">
             {communityItems.map((link) => (
-              <SideNavLink key={link.label} link={link} pathname={pathname} />
+              <SideNavLink key={link.label} link={link} pathname={pathname} previewSource={previewSource} />
             ))}
           </div>
         </div>
@@ -237,7 +239,7 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
         <div className="mt-auto border-t border-slate-300 pt-3">
           <div className="flex flex-col gap-1">
             {footerItems.map((link) => (
-              <SideNavLink key={link.label} link={link} pathname={pathname} />
+              <SideNavLink key={link.label} link={link} pathname={pathname} previewSource={previewSource} />
             ))}
           </div>
         </div>
@@ -246,7 +248,15 @@ export default function SideNav({ role: roleProp }: SideNavProps) {
   );
 }
 
-function SideNavLink({ link, pathname }: { link: NavItem; pathname: string }) {
+function SideNavLink({
+  link,
+  pathname,
+  previewSource,
+}: {
+  link: NavItem;
+  pathname: string;
+  previewSource: string | null;
+}) {
   const isInsideServicePage = pathname.startsWith("/service/");
   const isFindServicesLink = link.label === "Find Services";
   const isReportIssueLink = link.label === "Report Issue";
@@ -261,7 +271,7 @@ function SideNavLink({ link, pathname }: { link: NavItem; pathname: string }) {
     (isInsideServicePage && isFindServicesLink) ||
     (isReportIssuePage && isReportIssueLink) ||
     (isPostGigPage && isMyGigsLink) ||
-    (isGigPreviewPage && isMyGigsLink) ||
+    (isGigPreviewPage && isMyGigsLink && previewSource === "my-gigs") ||
     (isEditGigPage && isMyGigsLink);
   const Icon = link.icon;
   const isSignOut = link.label === "Sign Out";

@@ -13,11 +13,11 @@ import { formatRatingLabel } from "@/lib/ratings";
 import { type Role } from "@/lib/role-routes";
 import type { ProviderGig, UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
-import { AVAILABILITY_TIME_SLOTS, inferServiceCategory } from "@/lib/platform";
+import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS, inferServiceCategory } from "@/lib/platform";
 import { useLookupOptions } from "@/lib/lookups";
 import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
-import ModalPortal from "@/components/ui/modal-portal";
+import SharedGigDetailsModal from "@/components/gig-details-modal";
 import { getGigCoverForCategory } from "@/lib/gig-covers";
 
 type GigCardData = {
@@ -63,6 +63,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
   const [universityFilter, setUniversityFilter] = useState("Any University");
   const [ratingFilter, setRatingFilter] = useState("Any Rating");
   const [availabilityFilter, setAvailabilityFilter] = useState("Any Time");
+  const [weekdayFilters, setWeekdayFilters] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const hideOwnGigInMarketplace = role !== "both";
 
@@ -237,10 +238,21 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
           }
         }
 
+        if (weekdayFilters.length > 0) {
+          const availability = Array.isArray(gig.availability) ? gig.availability : [gig.availability];
+          if (
+            !weekdayFilters.some((day) =>
+              availability.some((item) => item.toLowerCase().startsWith(day.toLowerCase())),
+            )
+          ) {
+            return false;
+          }
+        }
+
         return true;
       })
       .sort((a, b) => b.match - a.match);
-  }, [availabilityFilter, categoryFilter, gigs, hideOwnGigInMarketplace, ratingFilter, searchQuery, universityFilter, userProfile]);
+  }, [availabilityFilter, categoryFilter, gigs, hideOwnGigInMarketplace, ratingFilter, searchQuery, universityFilter, userProfile, weekdayFilters]);
 
   // Pagination happens after filtering so page counts always match the results.
   const cardsPerPage = 6;
@@ -249,7 +261,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
 
   const previewHref = (gig: GigCardData) =>
     role
-      ? `/gig-preview/${role}?source=find&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=${gig.skillIndex}${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}`
+      ? `/gig-preview/${role}?source=find&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=${gig.skillIndex}${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}&coverImage=${encodeURIComponent(gig.image)}`
       : "/get-started";
 
   return (
@@ -283,6 +295,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
                       setUniversityFilter("Any University");
                       setRatingFilter("Any Rating");
                       setAvailabilityFilter("Any Time");
+                      setWeekdayFilters([]);
                     }}
                     className="mt-4 inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700"
                   >
@@ -316,6 +329,8 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
         setRatingFilter={(value) => updateFilters(() => setRatingFilter(value))}
         availabilityFilter={availabilityFilter}
         setAvailabilityFilter={(value) => updateFilters(() => setAvailabilityFilter(value))}
+        weekdayFilters={weekdayFilters}
+        setWeekdayFilters={(value) => updateFilters(() => setWeekdayFilters(value))}
         serviceCategories={serviceCategories}
         availabilityOptions={availabilityFilters}
       />
@@ -334,7 +349,7 @@ function GigCard({
 }) {
   const { userProfile, refreshProfile } = useAuth();
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const availability = Array.isArray(gig.availability) ? gig.availability.join(", ") : gig.availability;
+  const availability = formatAvailabilityPreview(gig.availability);
   const isFavorited = Boolean(
     userProfile?.favorites?.some(
       (fav) =>
@@ -475,114 +490,23 @@ function GigCard({
       </div>
     </article>
     {detailsOpen ? (
-      <GigDetailsModal
-        gig={gig}
-        availability={availability}
+      <SharedGigDetailsModal
+        gig={{
+          title: gig.title,
+          category: gig.category,
+          price: formatPrice(gig.price),
+          providerName: gig.providerName,
+          ratingLabel: gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} rating` : "New",
+          summary: gig.summary,
+          description: gig.description,
+          availability: gig.availability,
+          image: gig.image,
+        }}
         previewHref={previewHref}
         onClose={() => setDetailsOpen(false)}
       />
     ) : null}
     </>
-  );
-}
-
-function GigDetailsModal({
-  gig,
-  availability,
-  previewHref,
-  onClose,
-}: {
-  gig: GigCardData;
-  availability: string;
-  previewHref: string;
-  onClose: () => void;
-}) {
-  return (
-    <ModalPortal>
-      <div
-        className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-md"
-        onClick={onClose}
-      >
-        <article
-          className="relative grid max-h-[88vh] w-full max-w-4xl overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(243,248,255,0.97))] shadow-[0_32px_90px_rgba(15,23,42,0.22)] md:grid-cols-[1.02fr_0.98fr]"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close gig details"
-            className="absolute right-5 top-5 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/80 bg-white/95 text-slate-500 shadow-[0_10px_26px_rgba(15,23,42,0.1)] transition hover:border-slate-300 hover:text-slate-900"
-          >
-            <CloseIcon className="h-4 w-4" />
-          </button>
-          <div className="relative min-h-[260px] overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(63,94,251,0.16),transparent_34%),linear-gradient(160deg,#edf4ff_0%,#f8fbff_46%,#eef8f6_100%)] p-5 md:min-h-[440px] md:p-7">
-            <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
-            <div className="relative flex h-full min-h-[220px] items-center justify-center overflow-hidden rounded-[26px] border border-white/80 bg-white/90 shadow-[0_20px_44px_rgba(15,23,42,0.09)] md:min-h-[360px]">
-              <Image
-                src={gig.image}
-                alt={gig.title}
-                fill
-                className="object-contain p-5 md:p-7"
-                sizes="(min-width: 768px) 420px, 100vw"
-              />
-            </div>
-          </div>
-          <div className="min-w-0 overflow-y-auto p-6 md:p-8">
-            <div className="flex items-start justify-between gap-4">
-              <span className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-[#1453c4] shadow-sm">
-              {gig.category}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-100 bg-amber-50 px-3 py-1.5 text-xs font-bold text-slate-700">
-                <StarIcon className="h-3.5 w-3.5 text-amber-400" />
-                {gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} rating` : "New"}
-              </span>
-            </div>
-
-            <h2 className="mt-4 break-words text-[1.85rem] font-black leading-[1.08] tracking-tight text-slate-900">
-              {gig.title}
-            </h2>
-            <p className="mt-3 line-clamp-3 break-words text-[15px] leading-7 text-slate-600">
-              {gig.summary || gig.description}
-            </p>
-
-            <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
-              <InfoItem label="Price" value={formatPrice(gig.price)} />
-              <InfoItem label="Availability" value={availability || "Flexible"} />
-              <InfoItem label="Provider" value={gig.providerName} />
-              <InfoItem
-                label="Rating"
-                value={gig.reviews > 0 ? `${formatRatingLabel(gig.rating)} (${gig.reviews} reviews)` : "New"}
-              />
-            </dl>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href={previewHref}
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-[#2f66e7] px-6 text-sm font-semibold text-white transition hover:bg-[#2557cf]"
-              >
-                View Full Details
-              </Link>
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </article>
-      </div>
-    </ModalPortal>
-  );
-}
-
-function InfoItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[20px] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] px-4 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.03)]">
-      <dt className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</dt>
-      <dd className="mt-1.5 break-words text-[15px] font-semibold leading-6 text-slate-800">{value}</dd>
-    </div>
   );
 }
 
@@ -613,6 +537,8 @@ function FiltersSidebar(props: {
   setRatingFilter: (value: string) => void;
   availabilityFilter: string;
   setAvailabilityFilter: (value: string) => void;
+  weekdayFilters: string[];
+  setWeekdayFilters: (value: string[]) => void;
   serviceCategories: string[];
   availabilityOptions: string[];
 }) {
@@ -674,6 +600,33 @@ function FiltersSidebar(props: {
                   placeholder="Any University"
                   labelClassName="text-[10px] font-bold uppercase tracking-wider text-slate-400"
                 />
+              );
+            }
+
+            if (filter.label === "Availability") {
+              const weekdayValue = props.weekdayFilters[0] || "Any Day";
+
+              return (
+                <div key={filter.label} className="space-y-2.5">
+                  <SelectField
+                    label={filter.label}
+                    value={weekdayValue}
+                    onChange={(value) =>
+                      props.setWeekdayFilters(value === "Any Day" ? [] : [value])
+                    }
+                    options={["Any Day", ...AVAILABILITY_DAYS]}
+                    labelClassName="text-[10px] font-bold uppercase tracking-wider text-slate-400"
+                    className="h-9 px-2.5 text-xs text-slate-700"
+                  />
+                  <SelectField
+                    label="Time"
+                    value={selectValue}
+                    onChange={selectHandler}
+                    options={filter.options}
+                    labelClassName="sr-only"
+                    className="h-9 px-2.5 text-xs text-slate-700"
+                  />
+                </div>
               );
             }
 
@@ -764,6 +717,22 @@ function formatPrice(value: number | string | undefined) {
   return `LKR ${numeric.toLocaleString("en-LK")}`;
 }
 
+function formatAvailabilityPreview(value: string | string[] | undefined) {
+  const slots = Array.isArray(value)
+    ? value
+    : String(value || "")
+        .split(",")
+        .map((item) => item.trim());
+  const cleanSlots = slots.filter(Boolean);
+
+  if (cleanSlots.length === 0) {
+    return "Flexible";
+  }
+
+  const preview = cleanSlots.slice(0, 2).join(", ");
+  return cleanSlots.length > 2 ? `${preview}, ...` : preview;
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -776,15 +745,6 @@ function SearchIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <circle cx="11" cy="11" r="7" />
       <path d="M20 20l-3-3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M6 6l12 12" strokeLinecap="round" />
-      <path d="M18 6L6 18" strokeLinecap="round" />
     </svg>
   );
 }

@@ -7,8 +7,8 @@ import { collection, doc, getDocs, query, updateDoc, where } from "firebase/fire
 import { usePathname, useRouter } from "next/navigation";
 import type { SVGProps } from "react";
 import ScrollReveal from "@/components/scroll-reveal";
-import ModalPortal from "@/components/ui/modal-portal";
 import GuestAuthModal from "@/components/guest-auth-modal";
+import SharedGigDetailsModal from "@/components/gig-details-modal";
 import { db } from "@/lib/firebase";
 import { buildGigRatingSummary } from "@/lib/gig-ratings";
 import { ensureGigTitlePrefix } from "@/lib/gig-titles";
@@ -277,8 +277,8 @@ function GigCard({ gig }: { gig: LiveGig }) {
   const isBothHome = pathname === "/home/both";
   const requestRole = isBuyerHome ? "buyer" : isProviderHome ? "provider" : isBothHome ? "both" : null;
   const previewHref = requestRole
-    ? `/gig-preview/${requestRole}?source=home&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}`
-    : `/gig-preview?providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}`;
+    ? `/gig-preview/${requestRole}?source=home&providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}&coverImage=${encodeURIComponent(gig.image)}`
+    : `/gig-preview?providerId=${encodeURIComponent(gig.providerId)}&skillIndex=0${gig.gigId ? `&gigId=${encodeURIComponent(gig.gigId)}` : ""}&coverImage=${encodeURIComponent(gig.image)}`;
   const [previewOpen, setPreviewOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const isFavorited = Boolean(
@@ -442,8 +442,17 @@ function GigCard({ gig }: { gig: LiveGig }) {
       </article>
 
       {previewOpen ? (
-        <HomeGigPreviewModal
-          gig={gig}
+        <SharedGigDetailsModal
+          gig={{
+            title: ensureGigTitlePrefix(gig.title),
+            category: gig.category,
+            price: formatGigPrice(gig.price),
+            providerName: gig.providerName,
+            ratingLabel: formatRatingLabel(gig.rating),
+            summary: gig.summary,
+            availability: gig.availability,
+            image: gig.image,
+          }}
           previewHref={previewHref}
           onClose={() => setPreviewOpen(false)}
         />
@@ -456,99 +465,6 @@ function GigCard({ gig }: { gig: LiveGig }) {
         onClose={() => setAuthModalOpen(false)}
       />
     </>
-  );
-}
-
-function HomeGigPreviewModal({
-  gig,
-  previewHref,
-  onClose,
-}: {
-  gig: LiveGig;
-  previewHref: string;
-  onClose: () => void;
-}) {
-  return (
-    <ModalPortal>
-      <div
-        className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-md"
-        onClick={onClose}
-      >
-        <article
-          className="relative grid max-h-[88vh] w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl md:grid-cols-[0.9fr_1.1fr]"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close gig details"
-            className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-slate-500 shadow-sm transition hover:text-slate-900"
-          >
-            <CloseIcon />
-          </button>
-
-          <div className="relative flex min-h-[260px] items-center justify-center bg-slate-100 p-5 md:min-h-[500px]">
-            <div className="relative h-[220px] w-full max-w-[420px] overflow-hidden bg-white shadow-sm md:h-[250px]">
-              <Image
-                src={gig.image}
-                alt={gig.title}
-                fill
-                className="object-contain"
-                sizes="(min-width: 768px) 420px, 90vw"
-              />
-            </div>
-          </div>
-
-          <div className="min-w-0 overflow-y-auto p-6 md:p-8">
-            <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#1453c4]">
-              {gig.category}
-            </span>
-            <h2 className="mt-4 break-words text-2xl font-bold leading-8 text-slate-900">
-              {ensureGigTitlePrefix(gig.title)}
-            </h2>
-            <p className="mt-4 line-clamp-3 break-words text-sm leading-6 text-slate-600">
-              {gig.summary}
-            </p>
-
-            <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
-              <PreviewInfoItem label="Price" value={formatGigPrice(gig.price)} />
-              <PreviewInfoItem label="Availability" value={gig.availability || "Flexible"} />
-              <PreviewInfoItem label="Provider" value={gig.providerName} />
-              <PreviewInfoItem label="Rating" value={formatRatingLabel(gig.rating)} />
-            </dl>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href={previewHref}
-                className="inline-flex h-11 items-center justify-center rounded-lg bg-[#2f66e7] px-6 text-sm font-semibold text-white transition hover:bg-[#2557cf]"
-              >
-                View Full Details
-              </Link>
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </article>
-      </div>
-    </ModalPortal>
-  );
-}
-
-function PreviewInfoItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-slate-50 px-4 py-3">
-      <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-        {label}
-      </dt>
-      <dd className="mt-2 break-words text-sm font-bold leading-5 text-slate-800">
-        {value}
-      </dd>
-    </div>
   );
 }
 
@@ -580,24 +496,6 @@ function HeartIcon({ className, filled = false }: { className?: string; filled?:
       aria-hidden="true"
     >
       <path d="M12 21s-6.4-4.1-9-8.1C1 9.8 2.4 6.2 5.8 5.6c2.1-.4 3.8.6 5 2.3.2.3.3.4.4.4s.2-.1.4-.4c1.2-1.7 2.9-2.7 5-2.3 3.4.6 4.8 4.2 2.8 7.3C18.4 16.9 12 21 12 21z" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
     </svg>
   );
 }

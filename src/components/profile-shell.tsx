@@ -37,7 +37,7 @@ export default function ProfileShell({ role, navRole, children }: ProfileShellPr
             </div>
           </main>
         </div>
-        <div className="xl:ml-[255px]">
+        <div>
           <SiteFooter role={shellRole} />
         </div>
       </div>

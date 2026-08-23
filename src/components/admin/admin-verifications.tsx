@@ -312,34 +312,31 @@ export default function AdminVerifications() {
   };
 
   return (
-    <div className="px-6 py-10">
-      <section className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+    <div className="px-4 py-8 sm:px-6 lg:py-10">
+      <section className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-[30px] font-semibold leading-tight tracking-tight text-slate-900">
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-[30px]">
             Student Provider Verifications
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Review uploaded student proof documents and approve verified students as service providers.
           </p>
         </div>
-
-        <div className="grid gap-3 sm:grid-cols-[220px_auto] xl:items-end">
-          <div className="min-w-0">
-            <SelectField
-              label="Verification Status"
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={verificationFilters}
-              title="Filter verification requests"
-              wrapperClassName="min-w-0"
-              labelClassName="mb-0 text-sm font-medium text-slate-600"
-              className="h-12 rounded-xl border-slate-200 px-4 text-sm font-medium text-slate-700 shadow-sm"
-            />
-          </div>
+        <div className="grid shrink-0 gap-4 sm:grid-cols-[minmax(0,275px)_auto] lg:justify-end">
+          <SelectField
+            label="Verification Status"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={verificationFilters}
+            title="Filter verification requests"
+            wrapperClassName="min-w-0"
+            labelClassName="mb-0 text-sm font-medium text-slate-600"
+            className="h-12 rounded-xl border-slate-200 px-4 text-sm font-medium text-slate-700 shadow-sm"
+          />
           <button
             type="button"
             onClick={() => setStatusFilter(verificationFilters[0])}
-            className="inline-flex h-12 w-12 cursor-pointer items-center justify-center self-end rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+            className="mt-7 inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 sm:w-12"
             aria-label="Clear verification filters"
             title="Clear filters"
           >
@@ -348,7 +345,7 @@ export default function AdminVerifications() {
         </div>
       </section>
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-4">
+      <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
           <StatCard key={stat.label} stat={stat} />
         ))}
@@ -360,73 +357,80 @@ export default function AdminVerifications() {
         </p>
       ) : null}
 
-      <section className="mt-8 overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.05)]">
-        <div className="grid grid-cols-[minmax(0,1.45fr)_minmax(0,1.2fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(90px,0.45fr)] gap-6 border-b border-slate-300 bg-[#f0f1ff] px-6 py-5 text-[12px] font-medium text-slate-700">
-          <span className="min-w-0">Student</span>
-          <span className="min-w-0">University</span>
-          <span className="min-w-0">Programme</span>
-          <span className="min-w-0">Proof Type</span>
-          <span className="min-w-0">Status</span>
-          <span className="min-w-0">Actions</span>
-        </div>
-
+      <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <div className="flex h-56 items-center justify-center">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2b62e6] border-t-transparent" />
           </div>
         ) : filteredRows.length ? (
-          paginatedRows.map((row, index) => (
-            <div
-              key={row.id}
-              className="grid grid-cols-[minmax(0,1.45fr)_minmax(0,1.2fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(90px,0.45fr)] items-start gap-6 border-b border-slate-300 px-6 py-4 last:border-b-0"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <Avatar
-                  name={row.studentName}
-                  index={(currentPage - 1) * VERIFICATIONS_PER_PAGE + index}
-                  profileImageUrl={userAvatars[row.userId]}
-                />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-slate-800">{row.studentName}</p>
-                  <p className="truncate text-xs text-slate-500">{row.email}</p>
-                  <p className="mt-0.5 text-[11px] text-slate-400">{formatDate(row.submittedAt)}</p>
+          <>
+            <div className="overflow-x-auto">
+              <div className="min-w-[980px]">
+                <div className="grid grid-cols-[1.55fr_1.2fr_1fr_0.95fr_0.8fr_0.65fr] border-b border-slate-200 bg-slate-50 px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                  <span className="min-w-0">Student</span>
+                  <span className="min-w-0">University</span>
+                  <span className="min-w-0">Programme</span>
+                  <span className="min-w-0">Proof Type</span>
+                  <span className="justify-self-center">Status</span>
+                  <span className="justify-self-center">Actions</span>
                 </div>
-              </div>
-              <div className="min-w-0 pt-1 text-sm text-slate-700">
-                <span className="block truncate">{row.university}</span>
-              </div>
-              <div className="min-w-0 pt-1 text-sm text-slate-700">
-                {row.degree}
-                <span className="mt-1 block text-xs text-slate-400">{row.yearOfStudy}</span>
-              </div>
-              <div className="min-w-0 pt-1 text-sm text-slate-700">
-                {row.proof?.fileType || "Student ID"}
-                {(downloadUrls[row.id] || row.proof?.downloadUrl || row.proof?.storagePath) ? (
-                  <button
-                    type="button"
-                    onClick={() => void openProofPreview(row)}
-                      className="mt-1 block cursor-pointer text-xs font-semibold text-[#1454cc]"
+
+                {paginatedRows.map((row, index) => (
+                  <div
+                    key={row.id}
+                    className="grid grid-cols-[1.55fr_1.2fr_1fr_0.95fr_0.8fr_0.65fr] items-center border-b border-slate-200 px-6 py-5 text-sm last:border-b-0"
                   >
-                    View File
-                  </button>
-                ) : null}
-              </div>
-              <div className="pt-1">
-                <StatusPill status={row.status} />
-              </div>
-              <div className="flex min-w-0 justify-start pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => setReviewRow(row)}
-                  className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-[#1454cc] shadow-sm transition hover:border-[#2b62e6] hover:bg-blue-50"
-                  aria-label={`Review ${row.studentName}'s verification`}
-                  title="Open review popup"
-                >
-                  <ReviewActionIcon />
-                </button>
+                    <div className="flex min-w-0 items-center gap-4">
+                      <Avatar
+                        name={row.studentName}
+                        index={(currentPage - 1) * VERIFICATIONS_PER_PAGE + index}
+                        profileImageUrl={userAvatars[row.userId]}
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-slate-800">{row.studentName}</p>
+                        <p className="truncate text-xs text-slate-500">{row.email}</p>
+                        <p className="mt-0.5 text-[11px] text-slate-400">{formatDate(row.submittedAt)}</p>
+                      </div>
+                    </div>
+                    <div className="min-w-0 pt-1 text-sm text-slate-700">
+                      <span className="block truncate">{row.university}</span>
+                    </div>
+                    <div className="min-w-0 text-sm text-slate-700">
+                      {row.degree}
+                      <span className="mt-1 block text-xs text-slate-400">{row.yearOfStudy}</span>
+                    </div>
+                    <div className="min-w-0 text-sm text-slate-700">
+                      {row.proof?.fileType || "Student ID"}
+                      {(downloadUrls[row.id] || row.proof?.downloadUrl || row.proof?.storagePath) ? (
+                        <button
+                          type="button"
+                          onClick={() => void openProofPreview(row)}
+                          className="mt-1 block cursor-pointer text-xs font-semibold text-[#1454cc]"
+                        >
+                          View File
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="justify-self-center">
+                      <StatusPill status={row.status} />
+                    </div>
+                    <div className="flex min-w-0 justify-self-center">
+                      <button
+                        type="button"
+                        onClick={() => setReviewRow(row)}
+                        className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-[#1454cc] shadow-sm transition hover:border-[#2b62e6] hover:bg-blue-50"
+                        aria-label={`Review ${row.studentName}'s verification`}
+                        title="Open review popup"
+                      >
+                        <ReviewActionIcon />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))
+
+          </>
         ) : (
           <div className="px-6 py-16 text-center text-sm text-slate-500">
             No student provider verification requests yet.
