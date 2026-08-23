@@ -13,23 +13,23 @@ type Feature = {
 
 const features: Feature[] = [
   {
-    title: "Provider Verification",
+    title: "Student Provider Verification",
     description:
-      "Student providers complete campus email and proof verification before offering services on the platform.",
+      "Student providers complete proof review before publishing services and accepting requests on the platform.",
     Icon: MailIcon,
     tone: "bg-[#e8f1ff] text-[#0f4cbf]",
   },
   {
-    title: "Trusted Access",
+    title: "Trusted Access for Everyone",
     description:
-      "Students and non-student buyers can join safely while provider access stays limited to verified university students.",
+      "Students and non-student buyers can join safely, while provider access stays limited to verified university students.",
     Icon: UsersIcon,
     tone: "bg-[#e7f8f1] text-[#0f8a6b]",
   },
   {
-    title: "Ratings and Reports",
+    title: "Ratings, Reviews and Reports",
     description:
-      "Transparent peer-to-peer feedback systems and quick reporting for a high-quality experience.",
+      "Completed exchanges build trusted feedback, and quick reporting helps protect the platform experience.",
     Icon: ShieldIcon,
     tone: "bg-[#eef2ff] text-[#3b5bcc]",
   },
@@ -42,7 +42,7 @@ export default function VerifiedStudentsSection() {
       <div className="mx-auto max-w-6xl px-5 sm:px-6">
         <ScrollReveal delayMs={30}>
           <div className="text-center">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl leading-tight">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl leading-tight">
               Built for Verified Student Providers
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm sm:text-base text-slate-600">
