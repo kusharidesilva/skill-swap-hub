@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import ModalPortal from "@/components/ui/modal-portal";
+import GigCoverImage from "@/components/ui/gig-cover-image";
 import { AVAILABILITY_DAYS } from "@/lib/platform";
 
 export type GigDetailsModalData = {
@@ -55,10 +55,11 @@ export default function GigDetailsModal({ gig, previewHref, onClose }: GigDetail
           <div className="relative min-h-[230px] overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(63,94,251,0.16),transparent_34%),linear-gradient(160deg,#edf4ff_0%,#f8fbff_46%,#eef8f6_100%)] p-4 md:min-h-[390px] md:p-6">
             <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
             <div className="relative flex h-full min-h-[200px] items-center justify-center overflow-hidden rounded-[22px] border border-white/80 bg-white/90 shadow-[0_18px_38px_rgba(15,23,42,0.08)] md:min-h-[320px] md:rounded-[24px]">
-              <Image
+              <GigCoverImage
                 src={gig.image}
                 alt={gig.title}
-                fill
+                title={gig.title}
+                category={gig.category}
                 className="object-contain p-4 md:p-6"
                 sizes="(min-width: 768px) 420px, 100vw"
               />

@@ -18,6 +18,7 @@ import { useLookupOptions } from "@/lib/lookups";
 import UniversityCombobox from "@/components/ui/university-combobox";
 import SelectField from "@/components/ui/select-field";
 import SharedGigDetailsModal from "@/components/gig-details-modal";
+import GigCoverImage from "@/components/ui/gig-cover-image";
 import { getGigCoverForCategory } from "@/lib/gig-covers";
 
 type GigCardData = {
@@ -65,7 +66,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
   const [availabilityFilter, setAvailabilityFilter] = useState("Any Time");
   const [weekdayFilters, setWeekdayFilters] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const hideOwnGigInMarketplace = role !== "both";
+  const hideOwnGigInMarketplace = Boolean(userProfile);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -192,7 +193,7 @@ export default function FindServicesPageContent({ role }: FindServicesPageConten
     }
 
     fetchGigs();
-  }, [userProfile, ratingsVersion]);
+  }, [hideOwnGigInMarketplace, userProfile, ratingsVersion]);
 
   const updateFilters = (update: () => void) => {
     update();
@@ -417,7 +418,14 @@ function GigCard({
     <>
     <article className="flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
       <div className="relative h-40 bg-slate-100">
-        <Image src={gig.image} alt={gig.title} fill className="object-cover" sizes="(min-width: 1024px) 320px, 100vw" />
+        <GigCoverImage
+          src={gig.image}
+          alt={gig.title}
+          title={gig.title}
+          category={gig.category}
+          className="object-cover"
+          sizes="(min-width: 1024px) 320px, 100vw"
+        />
         <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-[#1453c4] shadow-sm">
           {gig.category}
         </span>
