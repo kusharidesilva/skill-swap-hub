@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Compile React components for automatic rendering optimizations.
   reactCompiler: true,
+  // Silence multiple lockfiles workspace root warning.
+  turbopack: {
+    root: __dirname,
+  },
   images: {
     // Remote images are limited to the providers this app actually stores.
     remotePatterns: [
