@@ -268,7 +268,7 @@ export default function AdminVerifications() {
         approvalEmailQueued = true;
       } else {
         await updateDoc(userRef, {
-          role: "buyer",
+          role: "provider",
           accountStatus: "suspended",
           providerVerificationStatus: "rejected",
           canBuyServices: false,

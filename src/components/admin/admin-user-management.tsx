@@ -146,7 +146,7 @@ export default function AdminUserManagement() {
     return users.filter((user) => {
       const matchesSearch =
         !search ||
-        [user.name, user.email, user.university, user.degree, user.role]
+        [user.name, user.email, user.university, user.degree, adminUserRole(user)]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(search));
 
@@ -157,10 +157,10 @@ export default function AdminUserManagement() {
           ? accountStatus.startsWith("pending")
           : accountStatus === normalizeStatus(accountFilter));
 
-      const role = normalizeAdminRole(user.role || "buyer");
+      const role = adminUserRole(user);
       const matchesRole =
         roleFilter === "All Roles" ||
-        (normalizeAdminRole(roleFilter) === "buyer" && (role === "buyer" || role === "both")) ||
+        (normalizeAdminRole(roleFilter) === "buyer" && role === "both") ||
         (normalizeAdminRole(roleFilter) === "provider" && (role === "provider" || role === "both")) ||
         role === normalizeAdminRole(roleFilter);
 
@@ -247,8 +247,8 @@ export default function AdminUserManagement() {
           type: "system",
           icon: nextStatus === "active" ? "check-circle" : "alert-triangle",
           tone: nextStatus === "active" ? "emerald" : "red",
-          href: notificationHrefForRole(user.role),
-          destination: notificationHrefForRole(user.role),
+          href: notificationHrefForRole(adminUserRole(user)),
+          destination: notificationHrefForRole(adminUserRole(user)),
         });
       }
 
@@ -269,7 +269,7 @@ export default function AdminUserManagement() {
     const rows = filteredUsers.map((user) => [
       user.name || "",
       user.email || "",
-      roleLabel(user.role),
+      roleLabel(adminUserRole(user)),
       accountTypeLabel(user.accountType),
       accountStatusLabel(user.accountStatus),
       verificationLabel(user.providerVerificationStatus),
@@ -449,7 +449,8 @@ export default function AdminUserManagement() {
                 const isSuspended = normalizeStatus(user.accountStatus || "") === "suspended";
                 const isSelf = targetUserId === userProfile?.uid;
                 const isStudentAccount = normalizeStatus(user.accountType || "") === "student";
-                const isAdminAccount = normalizeAdminRole(user.role) === "admin";
+                const displayRole = adminUserRole(user);
+                const isAdminAccount = displayRole === "admin";
 
                 return (
                   <div
@@ -479,7 +480,7 @@ export default function AdminUserManagement() {
                     </div>
 
                     <div className="justify-self-center">
-                      <StatusChip tone={roleTone(user.role)}>{roleLabel(user.role)}</StatusChip>
+                      <StatusChip tone={roleTone(displayRole)}>{roleLabel(displayRole)}</StatusChip>
                     </div>
                     <span className="justify-self-center font-medium text-slate-600">{accountTypeLabel(user.accountType)}</span>
                     <div className="justify-self-center space-y-1.5 text-center">
@@ -728,6 +729,24 @@ function roleLabel(role?: string) {
   if (normalized === "provider") return "Provider";
   if (normalized === "admin") return "Admin";
   return "Buyer";
+}
+
+function adminUserRole(user: ManagedUser) {
+  const normalizedRole = normalizeAdminRole(user.role || "buyer");
+  if (normalizedRole === "admin" || normalizedRole === "both") {
+    return normalizedRole;
+  }
+
+  const accountType = normalizeStatus(user.accountType || "");
+  const verificationStatus = normalizeStatus(
+    user.providerVerificationStatus || "not_required",
+  );
+
+  if (accountType === "student" && verificationStatus !== "not_required") {
+    return "provider";
+  }
+
+  return normalizedRole;
 }
 
 function accountTone(status?: string): "cyan" | "amber" | "rose" {
