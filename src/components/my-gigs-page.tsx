@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState, useEffect } from "react";
 import { collection, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -11,6 +10,7 @@ import { formatRatingLabel } from "@/lib/ratings";
 import { useAuth } from "@/context/AuthContext";
 import type { ProviderGig, UserProfile } from "@/lib/auth";
 import ModalPortal from "@/components/ui/modal-portal";
+import GigCoverImage from "@/components/ui/gig-cover-image";
 import { getGigCoverForCategory } from "@/lib/gig-covers";
 
 type MyGigsPageContentProps = {
@@ -363,10 +363,11 @@ export default function MyGigsPageContent({
                     href={`/gig-preview/${role}?source=my-gigs&providerId=${encodeURIComponent(userProfile.uid)}&skillIndex=${gig.rawIndex}`}
                     className="relative block h-36 w-full overflow-hidden bg-slate-100 sm:h-[150px]"
                   >
-                    <Image
+                    <GigCoverImage
                       src={gig.image}
                       alt={gig.title}
-                      fill
+                      title={gig.title}
+                      category={gig.category}
                       sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 320px"
                       className="h-full w-full object-cover transition duration-300 hover:scale-105"
                     />

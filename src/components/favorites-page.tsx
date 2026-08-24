@@ -11,6 +11,7 @@ import { formatRatingLabel } from "@/lib/ratings";
 import { doc, updateDoc } from "firebase/firestore";
 import SharedGigDetailsModal from "@/components/gig-details-modal";
 import { isRole, type Role } from "@/lib/role-routes";
+import GigCoverImage from "@/components/ui/gig-cover-image";
 
 type SavedSkill = {
   id: string;
@@ -232,10 +233,11 @@ function SavedSkillCard({
     <>
       <article className="flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md">
         <div className="relative h-40 bg-slate-100">
-          <Image
+          <GigCoverImage
             src={skill.image}
             alt={displayTitle}
-            fill
+            title={displayTitle}
+            category={skill.category}
             sizes="(min-width: 1536px) 18vw, (min-width: 1024px) 25vw, 100vw"
             className="object-cover"
           />

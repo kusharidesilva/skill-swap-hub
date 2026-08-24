@@ -32,6 +32,7 @@ type ReportRecord = {
   reportCode?: string;
   adminNote?: string;
   status?: string;
+  adminNeedsReview?: boolean;
   targetUserId?: string;
   reportedUserId?: string;
   reportedUser?: string;
@@ -60,28 +61,35 @@ export default function ReportActionModal({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [fileError, setFileError] = useState("");
+  const [replyError, setReplyError] = useState("");
 
   useEffect(() => {
     if (!open) return;
 
     let active = true;
-    setLoading(true);
-    setNotice("");
 
-    void getDoc(doc(db, "reports", reportId))
-      .then((snapshot) => {
-        if (!active) return;
-        setReport(snapshot.exists() ? (snapshot.data() as ReportRecord) : null);
-      })
-      .catch((error) => {
+    async function loadReport() {
+      setLoading(true);
+      setNotice("");
+      setFileError("");
+      setReplyError("");
+
+      try {
+        const snapshot = await getDoc(doc(db, "reports", reportId));
+        if (active) {
+          setReport(snapshot.exists() ? (snapshot.data() as ReportRecord) : null);
+        }
+      } catch (error) {
         console.error("Error loading report action modal:", error);
         if (active) {
           setReport(null);
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) setLoading(false);
-      });
+      }
+    }
+
+    void loadReport();
 
     return () => {
       active = false;
@@ -99,6 +107,9 @@ export default function ReportActionModal({
     report?.reportedUser === userId;
   const expectedReplyUserId =
     report?.targetUserId || report?.reportedUserId || report?.reportedUser || "";
+  const isAwaitingAdminReview =
+    report?.adminNeedsReview === true && Boolean(latestResponse);
+  const canSubmitReply = canReplyToReport && !isAwaitingAdminReview;
 
   if (!open) return null;
 
@@ -136,15 +147,19 @@ export default function ReportActionModal({
       return;
     }
 
-    if (!replyMessage.trim() && !selectedFile) {
-      setNotice(
-        "Your reply is required. Add a clarification message or attach one supporting file.",
-      );
+    if (isAwaitingAdminReview) {
+      setNotice("Your response is already with admin. Please wait until admin reviews it.");
+      return;
+    }
+
+    if (!replyMessage.trim()) {
+      setReplyError("Description is required before submitting your response.");
       return;
     }
 
     setBusy(true);
     setNotice("");
+    setReplyError("");
 
     try {
       let evidenceFiles: ModerationEvidenceFile[] = [];
@@ -168,20 +183,36 @@ export default function ReportActionModal({
           normalizeModerationStatus(report?.status || "") === "warn"
             ? "Pending"
             : report?.status || "Pending";
+        const submittedAt = Timestamp.now();
+        const submittedResponse = {
+          userId,
+          userName: userName || "Reported user",
+          message: replyMessage.trim(),
+          evidenceFiles,
+          submittedAt,
+        };
 
         await updateDoc(doc(db, "reports", reportId), {
-          reportedUserResponses: arrayUnion({
-            userId,
-            userName: userName || "Reported user",
-            message: replyMessage.trim(),
-            evidenceFiles,
-            submittedAt: Timestamp.now(),
-          }),
+          reportedUserResponses: arrayUnion(submittedResponse),
           status: nextStatus,
           adminNeedsReview: true,
           lastResponseAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
+
+        setReport((current) =>
+          current
+            ? {
+                ...current,
+                reportedUserResponses: [
+                  ...(current.reportedUserResponses || []),
+                  submittedResponse,
+                ],
+                status: nextStatus,
+                adminNeedsReview: true,
+              }
+            : current,
+        );
       } catch (error) {
         console.error("Error updating report reply:", error);
         setNotice(
@@ -313,7 +344,11 @@ export default function ReportActionModal({
                     <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
                       Your Reply
                     </p>
-                    {canReplyToReport ? (
+                    {isAwaitingAdminReview ? (
+                      <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm leading-6 text-blue-800">
+                        Your response and supporting evidence were submitted to admin. Please wait until admin reviews it before adding anything else.
+                      </div>
+                    ) : canReplyToReport ? (
                       <>
                         <p className="mt-2 text-sm leading-6 text-slate-500">
                           Add your clarification and, if needed, attach one supporting file for admin review.
@@ -322,13 +357,26 @@ export default function ReportActionModal({
                           value={replyMessage}
                           onChange={(event) => {
                             setReplyMessage(event.target.value);
+                            if (replyError) {
+                              setReplyError("");
+                            }
                             if (notice) {
                               setNotice("");
                             }
                           }}
                           placeholder="Add clarification, explain your side, or attach supporting details for admin review."
-                          className="mt-4 min-h-32 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#2f66e7] focus:ring-4 focus:ring-blue-100"
+                          aria-invalid={Boolean(replyError)}
+                          className={`mt-4 min-h-32 w-full resize-none rounded-2xl border bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:ring-4 ${
+                            replyError
+                              ? "border-red-300 focus:border-red-500 focus:ring-red-100"
+                              : "border-slate-200 focus:border-[#2f66e7] focus:ring-blue-100"
+                          }`}
                         />
+                        {replyError ? (
+                          <p className="mt-2 text-xs font-semibold text-red-500">
+                            {replyError}
+                          </p>
+                        ) : null}
                         <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white p-4">
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
@@ -424,7 +472,7 @@ export default function ReportActionModal({
             <button
               type="button"
               onClick={() => void handleSubmit()}
-              disabled={busy || !canReplyToReport}
+              disabled={busy || !canSubmitReply}
               className="inline-flex h-11 min-w-[190px] items-center justify-center rounded-xl bg-[#1454cc] px-5 text-sm font-semibold text-white transition hover:bg-[#1146ab] disabled:opacity-60"
             >
               {busy ? "Submitting..." : "Submit Response"}

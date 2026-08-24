@@ -63,7 +63,11 @@ type ReportRecord = {
 
 type OrderRecord = {
   id?: string;
+  sourceCollection?: "requests" | "directServiceRequests" | "serviceOrders";
+  directRequestId?: string;
+  orderId?: string;
   orderStatus?: string;
+  requestStatus?: string;
   status?: string;
   review?: Record<string, unknown>;
   providerReview?: Record<string, unknown>;
@@ -141,6 +145,8 @@ export default function AdminDashboard() {
     [],
   );
   const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [directOrders, setDirectOrders] = useState<OrderRecord[]>([]);
+  const [serviceOrders, setServiceOrders] = useState<OrderRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -233,12 +239,41 @@ export default function AdminDashboard() {
           setOrders(
             snapshot.docs.map((docSnap) => ({
               id: docSnap.id,
+              sourceCollection: "requests",
               ...(docSnap.data() as OrderRecord),
             })),
           );
           markLoaded("requests");
         },
         (error) => handleSnapshotError("requests", error),
+      ),
+      onSnapshot(
+        collection(db, "directServiceRequests"),
+        (snapshot) => {
+          setDirectOrders(
+            snapshot.docs.map((docSnap) => ({
+              id: docSnap.id,
+              sourceCollection: "directServiceRequests",
+              ...(docSnap.data() as OrderRecord),
+            })),
+          );
+          markLoaded("directServiceRequests");
+        },
+        (error) => handleSnapshotError("directServiceRequests", error),
+      ),
+      onSnapshot(
+        collection(db, "serviceOrders"),
+        (snapshot) => {
+          setServiceOrders(
+            snapshot.docs.map((docSnap) => ({
+              id: docSnap.id,
+              sourceCollection: "serviceOrders",
+              ...(docSnap.data() as OrderRecord),
+            })),
+          );
+          markLoaded("serviceOrders");
+        },
+        (error) => handleSnapshotError("serviceOrders", error),
       ),
     ];
 
@@ -280,13 +315,11 @@ export default function AdminDashboard() {
     (gig) =>
       normalizeStatus(gig.status || gig.gigStatus || "active") === "active",
   );
-  const completedOrders = orders.filter(
-    (order) =>
-      normalizeStatus(order.orderStatus || order.status || "") ===
-        "completed" &&
-      Boolean(order.review) &&
-      Boolean(order.providerReview),
-  );
+  const completedOrders = countCompletedOrders([
+    ...orders,
+    ...directOrders,
+    ...serviceOrders,
+  ]);
   const pendingReports = reports.filter((report) =>
     isPendingAdminReport(report),
   );
@@ -340,7 +373,7 @@ export default function AdminDashboard() {
     },
     {
       label: "Completed Orders",
-      value: String(completedOrders.length),
+      value: String(completedOrders),
       accent: "#7c3aed",
       icon: <CompletedOrdersIcon />,
       hoverClassName: "hover:border-violet-300 hover:bg-violet-50/40",
@@ -630,6 +663,45 @@ function formatDate(
 
 function normalizeStatus(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+}
+
+function isCompletedOrder(order: OrderRecord) {
+  if (order.sourceCollection === "serviceOrders") {
+    return normalizeStatus(order.orderStatus || order.status || "") === "completed";
+  }
+
+  if (order.sourceCollection === "directServiceRequests") {
+    return normalizeStatus(order.requestStatus || order.status || "") === "completed";
+  }
+
+  return normalizeStatus(order.status || "") === "completed";
+}
+
+function getOrderCountKey(order: OrderRecord) {
+  if (order.sourceCollection === "serviceOrders" && order.directRequestId) {
+    return `direct:${order.directRequestId}`;
+  }
+
+  if (order.sourceCollection === "directServiceRequests") {
+    return `direct:${order.id || order.directRequestId || "unknown"}`;
+  }
+
+  if (order.sourceCollection === "serviceOrders") {
+    return `service:${order.orderId || order.id || "unknown"}`;
+  }
+
+  return `request:${order.id || "unknown"}`;
+}
+
+function countCompletedOrders(orderRecords: OrderRecord[]) {
+  const completedKeys = new Set<string>();
+
+  orderRecords.forEach((order) => {
+    if (!isCompletedOrder(order)) return;
+    completedKeys.add(getOrderCountKey(order));
+  });
+
+  return completedKeys.size;
 }
 
 function StatCardBlock({

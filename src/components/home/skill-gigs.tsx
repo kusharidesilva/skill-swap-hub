@@ -9,6 +9,7 @@ import type { SVGProps } from "react";
 import ScrollReveal from "@/components/scroll-reveal";
 import GuestAuthModal from "@/components/guest-auth-modal";
 import SharedGigDetailsModal from "@/components/gig-details-modal";
+import GigCoverImage from "@/components/ui/gig-cover-image";
 import { db } from "@/lib/firebase";
 import { buildGigRatingSummary } from "@/lib/gig-ratings";
 import { ensureGigTitlePrefix } from "@/lib/gig-titles";
@@ -73,7 +74,7 @@ export default function SkillGigsSection() {
   const isBuyerHome = pathname === "/home/buyer";
   const isProviderHome = pathname === "/home/provider";
   const isBothHome = pathname === "/home/both";
-  const hideOwnGig = !isBothHome;
+  const hideOwnGig = Boolean(userProfile);
   const viewAllHref = isBuyerHome
     ? "/find-services/buyer"
     : isProviderHome
@@ -88,13 +89,10 @@ export default function SkillGigsSection() {
         const statusSnapshot = await getDocs(
           query(collection(db, "gigs"), where("status", "==", "active")),
         );
-        const completedRequests = userProfile
-          ? (
-              await getDocs(
-                query(collection(db, "requests"), where("status", "==", "completed")),
-              )
-            ).docs.map((requestDoc) => requestDoc.data())
-          : [];
+        const completedRequests =
+          userProfile && userProfile.accountStatus !== "suspended"
+            ? await loadCompletedRequestsForRatings()
+            : [];
 
         const gigRecords: GigRecord[] = statusSnapshot.docs
           .map((gigDoc, index) => {
@@ -173,7 +171,9 @@ export default function SkillGigsSection() {
 
         setGigs(liveGigs);
       } catch (err) {
-        console.error("Error fetching live gigs for home section:", err);
+        if (!isPermissionDeniedError(err)) {
+          console.error("Error fetching live gigs for home section:", err);
+        }
         setGigs([]);
       } finally {
         setLoading(false);
@@ -269,6 +269,29 @@ export default function SkillGigsSection() {
   );
 }
 
+async function loadCompletedRequestsForRatings() {
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, "requests"), where("status", "==", "completed")),
+    );
+    return snapshot.docs.map((requestDoc) => requestDoc.data());
+  } catch (error) {
+    if (!isPermissionDeniedError(error)) {
+      console.error("Error fetching completed request ratings for home gigs:", error);
+    }
+    return [];
+  }
+}
+
+function isPermissionDeniedError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "permission-denied"
+  );
+}
+
 function GigCard({ gig }: { gig: LiveGig }) {
   const { userProfile, refreshProfile } = useAuth();
   const pathname = usePathname();
@@ -352,10 +375,11 @@ function GigCard({ gig }: { gig: LiveGig }) {
     <>
       <article className="ssh-card flex h-full min-h-[310px] w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md min-[760px]:min-h-[332px] xl:min-h-[350px]">
         <div className="ssh-card-image relative h-28 bg-slate-100 sm:h-32 xl:h-40">
-          <Image
+          <GigCoverImage
             src={gig.image}
             alt={gig.title}
-            fill
+            title={gig.title}
+            category={gig.category}
             className="object-cover"
             sizes="(min-width: 1280px) 320px, (min-width: 900px) 33vw, (min-width: 560px) 50vw, 100vw"
           />

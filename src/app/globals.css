@@ -15,7 +15,7 @@
   /* Expose the CSS variables to Tailwind utility classes. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -45,7 +45,7 @@ body {
 body { 
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--font-sans), sans-serif;
 } 
 
 .user-motion-scope {

@@ -558,7 +558,8 @@ export async function loginUser(
 
   if (
     accountNeedsEmailVerification(profile.accountType) &&
-    user.emailVerified
+    user.emailVerified &&
+    profile.accountStatus === "pending_email_verification"
   ) {
     const updates: Partial<UserProfile> = {
       emailVerified: true,

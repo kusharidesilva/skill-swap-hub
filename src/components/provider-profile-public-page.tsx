@@ -16,6 +16,7 @@ import type { ProviderGig } from "@/lib/auth";
 import { getVerificationBadge } from "@/lib/identity-badges";
 import { getGigCoverForCategory } from "@/lib/gig-covers";
 import ReviewCard from "@/components/reviews/review-card";
+import GigCoverImage from "@/components/ui/gig-cover-image";
 
 type ProviderProfilePublicPageProps = {
   providerId: string;
@@ -475,10 +476,11 @@ export default function ProviderProfilePublicPage({
                   className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-md"
                 >
                   <div className="relative h-40 w-full bg-slate-100">
-                    <Image
+                    <GigCoverImage
                       src={gig.image}
                       alt={gig.title}
-                      fill
+                      title={gig.title}
+                      category={gig.category}
                       className="object-cover"
                       sizes="(min-width: 1024px) 30vw, 100vw"
                     />

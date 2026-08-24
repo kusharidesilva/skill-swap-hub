@@ -320,8 +320,17 @@ export default function IncomingRequestsPageContent({
             providerId: data.providerId,
             providerName: data.providerName,
             gigId: data.gigId || "",
+            review: data.review,
+            providerReview: data.providerReview,
             updatedAt: data.updatedAt,
             createdAt: data.createdAt,
+            acceptedAt: data.acceptedAt,
+            deliveredAt: data.deliveredAt,
+            providerReviewedAt: data.providerReviewedAt,
+            buyerReviewedAt: data.buyerReviewedAt,
+            reviewSubmittedAt: data.reviewSubmittedAt,
+            reviewedAt: data.reviewedAt,
+            completedAt: data.completedAt,
             providerDoneReminderSentAt: data.providerDoneReminderSentAt,
           });
         });
@@ -339,50 +348,6 @@ export default function IncomingRequestsPageContent({
       unsubscribeDirect();
     };
   }, [userProfile]);
-
-  useEffect(() => {
-    if (!userProfile || fetching) return;
-
-    const reminderAgeMs = 3 * 24 * 60 * 60 * 1000;
-    const overdueRequests = requests.filter((request) => {
-      if (request.providerId !== userProfile.uid) return false;
-      if (request.status !== "working") return false;
-      if (toMillis(request.providerDoneReminderSentAt)) return false;
-
-      const baseTime = toMillis(request.updatedAt) || toMillis(request.createdAt);
-      return Boolean(baseTime && Date.now() - baseTime >= reminderAgeMs);
-    });
-
-    if (!overdueRequests.length) return;
-
-    overdueRequests.forEach((request) => {
-      const collectionName = request.sourceCollection || "requests";
-      const href = scopedHref("/incoming-requests", role);
-
-      void createNotification({
-        userId: userProfile.uid,
-        title: "Mark service as done",
-        description: `Please mark "${request.title}" as done if you have completed the work for ${request.buyerName}.`,
-        type: "request",
-        icon: "request",
-        tone: "indigo",
-        href,
-        destination: href,
-        metadata: {
-          kind: "provider_done_reminder",
-          requestId: request.id,
-          sourceCollection: collectionName,
-        },
-      });
-
-      void updateDoc(doc(db, collectionName, request.id), {
-        providerDoneReminderSentAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }).catch((err) => {
-        console.error("Error saving provider done reminder timestamp:", err);
-      });
-    });
-  }, [fetching, requests, role, userProfile]);
 
   const tabHref = (tab: IncomingRequestsTab) => `?tab=${tab}`;
 
@@ -561,6 +526,7 @@ function NewRequestsView({
         providerId?: string;
         providerName?: string;
         requestStatus?: string;
+        acceptedAt?: unknown;
       } = {
         status,
         updatedAt: serverTimestamp(),
@@ -573,6 +539,7 @@ function NewRequestsView({
       if (status === "working" && userProfile) {
         updateData.providerId = userProfile.uid;
         updateData.providerName = userProfile.name || "Provider Partner";
+        updateData.acceptedAt = serverTimestamp();
       }
       await updateDoc(doc(db, collectionName, reqId), updateData);
 

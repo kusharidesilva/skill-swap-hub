@@ -2,6 +2,9 @@
   "extensions": {
     "firestore-send-email": "firebase/firestore-send-email@0.2.10"
   },
+  "functions": {
+    "source": "functions"
+  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"

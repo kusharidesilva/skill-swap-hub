@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
@@ -17,6 +16,7 @@ import { createNotification } from "@/lib/notifications";
 import { AVAILABILITY_DAYS, inferServiceCategory } from "@/lib/platform";
 import { getGigCoverForCategory } from "@/lib/gig-covers";
 import ReviewFeedbackCard from "@/components/reviews/review-card";
+import GigCoverImage from "@/components/ui/gig-cover-image";
 
 type GigPreviewPageProps = {
   role: SiteRole;
@@ -602,10 +602,11 @@ export default function GigPreviewPage({
             <div className="relative flex h-full overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(63,94,251,0.18),transparent_38%),linear-gradient(135deg,#eef4ff_0%,#f8fbff_40%,#edf8f6_100%)] px-5 py-5 md:px-7 md:py-7">
               <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
               <div className="relative h-[300px] w-full overflow-hidden rounded-[26px] border border-white/80 bg-white shadow-[0_24px_42px_rgba(15,23,42,0.08)] md:h-[390px] xl:h-full xl:min-h-[390px]">
-                <Image
+                <GigCoverImage
                   src={gig.image}
                   alt={gig.title}
-                  fill
+                  title={gig.title}
+                  category={gig.category}
                   priority
                   className="object-contain p-6 md:p-8"
                   sizes="(min-width: 1280px) 620px, 100vw"
