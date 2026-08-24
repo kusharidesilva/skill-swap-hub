@@ -89,13 +89,10 @@ export default function SkillGigsSection() {
         const statusSnapshot = await getDocs(
           query(collection(db, "gigs"), where("status", "==", "active")),
         );
-        const completedRequests = userProfile
-          ? (
-              await getDocs(
-                query(collection(db, "requests"), where("status", "==", "completed")),
-              )
-            ).docs.map((requestDoc) => requestDoc.data())
-          : [];
+        const completedRequests =
+          userProfile && userProfile.accountStatus !== "suspended"
+            ? await loadCompletedRequestsForRatings()
+            : [];
 
         const gigRecords: GigRecord[] = statusSnapshot.docs
           .map((gigDoc, index) => {
@@ -174,7 +171,9 @@ export default function SkillGigsSection() {
 
         setGigs(liveGigs);
       } catch (err) {
-        console.error("Error fetching live gigs for home section:", err);
+        if (!isPermissionDeniedError(err)) {
+          console.error("Error fetching live gigs for home section:", err);
+        }
         setGigs([]);
       } finally {
         setLoading(false);
@@ -267,6 +266,29 @@ export default function SkillGigsSection() {
         onClose={() => setAuthModalOpen(false)}
       />
     </section>
+  );
+}
+
+async function loadCompletedRequestsForRatings() {
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, "requests"), where("status", "==", "completed")),
+    );
+    return snapshot.docs.map((requestDoc) => requestDoc.data());
+  } catch (error) {
+    if (!isPermissionDeniedError(error)) {
+      console.error("Error fetching completed request ratings for home gigs:", error);
+    }
+    return [];
+  }
+}
+
+function isPermissionDeniedError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "permission-denied"
   );
 }
 

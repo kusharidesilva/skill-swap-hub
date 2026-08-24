@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Timestamp, arrayUnion, collection, doc, getDoc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
+import { Timestamp, arrayUnion, collection, doc, getDoc, onSnapshot, serverTimestamp, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { createNotification } from "@/lib/notifications";
 import { getAdminReportStatus, isPendingAdminReport } from "@/lib/admin-panel";
@@ -203,7 +203,8 @@ export default function AdminIssueResolution() {
     setNotice(null);
 
     try {
-      await updateDoc(doc(db, "reports", report.id), {
+      const batch = writeBatch(db);
+      batch.update(doc(db, "reports", report.id), {
         status: nextStatus,
         adminNote: note,
         adminAction: nextStatus === "Resolve" ? "report_resolved" : "report_rejected",
@@ -220,12 +221,19 @@ export default function AdminIssueResolution() {
           createdAt: Timestamp.now(),
         }),
       });
+      const restoredAccount = await queueReportSuspensionRestore(batch, report, nextStatus);
+      await batch.commit();
 
       await notifyReportedUser(report, nextStatus === "Resolve" ? "resolve" : "reject", note, {
         openPopup: false,
       });
 
-      setNotice({ type: "success", text: `Report ${formatReportId(report.reportCode || report.id)} marked ${nextStatus}.` });
+      setNotice({
+        type: "success",
+        text: restoredAccount
+          ? `Report ${formatReportId(report.reportCode || report.id)} marked ${nextStatus}. The suspended account is active again.`
+          : `Report ${formatReportId(report.reportCode || report.id)} marked ${nextStatus}.`,
+      });
     } catch (error) {
       console.error("Error updating report:", error);
       setNotice({ type: "error", text: "Could not update the report." });
@@ -288,14 +296,16 @@ export default function AdminIssueResolution() {
     setNotice(null);
 
     try {
+      const reportReference = formatReportId(report.reportCode || report.id);
+
       await updateDoc(doc(db, "users", targetUserId), {
         accountStatus: "suspended",
         suspensionCode: "report_action",
         suspensionTitle: "Your account has been suspended by an admin",
         suspensionReason:
           getDraftNote(report.id) ||
-          `Your account was suspended after admin review of ${formatReportId(report.reportCode || report.id)}.`,
-        suspensionReportId: report.id,
+          `Your account was suspended after admin review of ${reportReference}.`,
+        suspensionReportId: reportReference,
         adminSuspensionReason: getDraftNote(report.id),
         suspendedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -1203,6 +1213,67 @@ function reportedUserId(report: ReportRecord) {
 
 function reportedUserName(report: ReportRecord) {
   return report.targetUserName || report.reportedUserName || report.reportedUser || "Reported user";
+}
+
+async function queueReportSuspensionRestore(
+  batch: ReturnType<typeof writeBatch>,
+  report: ReportRecord,
+  nextStatus: "Resolve" | "Reject",
+) {
+  const wasSuspensionReport =
+    normalizeModerationStatus(report.status || "") === "suspend" ||
+    report.adminAction === "account_suspended";
+
+  if (nextStatus !== "Resolve") {
+    return false;
+  }
+
+  const targetUserId = reportedUserId(report);
+  if (!targetUserId) {
+    return false;
+  }
+
+  const userRef = doc(db, "users", targetUserId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) {
+    return false;
+  }
+
+  const user = userSnap.data() as {
+    accountStatus?: string;
+    suspensionCode?: string;
+    suspensionReportId?: string;
+  };
+  const suspensionReportIds = [
+    report.id,
+    formatReportId(report.id),
+    report.reportCode || "",
+    report.reportCode ? formatReportId(report.reportCode) : "",
+  ].filter(Boolean);
+  const isSameReportSuspension =
+    typeof user.suspensionReportId === "string" &&
+    suspensionReportIds.includes(user.suspensionReportId);
+  const isLegacyReportSuspension =
+    wasSuspensionReport &&
+    !user.suspensionReportId &&
+    (user.suspensionCode === "report_action" || !user.suspensionCode);
+
+  if (user.accountStatus !== "suspended" || (!isSameReportSuspension && !isLegacyReportSuspension)) {
+    return false;
+  }
+
+  batch.update(userRef, {
+    accountStatus: "active",
+    suspensionCode: "",
+    suspensionTitle: "",
+    suspensionReason: "",
+    suspensionReportId: "",
+    adminSuspensionReason: "",
+    suspendedAt: null,
+    updatedAt: serverTimestamp(),
+  });
+
+  return true;
 }
 
 function reportedUserEmail(report: ReportRecord, userEmails: UserEmailMap) {
