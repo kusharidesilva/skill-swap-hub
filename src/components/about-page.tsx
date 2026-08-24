@@ -13,19 +13,19 @@ const values = [
   {
     title: "Skill Sharing",
     description:
-      "Verified student providers share practical skills while buyers and students request the support they need in one place.",
+      "Student providers publish service gigs for skills like photography, content writing, handmade crafts, and graphic design.",
     icon: "book",
   },
   { 
-    title: "Trusted Verification",
+    title: "Trusted Providers",
     description:
-      "Student providers complete campus email and proof review before offering services, helping the platform stay dependable.",
+      "Providers are reviewed before they can offer services, so buyers can explore gigs with clearer confidence.",
     icon: "shield",
   },
   {
     title: "Meaningful Connections",
     description:
-      "The platform helps students and buyers find the right provider faster, chat clearly, and build trust through reviews.",
+      "Buyers can request services, chat with providers, save favorites, and use reviews to choose the right person.",
     icon: "users",
   },
 ];
@@ -106,7 +106,7 @@ export default function AboutPage({
 
       {/* Platform story and purpose */}
       <section id="story" className="ssh-section-clear bg-white scroll-mt-20">
-        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 sm:px-6 sm:py-16 lg:grid-cols-[1fr_1.05fr] lg:gap-12">
+        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 sm:px-6 sm:py-16 lg:grid-cols-[0.92fr_1.24fr] lg:items-center lg:gap-12">
           <div className="hidden grid-cols-2 gap-4 lg:grid">
             {storyImages.map((image, index) => (
               <ScrollReveal key={image.src} delayMs={70 + index * 55}>
@@ -125,31 +125,30 @@ export default function AboutPage({
             ))}
           </div>
           <ScrollReveal delayMs={110}>
-            <div>
-            <h2 className="text-2xl font-semibold text-slate-900">
+            <div className="lg:pl-2">
+            <h2 className="text-[1.75rem] font-semibold text-slate-900 sm:text-[2rem] lg:whitespace-nowrap">
               The Story Behind the Skill Swap Hub
             </h2>
             <div className="mt-2 h-1 w-10 rounded-full bg-[#0f4cbf]" />
             <div className="mt-4 space-y-4 text-sm leading-relaxed text-slate-600">
               <p>
-                Many university students in Sri Lanka have useful skills such as
-                graphic design, tutoring, writing, CV preparation,
-                presentation design, event support, and content creation.
-                However, they often lack a trusted and organized platform to
-                offer those skills to people who genuinely need them.
+                Many university students in Sri Lanka have extra skills such as
+                photography, handmade crafts and gift items, content writing,
+                graphic design, and more. Skill Swap Hub gives approved student
+                providers a dedicated place to publish those services as gigs.
               </p>
               <p>
-                Many users still depend on friends, social media groups, or
-                large freelance platforms. Those options can feel unstructured,
-                slow, and difficult to trust when someone wants a reliable
-                student provider for a specific task or learning need.
+                Buyers can explore live gigs, save favorites, request a
+                specific service directly, or post a general request when they
+                need help finding the right provider. The platform keeps each
+                request organized with clear statuses, private chat, and
+                notifications for both sides.
               </p>
               <p>
-                Skill Swap Hub was created to solve this problem by building a
-                structured platform where verified university students can offer
-                services, buyers can post requests, both sides can chat
-                privately, and completed exchanges can be rated and reviewed
-                with confidence.
+                After work is completed, buyers and providers rate and review
+                each other so future users can make confident decisions. Clear
+                profiles, saved favorites, service history, and trusted feedback
+                help users choose the right person more safely and easily.
               </p>
             </div>
 
@@ -183,7 +182,7 @@ export default function AboutPage({
         <div className="mx-auto max-w-6xl px-5 py-12 sm:px-6">
           <ScrollReveal delayMs={30}>
             <div className="text-center">
-              <h2 className="text-xl font-semibold text-slate-900">
+              <h2 className="text-3xl font-semibold text-slate-900 sm:text-4xl">
                 Our Core Values
               </h2>
               <p className="mt-2 text-sm text-slate-600">
