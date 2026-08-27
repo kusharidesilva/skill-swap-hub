@@ -21,9 +21,13 @@ type TimestampLike =
   | undefined;
 
 type UserRecord = {
+  id?: string;
+  uid?: string;
   role?: string;
   accountStatus?: string;
   providerVerificationStatus?: string;
+  canSellServices?: boolean;
+  verifiedStudentProvider?: boolean;
   createdAt?: TimestampLike;
   providerApprovedAt?: TimestampLike;
   updatedAt?: TimestampLike;
@@ -33,6 +37,7 @@ type UserRecord = {
 };
 
 type VerificationRecord = {
+  userId?: string;
   studentName?: string;
   email?: string;
   status?: string;
@@ -187,7 +192,10 @@ export default function AdminDashboard() {
         collection(db, "users"),
         (snapshot) => {
           setUsers(
-            snapshot.docs.map((docSnap) => docSnap.data() as UserRecord),
+            snapshot.docs.map((docSnap) => ({
+              id: docSnap.id,
+              ...(docSnap.data() as UserRecord),
+            })),
           );
           setLoadError("");
           markLoaded("users");
@@ -291,21 +299,17 @@ export default function AdminDashboard() {
   const pendingVerifications = verifications.filter(
     (item) => normalizeStatus(item.status || "pending") === "pending",
   );
-  const approvedProviders = users.filter(
-    (user) =>
-      normalizeStatus(user.accountStatus || "active") === "active" &&
-      normalizeStatus(user.providerVerificationStatus || "") === "approved",
+  const providerVerificationStatuses = useMemo(
+    () => buildProviderVerificationStatusMap(verifications),
+    [verifications],
   );
   const activeBuyers = users.filter(
     (user) =>
       normalizeStatus(user.accountStatus || "active") === "active" &&
       ["buyer", "both"].includes(normalizeAdminRole(user.role)),
   );
-  const activeProviders = users.filter(
-    (user) =>
-      normalizeStatus(user.accountStatus || "active") === "active" &&
-      normalizeStatus(user.providerVerificationStatus || "") === "approved" &&
-      ["provider", "both"].includes(normalizeAdminRole(user.role)),
+  const activeProviders = users.filter((user) =>
+    isActiveApprovedProvider(user, providerVerificationStatuses),
   );
   const dashboardGigs = useMemo(
     () => mergeDashboardGigs(gigs, users),
@@ -333,17 +337,48 @@ export default function AdminDashboard() {
       hoverClassName: "hover:border-blue-300 hover:bg-blue-50/40",
     },
     {
+      label: "Active Providers",
+      value: String(activeProviders.length),
+      accent: "#0f766e",
+      icon: <ShieldIcon />,
+      hoverClassName: "hover:border-teal-300 hover:bg-teal-50/40",
+    },
+    {
+      label: "Active Buyers",
+      value: String(activeBuyers.length),
+      accent: "#2563eb",
+      icon: <BuyerGroupIcon />,
+      hoverClassName: "hover:border-blue-300 hover:bg-blue-50/40",
+    },
+    {
       label: "Pending Student Verifications",
       value: String(pendingVerifications.length),
       accent: "#b45309",
       icon: <ClipboardIcon />,
       hoverClassName: "hover:border-amber-300 hover:bg-amber-50/50",
     },
+  ];
+
+  const secondaryStats: StatCard[] = [
     {
-      label: "Approved Providers",
-      value: String(approvedProviders.length),
+      label: "Active Gigs",
+      value: String(activeGigs.length),
+      accent: "#2563eb",
+      icon: <ActiveGigsIcon />,
+      hoverClassName: "hover:border-blue-300 hover:bg-blue-50/40",
+    },
+    {
+      label: "Completed Orders",
+      value: String(completedOrders),
+      accent: "#7c3aed",
+      icon: <CompletedOrdersIcon />,
+      hoverClassName: "hover:border-violet-300 hover:bg-violet-50/40",
+    },
+    {
+      label: "Active Skill Categories",
+      value: String(serviceCategories.length),
       accent: "#0f766e",
-      icon: <BadgeCheckIcon />,
+      icon: <CategoryIcon />,
       hoverClassName: "hover:border-teal-300 hover:bg-teal-50/40",
     },
     {
@@ -355,37 +390,6 @@ export default function AdminDashboard() {
       hoverClassName: "hover:border-rose-300 hover:bg-rose-50/50",
     },
   ];
-
-  const secondaryStats: StatCard[] = [
-    {
-      label: "Active Buyers",
-      value: String(activeBuyers.length),
-      accent: "#2563eb",
-      icon: <BuyerGroupIcon />,
-      hoverClassName: "hover:border-blue-300 hover:bg-blue-50/40",
-    },
-    {
-      label: "Active Providers",
-      value: String(activeProviders.length),
-      accent: "#0f766e",
-      icon: <ShieldIcon />,
-      hoverClassName: "hover:border-teal-300 hover:bg-teal-50/40",
-    },
-    {
-      label: "Completed Orders",
-      value: String(completedOrders),
-      accent: "#7c3aed",
-      icon: <CompletedOrdersIcon />,
-      hoverClassName: "hover:border-violet-300 hover:bg-violet-50/40",
-    },
-    {
-      label: "Active Gigs",
-      value: String(activeGigs.length),
-      accent: "#2563eb",
-      icon: <ActiveGigsIcon />,
-      hoverClassName: "hover:border-blue-300 hover:bg-blue-50/40",
-    },
-  ];
   const allStats = [...topStats, ...secondaryStats];
   const activityBuckets = useMemo(
     () => buildActivityBuckets(activityRange, activityNow),
@@ -393,11 +397,8 @@ export default function AdminDashboard() {
   );
 
   const activitySeries = useMemo<ActivitySeries[]>(() => {
-    const providerUsers = users.filter(
-      (user) =>
-        normalizeStatus(user.accountStatus || "active") === "active" &&
-        normalizeStatus(user.providerVerificationStatus || "") === "approved" &&
-        ["provider", "both"].includes(normalizeAdminRole(user.role)),
+    const providerUsers = users.filter((user) =>
+      isActiveApprovedProvider(user, providerVerificationStatuses),
     );
     const buyerUsers = users.filter((user) =>
       ["buyer", "both"].includes(normalizeAdminRole(user.role)),
@@ -441,7 +442,7 @@ export default function AdminDashboard() {
         ["createdAt", "updatedAt"],
       ),
     ];
-  }, [activityBuckets, activityNow, dashboardGigs, users]);
+  }, [activityBuckets, activityNow, dashboardGigs, providerVerificationStatuses, users]);
 
   const topCategories = useMemo<CategoryRow[]>(() => {
     const managedCategories = new Map(
@@ -663,6 +664,50 @@ function formatDate(
 
 function normalizeStatus(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+}
+
+function buildProviderVerificationStatusMap(
+  verifications: Array<VerificationRecord & { id: string }>,
+) {
+  const statuses = new Map<string, string>();
+
+  verifications.forEach((verification) => {
+    const status = normalizeStatus(verification.status || "");
+    if (!status) return;
+
+    const userId = verification.userId || verification.id;
+    if (userId) {
+      statuses.set(userId, status);
+    }
+  });
+
+  return statuses;
+}
+
+function getUserVerificationStatus(
+  user: UserRecord,
+  liveVerificationStatuses: Map<string, string>,
+) {
+  const userId = user.uid || user.id || "";
+  return (
+    (userId ? liveVerificationStatuses.get(userId) : undefined) ||
+    normalizeStatus(user.providerVerificationStatus || "")
+  );
+}
+
+function isActiveApprovedProvider(
+  user: UserRecord,
+  liveVerificationStatuses: Map<string, string>,
+) {
+  const role = normalizeAdminRole(user.role);
+
+  return (
+    normalizeStatus(user.accountStatus || "active") === "active" &&
+    ["provider", "both"].includes(role) &&
+    getUserVerificationStatus(user, liveVerificationStatuses) === "approved" &&
+    user.canSellServices !== false &&
+    user.verifiedStudentProvider !== false
+  );
 }
 
 function isCompletedOrder(order: OrderRecord) {
@@ -1557,12 +1602,6 @@ function buildYAxisSteps(maxValue: number) {
 function UsersIcon() {
   return (
     <Icon path="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" />
-  );
-}
-
-function BadgeCheckIcon() {
-  return (
-    <Icon path="M12 2.8 6.8 5.1v4.7c0 4 2.3 6.8 5.2 8.4 2.9-1.6 5.2-4.4 5.2-8.4V5.1L12 2.8Z m-2.3 8.1 1.6 1.7 3.2-3.4" />
   );
 }
 
