@@ -21,9 +21,13 @@ type TimestampLike =
   | undefined;
 
 type UserRecord = {
+  id?: string;
+  uid?: string;
   role?: string;
   accountStatus?: string;
   providerVerificationStatus?: string;
+  canSellServices?: boolean;
+  verifiedStudentProvider?: boolean;
   createdAt?: TimestampLike;
   providerApprovedAt?: TimestampLike;
   updatedAt?: TimestampLike;
@@ -33,6 +37,7 @@ type UserRecord = {
 };
 
 type VerificationRecord = {
+  userId?: string;
   studentName?: string;
   email?: string;
   status?: string;
@@ -187,7 +192,10 @@ export default function AdminDashboard() {
         collection(db, "users"),
         (snapshot) => {
           setUsers(
-            snapshot.docs.map((docSnap) => docSnap.data() as UserRecord),
+            snapshot.docs.map((docSnap) => ({
+              id: docSnap.id,
+              ...(docSnap.data() as UserRecord),
+            })),
           );
           setLoadError("");
           markLoaded("users");
@@ -291,21 +299,20 @@ export default function AdminDashboard() {
   const pendingVerifications = verifications.filter(
     (item) => normalizeStatus(item.status || "pending") === "pending",
   );
-  const approvedProviders = users.filter(
-    (user) =>
-      normalizeStatus(user.accountStatus || "active") === "active" &&
-      normalizeStatus(user.providerVerificationStatus || "") === "approved",
+  const providerVerificationStatuses = useMemo(
+    () => buildProviderVerificationStatusMap(verifications),
+    [verifications],
+  );
+  const approvedProviders = users.filter((user) =>
+    isActiveApprovedProvider(user, providerVerificationStatuses),
   );
   const activeBuyers = users.filter(
     (user) =>
       normalizeStatus(user.accountStatus || "active") === "active" &&
       ["buyer", "both"].includes(normalizeAdminRole(user.role)),
   );
-  const activeProviders = users.filter(
-    (user) =>
-      normalizeStatus(user.accountStatus || "active") === "active" &&
-      normalizeStatus(user.providerVerificationStatus || "") === "approved" &&
-      ["provider", "both"].includes(normalizeAdminRole(user.role)),
+  const activeProviders = users.filter((user) =>
+    isActiveApprovedProvider(user, providerVerificationStatuses),
   );
   const dashboardGigs = useMemo(
     () => mergeDashboardGigs(gigs, users),
@@ -393,11 +400,8 @@ export default function AdminDashboard() {
   );
 
   const activitySeries = useMemo<ActivitySeries[]>(() => {
-    const providerUsers = users.filter(
-      (user) =>
-        normalizeStatus(user.accountStatus || "active") === "active" &&
-        normalizeStatus(user.providerVerificationStatus || "") === "approved" &&
-        ["provider", "both"].includes(normalizeAdminRole(user.role)),
+    const providerUsers = users.filter((user) =>
+      isActiveApprovedProvider(user, providerVerificationStatuses),
     );
     const buyerUsers = users.filter((user) =>
       ["buyer", "both"].includes(normalizeAdminRole(user.role)),
@@ -441,7 +445,7 @@ export default function AdminDashboard() {
         ["createdAt", "updatedAt"],
       ),
     ];
-  }, [activityBuckets, activityNow, dashboardGigs, users]);
+  }, [activityBuckets, activityNow, dashboardGigs, providerVerificationStatuses, users]);
 
   const topCategories = useMemo<CategoryRow[]>(() => {
     const managedCategories = new Map(
@@ -663,6 +667,50 @@ function formatDate(
 
 function normalizeStatus(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+}
+
+function buildProviderVerificationStatusMap(
+  verifications: Array<VerificationRecord & { id: string }>,
+) {
+  const statuses = new Map<string, string>();
+
+  verifications.forEach((verification) => {
+    const status = normalizeStatus(verification.status || "");
+    if (!status) return;
+
+    const userId = verification.userId || verification.id;
+    if (userId) {
+      statuses.set(userId, status);
+    }
+  });
+
+  return statuses;
+}
+
+function getUserVerificationStatus(
+  user: UserRecord,
+  liveVerificationStatuses: Map<string, string>,
+) {
+  const userId = user.uid || user.id || "";
+  return (
+    (userId ? liveVerificationStatuses.get(userId) : undefined) ||
+    normalizeStatus(user.providerVerificationStatus || "")
+  );
+}
+
+function isActiveApprovedProvider(
+  user: UserRecord,
+  liveVerificationStatuses: Map<string, string>,
+) {
+  const role = normalizeAdminRole(user.role);
+
+  return (
+    normalizeStatus(user.accountStatus || "active") === "active" &&
+    ["provider", "both"].includes(role) &&
+    getUserVerificationStatus(user, liveVerificationStatuses) === "approved" &&
+    user.canSellServices !== false &&
+    user.verifiedStudentProvider !== false
+  );
 }
 
 function isCompletedOrder(order: OrderRecord) {
