@@ -303,9 +303,6 @@ export default function AdminDashboard() {
     () => buildProviderVerificationStatusMap(verifications),
     [verifications],
   );
-  const approvedProviders = users.filter((user) =>
-    isActiveApprovedProvider(user, providerVerificationStatuses),
-  );
   const activeBuyers = users.filter(
     (user) =>
       normalizeStatus(user.accountStatus || "active") === "active" &&
@@ -340,30 +337,12 @@ export default function AdminDashboard() {
       hoverClassName: "hover:border-blue-300 hover:bg-blue-50/40",
     },
     {
-      label: "Pending Student Verifications",
-      value: String(pendingVerifications.length),
-      accent: "#b45309",
-      icon: <ClipboardIcon />,
-      hoverClassName: "hover:border-amber-300 hover:bg-amber-50/50",
-    },
-    {
-      label: "Approved Providers",
-      value: String(approvedProviders.length),
+      label: "Active Providers",
+      value: String(activeProviders.length),
       accent: "#0f766e",
-      icon: <BadgeCheckIcon />,
+      icon: <ShieldIcon />,
       hoverClassName: "hover:border-teal-300 hover:bg-teal-50/40",
     },
-    {
-      label: "Pending Reports",
-      value: String(pendingReports.length),
-      accent: "#b91c1c",
-      icon: <FlagIcon />,
-      muted: pendingReports.length > 0,
-      hoverClassName: "hover:border-rose-300 hover:bg-rose-50/50",
-    },
-  ];
-
-  const secondaryStats: StatCard[] = [
     {
       label: "Active Buyers",
       value: String(activeBuyers.length),
@@ -372,11 +351,21 @@ export default function AdminDashboard() {
       hoverClassName: "hover:border-blue-300 hover:bg-blue-50/40",
     },
     {
-      label: "Active Providers",
-      value: String(activeProviders.length),
-      accent: "#0f766e",
-      icon: <ShieldIcon />,
-      hoverClassName: "hover:border-teal-300 hover:bg-teal-50/40",
+      label: "Pending Student Verifications",
+      value: String(pendingVerifications.length),
+      accent: "#b45309",
+      icon: <ClipboardIcon />,
+      hoverClassName: "hover:border-amber-300 hover:bg-amber-50/50",
+    },
+  ];
+
+  const secondaryStats: StatCard[] = [
+    {
+      label: "Active Gigs",
+      value: String(activeGigs.length),
+      accent: "#2563eb",
+      icon: <ActiveGigsIcon />,
+      hoverClassName: "hover:border-blue-300 hover:bg-blue-50/40",
     },
     {
       label: "Completed Orders",
@@ -386,11 +375,19 @@ export default function AdminDashboard() {
       hoverClassName: "hover:border-violet-300 hover:bg-violet-50/40",
     },
     {
-      label: "Active Gigs",
-      value: String(activeGigs.length),
-      accent: "#2563eb",
-      icon: <ActiveGigsIcon />,
-      hoverClassName: "hover:border-blue-300 hover:bg-blue-50/40",
+      label: "Active Skill Categories",
+      value: String(serviceCategories.length),
+      accent: "#0f766e",
+      icon: <CategoryIcon />,
+      hoverClassName: "hover:border-teal-300 hover:bg-teal-50/40",
+    },
+    {
+      label: "Pending Reports",
+      value: String(pendingReports.length),
+      accent: "#b91c1c",
+      icon: <FlagIcon />,
+      muted: pendingReports.length > 0,
+      hoverClassName: "hover:border-rose-300 hover:bg-rose-50/50",
     },
   ];
   const allStats = [...topStats, ...secondaryStats];
@@ -1605,12 +1602,6 @@ function buildYAxisSteps(maxValue: number) {
 function UsersIcon() {
   return (
     <Icon path="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" />
-  );
-}
-
-function BadgeCheckIcon() {
-  return (
-    <Icon path="M12 2.8 6.8 5.1v4.7c0 4 2.3 6.8 5.2 8.4 2.9-1.6 5.2-4.4 5.2-8.4V5.1L12 2.8Z m-2.3 8.1 1.6 1.7 3.2-3.4" />
   );
 }
 
