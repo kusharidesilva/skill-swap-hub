@@ -21,6 +21,7 @@ interface AuthGuardProps {
 export default function AuthGuard({ requiredRole, children }: AuthGuardProps) {
   const { firebaseUser, userProfile, loading } = useAuth();
   const isSuspended = userProfile?.accountStatus === "suspended";
+  const isDeactivated = userProfile?.accountStatus === "deleted";
 
   const redirectTo = (href: string) => {
     if (typeof window === "undefined") return;
@@ -40,6 +41,13 @@ export default function AuthGuard({ requiredRole, children }: AuthGuardProps) {
     if (userProfile?.providerVerificationStatus === "rejected") {
       void signOut().finally(() => {
         redirectTo("/login?reason=verification-rejected");
+      });
+      return;
+    }
+
+    if (userProfile?.accountStatus === "deleted") {
+      void signOut().finally(() => {
+        redirectTo("/login");
       });
       return;
     }
@@ -93,6 +101,7 @@ export default function AuthGuard({ requiredRole, children }: AuthGuardProps) {
     !firebaseUser ||
     userProfile?.providerVerificationStatus === "rejected" ||
     isSuspended ||
+    isDeactivated ||
     isPendingAdminVerificationStatus(userProfile?.accountStatus) ||
     userProfile?.providerVerificationStatus === "pending" ||
     (userProfile &&

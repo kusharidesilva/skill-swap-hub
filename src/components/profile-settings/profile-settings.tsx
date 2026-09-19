@@ -10,7 +10,7 @@ import {
   reauthenticateWithCredential,
   updatePassword,
 } from "firebase/auth";
-import { changeSignedInEmail, type UserProfile } from "@/lib/auth";
+import { changeSignedInEmail, deactivateAccount, type UserProfile } from "@/lib/auth";
 import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
 import { useLookupOptions } from "@/lib/lookups";
 import { propagateUserProfileReferences } from "@/lib/user-profile-propagation";
@@ -18,6 +18,7 @@ import {
   getVerificationBadge,
   type IdentityRole,
 } from "@/lib/identity-badges";
+import ModalPortal from "@/components/ui/modal-portal";
 
 export type Role = "buyer" | "provider" | "both";
 
@@ -679,7 +680,8 @@ function ProfileSettingsForm({
                       })}
                     </div>
                   </div>
-
+ 
+                  {/* 
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
                       Time Periods
@@ -717,6 +719,7 @@ function ProfileSettingsForm({
                       })}
                     </div>
                   </div>
+                  */}
                 </div>
               </div>
             </section>
@@ -880,7 +883,7 @@ function ProfileSettingsForm({
             profileVisibility={profileVisibility}
             onProfileVisibilityChange={setProfileVisibility}
           />
-          <DangerZone />
+          <DangerZone userId={userProfile.uid} />
         </div>
       </div>
     </div>
@@ -1185,26 +1188,109 @@ function PrivacySettings({
   );
 }
 
-function DangerZone() {
+function DangerZone({ userId }: { userId: string }) {
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
+  const [deactivationError, setDeactivationError] = useState("");
+
+  const handleDeactivate = async () => {
+    setIsDeactivating(true);
+    setDeactivationError("");
+
+    try {
+      await deactivateAccount(userId);
+      window.location.replace("/login");
+    } catch (error) {
+      setDeactivationError(
+        error instanceof Error
+          ? error.message
+          : "Could not deactivate your account. Please try again.",
+      );
+      setShowConfirmation(false);
+      setIsDeactivating(false);
+    }
+  };
+
   return (
-    <section className="rounded-xl border border-red-200 bg-red-50/50 p-5">
-      <div className="flex flex-col gap-3">
-        <div>
-          <h2 className="text-sm font-bold text-red-700">Danger Zone</h2>
-          <p className="mt-1 text-sm font-medium leading-relaxed text-slate-600">
-            Permanently deactivate your account. This action is irreversible and
-            all your data, including swap history, will be removed.
-          </p>
+    <>
+      <section className="rounded-xl border border-red-200 bg-red-50/50 p-5">
+        <div className="flex flex-col gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-red-700">Danger Zone</h2>
+            <p className="mt-1 text-sm font-medium leading-relaxed text-slate-600">
+              Deactivate your account, hide your public profile, and unpublish your gigs.
+              Your completed swap and review history will be retained for platform records.
+            </p>
+          </div>
+          {deactivationError ? (
+            <p className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700">
+              {deactivationError}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              setDeactivationError("");
+              setShowConfirmation(true);
+            }}
+            className="h-11 w-full rounded-lg border border-red-600 bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700"
+          >
+            Deactivate Account
+          </button>
         </div>
-        <button
-          type="button"
-          disabled
-          className="h-11 w-full rounded-lg border border-red-200 bg-red-200 px-4 text-sm font-semibold text-red-400 cursor-not-allowed"
-        >
-          Deactivate Account
-        </button>
-      </div>
-    </section>
+      </section>
+
+      {showConfirmation ? (
+        <ModalPortal>
+          <div
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
+            onClick={() => {
+              if (!isDeactivating) setShowConfirmation(false);
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="deactivate-account-title"
+              className="w-full max-w-md rounded-2xl border border-red-100 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.2)]"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-red-600">
+                Account Deactivation
+              </p>
+              <h2
+                id="deactivate-account-title"
+                className="mt-2 text-xl font-semibold text-slate-900"
+              >
+                Deactivate this account?
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                You will be signed out immediately. Your profile and gigs will no longer be
+                public, and you will need support assistance to restore access.
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmation(false)}
+                  disabled={isDeactivating}
+                  className="h-11 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDeactivate()}
+                  disabled={isDeactivating}
+                  className="h-11 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                >
+                  {isDeactivating ? "Deactivating..." : "Deactivate"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      ) : null}
+    </>
   );
 }
 

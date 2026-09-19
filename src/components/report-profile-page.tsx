@@ -384,15 +384,8 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
   const isTargetInvalid = didAttemptSubmit && (!targetUserId || !targetIsEligible);
   const isCategoryInvalid = didAttemptSubmit && !category;
   const isDescriptionInvalid = didAttemptSubmit && description.trim().length < 10;
+  const isEvidenceInvalid = didAttemptSubmit && selectedFiles.length === 0;
   const isAgreementInvalid = didAttemptSubmit && !isAgreed;
-
-  useEffect(() => {
-    if (canChooseIssueType) {
-      return;
-    }
-
-    setCategory("");
-  }, [canChooseIssueType]);
 
   const handleFiles = (incomingFiles: FileList | File[]) => {
     const nextFiles = Array.from(incomingFiles);
@@ -494,6 +487,14 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
       return;
     }
 
+    if (selectedFiles.length === 0) {
+      setFeedback({
+        type: "error",
+        msg: "Please attach at least one evidence file before submitting the report.",
+      });
+      return;
+    }
+
     if (!isAgreed) {
       setFeedback({
         type: "error",
@@ -534,7 +535,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
       );
 
       const reportCode = generateReportCode();
-      const reportRef = await addDoc(collection(db, "reports"), {
+      await addDoc(collection(db, "reports"), {
         type: "profile",
         reportCode,
         reportSource: providerId ? "report-issue-targeted" : "report-issue-general",
@@ -682,6 +683,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
                   value={targetUserId}
                   onChange={(nextValue) => {
                     setTargetUserId(nextValue);
+                    setCategory("");
                     setFeedback(null);
                   }}
                   placeholder={
@@ -760,7 +762,7 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
               </p>
             </Field>
 
-            <Field label="Supporting Evidence">
+            <Field label="Supporting Evidence *">
               <div
                 onClick={() => fileInputRef.current?.click()}
                 onKeyDown={(event) => {
@@ -780,6 +782,8 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
                 className={`rounded-[14px] border border-dashed px-6 py-10 text-center transition ${
                   isDraggingFiles
                     ? "border-[#7aa8ff] bg-[#f4f8ff]"
+                    : isEvidenceInvalid
+                      ? "border-red-300 bg-red-50"
                     : "border-[#d8e0ee] bg-[#fbfdff]"
                 }`}
               >
@@ -808,9 +812,15 @@ export default function ReportProfilePage({ providerId }: ReportProfilePageProps
                   </button>
                 </p>
                 <p className="mt-1 text-[12px] text-slate-400">
-                  Screenshots, PDFs, or relevant chat logs (Max 2MB)
+                  At least one screenshot, PDF, or relevant chat log is required (Max 2MB)
                 </p>
               </div>
+
+              {isEvidenceInvalid ? (
+                <p className="mt-2 text-[12px] text-red-500">
+                  Please attach at least one evidence file.
+                </p>
+              ) : null}
 
               {selectedFiles.length > 0 ? (
                 <div className="mt-3 space-y-2">

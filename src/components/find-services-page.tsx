@@ -626,6 +626,7 @@ function FiltersSidebar(props: {
                     labelClassName="text-[10px] font-bold uppercase tracking-wider text-slate-400"
                     className="h-9 px-2.5 text-xs text-slate-700"
                   />
+                  {/*
                   <SelectField
                     label="Time"
                     value={selectValue}
@@ -634,10 +635,11 @@ function FiltersSidebar(props: {
                     labelClassName="sr-only"
                     className="h-9 px-2.5 text-xs text-slate-700"
                   />
+                  */}
                 </div>
               );
             }
-
+ 
             return (
               <SelectField
                 key={filter.label}

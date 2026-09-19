@@ -72,35 +72,14 @@ interface RequestData {
   providerDoneReminderSentAt?: TimestampLike;
 }
 
-const getLatestIncomingRequestMillis = (request: RequestData) =>
-  Math.max(
-    toMillis(request.providerReviewedAt),
-    toMillis(request.reviewSubmittedAt),
-    toMillis(request.reviewedAt),
-    toMillis(request.buyerReviewedAt),
-    toMillis(request.completedAt),
-    toMillis(request.deliveredAt),
-    toMillis(request.acceptedAt),
-    toMillis(request.updatedAt),
-    toMillis(request.createdAt),
-    0,
-  );
-
 const getRequestCreatedMillis = (request: RequestData) =>
   toMillis(request.createdAt) || toMillis(request.updatedAt) || 0;
 
-const sortIncomingRequestsLatestFirst = (items: RequestData[]) =>
+const sortIncomingRequestsNewestFirst = (items: RequestData[]) =>
   [...items].sort((a, b) => {
     const timeDifference =
-      getLatestIncomingRequestMillis(b) - getLatestIncomingRequestMillis(a);
+      getRequestCreatedMillis(b) - getRequestCreatedMillis(a);
     return timeDifference || b.id.localeCompare(a.id);
-  });
-
-const sortIncomingRequestsOldestFirst = (items: RequestData[]) =>
-  [...items].sort((a, b) => {
-    const timeDifference =
-      getRequestCreatedMillis(a) - getRequestCreatedMillis(b);
-    return timeDifference || a.id.localeCompare(b.id);
   });
 
 const GENERAL_REQUEST_STARTER_MESSAGE =
@@ -252,8 +231,7 @@ export default function IncomingRequestsPageContent({
               : request.buyerYearOfStudy || buyerMeta?.yearOfStudy || "",
         };
       });
-      hydratedDocs.sort((a, b) => b.id.localeCompare(a.id));
-      setRequests(hydratedDocs);
+      setRequests(sortIncomingRequestsNewestFirst(hydratedDocs));
       setFetching(false);
     };
 
@@ -415,7 +393,7 @@ export default function IncomingRequestsPageContent({
       {/* Only the selected workflow stage is rendered below. */}
       {activeTab === "new" && (
         <NewRequestsView
-          requests={sortIncomingRequestsOldestFirst(
+          requests={sortIncomingRequestsNewestFirst(
             requests.filter((r) => r.status === "pending"),
           )}
           role={role}
@@ -424,7 +402,7 @@ export default function IncomingRequestsPageContent({
       )}
       {activeTab === "accepted" && (
         <AcceptedView
-          requests={sortIncomingRequestsLatestFirst(
+          requests={sortIncomingRequestsNewestFirst(
             requests.filter(
               (r) =>
                 r.status === "working" ||
@@ -441,14 +419,16 @@ export default function IncomingRequestsPageContent({
       )}
       {activeTab === "completed" && (
         <CompletedView
-          requests={sortIncomingRequestsLatestFirst(
+          requests={sortIncomingRequestsNewestFirst(
             requests.filter((r) => r.status === "completed"),
           )}
         />
       )}
       {activeTab === "declined" && (
         <DeclinedView
-          requests={requests.filter((r) => r.status === "rejected")}
+          requests={sortIncomingRequestsNewestFirst(
+            requests.filter((r) => r.status === "rejected"),
+          )}
         />
       )}
     </section>

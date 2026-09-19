@@ -28,7 +28,9 @@ service cloud.firestore {
     }
 
     function hasActiveAccount() {
-      return hasProfile() && signedInProfile().data.accountStatus != 'suspended';
+      return hasProfile() &&
+        signedInProfile().data.accountStatus != 'suspended' &&
+        signedInProfile().data.accountStatus != 'deleted';
     }
 
     function isVerifiedProvider() {
@@ -142,6 +144,23 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']);
     }
 
+    function canSelfDeactivateAccount(userId) {
+      return isOwner(userId) &&
+        resource.data.accountStatus != 'deleted' &&
+        request.resource.data.accountStatus == 'deleted' &&
+        request.resource.data.canBuyServices == false &&
+        request.resource.data.canSellServices == false &&
+        request.resource.data.settings.profileVisibility == false &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'accountStatus',
+          'canBuyServices',
+          'canSellServices',
+          'settings',
+          'deletedAt',
+          'updatedAt'
+        ]);
+    }
+
     function canBootstrapAuthorizedAdmin(userId) {
       return isOwner(userId) &&
         request.resource.data.uid == request.auth.uid &&
@@ -170,7 +189,7 @@ service cloud.firestore {
           ) ||
           canBootstrapAuthorizedAdmin(userId)
         );
-      allow update: if isAdmin() || canBootstrapAuthorizedAdmin(userId) || canSelfBecomeBuyer(userId) || canSelfConfirmEmail(userId) || canSelfResubmitVerificationUser(userId) || (
+      allow update: if isAdmin() || canBootstrapAuthorizedAdmin(userId) || canSelfBecomeBuyer(userId) || canSelfDeactivateAccount(userId) || canSelfConfirmEmail(userId) || canSelfResubmitVerificationUser(userId) || (
         isOwner(userId) &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedUserFields())
       );
@@ -239,9 +258,14 @@ service cloud.firestore {
 
     match /gigs/{gigId} {
       allow read: if (
-        resource.data.status == 'active' ||
-        resource.data.gigStatus == 'active'
-      ) && resource.data.status != 'removed';
+          (
+            resource.data.status == 'active' ||
+            resource.data.gigStatus == 'active'
+          ) && resource.data.status != 'removed'
+        ) || isAdmin() || (
+          hasActiveAccount() &&
+          resource.data.providerId == request.auth.uid
+        );
       allow create: if isVerifiedProvider() &&
         request.resource.data.providerId == request.auth.uid;
       allow update: if isAdmin() || (
@@ -353,7 +377,10 @@ service cloud.firestore {
 
     match /reports/{reportId} {
       allow create: if hasActiveAccount() &&
-        request.resource.data.reporterId == request.auth.uid;
+        request.resource.data.reporterId == request.auth.uid &&
+        request.resource.data.evidenceFiles is list &&
+        request.resource.data.evidenceFiles.size() >= 1 &&
+        request.resource.data.evidenceFiles.size() <= 5;
       allow read: if hasActiveAccount() && (
         isAdmin() ||
         resource.data.reporterId == request.auth.uid ||

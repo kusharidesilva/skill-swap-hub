@@ -23,6 +23,7 @@ import { createNotification } from "@/lib/notifications";
 import SelectField from "@/components/ui/select-field";
 import { useLookupOptions } from "@/lib/lookups";
 import ModalPortal from "@/components/ui/modal-portal";
+import { toMillis, type TimestampLike } from "@/lib/moderation";
 
 const requestServiceSchema = z.object({
   category: z.string().trim().min(1, "Service category is required."),
@@ -56,6 +57,7 @@ type RequestServiceContentProps = {
 
 interface RequestData {
   id: string;
+  sourceCollection: "requests" | "directServiceRequests";
   category: string;
   title: string;
   description: string;
@@ -75,6 +77,34 @@ interface RequestData {
     rating: number;
     comment: string;
   };
+  createdAt?: TimestampLike;
+  updatedAt?: TimestampLike;
+}
+
+function normalizeDirectRequestStatus(status?: string) {
+  switch ((status || "").trim().toLowerCase()) {
+    case "active":
+    case "pending":
+    case "open":
+      return "pending";
+    case "working":
+    case "accepted":
+    case "in_progress":
+      return "working";
+    case "revision":
+      return "revision";
+    case "done":
+      return "done";
+    case "review_pending":
+      return "review_pending";
+    case "completed":
+      return "completed";
+    case "rejected":
+    case "declined":
+      return "rejected";
+    default:
+      return "pending";
+  }
 }
 
 export default function RequestServiceContent({
@@ -556,29 +586,97 @@ function RecentRequestsPanel({
   const RECENT_REQUEST_LIMIT = 1;
 
   useEffect(() => {
-    const q = query(
+    const standardRequestsQuery = query(
       collection(db, "requests"),
       where("buyerId", "==", buyerId),
     );
+    const directRequestsQuery = query(
+      collection(db, "directServiceRequests"),
+      where("buyerUserId", "==", buyerId),
+    );
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const docs: RequestData[] = [];
-        snapshot.forEach((docSnap) => {
-          docs.push({ id: docSnap.id, ...docSnap.data() } as RequestData);
-        });
-        docs.sort((a, b) => b.id.localeCompare(a.id));
-        setRequests(docs);
+    let standardRequests: RequestData[] = [];
+    let directRequests: RequestData[] = [];
+    let standardRequestsLoaded = false;
+    let directRequestsLoaded = false;
+
+    const syncRequests = () => {
+      const mergedRequests = [...standardRequests, ...directRequests].sort(
+        (left, right) => {
+          const timeDifference =
+            Math.max(toMillis(right.updatedAt), toMillis(right.createdAt)) -
+            Math.max(toMillis(left.updatedAt), toMillis(left.createdAt));
+          return timeDifference || right.id.localeCompare(left.id);
+        },
+      );
+
+      setRequests(mergedRequests);
+      if (standardRequestsLoaded && directRequestsLoaded) {
         setLoading(false);
+      }
+    };
+
+    const unsubscribeStandard = onSnapshot(
+      standardRequestsQuery,
+      (snapshot) => {
+        standardRequests = snapshot.docs.map((docSnapshot) => {
+          const data = docSnapshot.data();
+          return {
+            id: docSnapshot.id,
+            sourceCollection: "requests",
+            ...data,
+            status: (data.status || "pending").trim().toLowerCase(),
+          } as RequestData;
+        });
+        standardRequestsLoaded = true;
+        syncRequests();
       },
       (err) => {
-        console.error("Error loading recent requests:", err);
-        setLoading(false);
+        console.error("Error loading recent standard requests:", err);
+        standardRequestsLoaded = true;
+        syncRequests();
       },
     );
 
-    return () => unsubscribe();
+    const unsubscribeDirect = onSnapshot(
+      directRequestsQuery,
+      (snapshot) => {
+        directRequests = snapshot.docs.map((docSnapshot) => {
+          const data = docSnapshot.data();
+          return {
+            id: docSnapshot.id,
+            sourceCollection: "directServiceRequests",
+            category: data.serviceCategory || data.category || "General",
+            title: data.serviceTitle || data.gigTitle || data.title || "Direct Service Request",
+            description: data.message || data.description || "Direct service request",
+            status: normalizeDirectRequestStatus(data.requestStatus || data.status),
+            providerId: data.providerId || "",
+            providerName: data.providerName || "Provider",
+            level: data.level || "",
+            serviceType: data.serviceType || "Direct Gig Request",
+            time: data.delivery || data.time || "",
+            budget: data.price ? `LKR ${data.price}` : data.budget || "",
+            revisionNotes: data.revisionNotes,
+            review: data.review,
+            providerReview: data.providerReview,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+          } satisfies RequestData;
+        });
+        directRequestsLoaded = true;
+        syncRequests();
+      },
+      (err) => {
+        console.error("Error loading recent direct requests:", err);
+        directRequestsLoaded = true;
+        syncRequests();
+      },
+    );
+
+    return () => {
+      unsubscribeStandard();
+      unsubscribeDirect();
+    };
   }, [buyerId]);
 
   const activeRecentRequests = requests.filter(
@@ -599,8 +697,12 @@ function RecentRequestsPanel({
   const handleAcceptComplete = async (reqId: string) => {
     try {
       const reqObj = requests.find((r) => r.id === reqId);
-      await updateDoc(doc(db, "requests", reqId), {
+      const sourceCollection = reqObj?.sourceCollection || "requests";
+      await updateDoc(doc(db, sourceCollection, reqId), {
         status: "review_pending",
+        ...(sourceCollection === "directServiceRequests"
+          ? { requestStatus: "review_pending" }
+          : {}),
         buyerReviewedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         review: {
@@ -632,8 +734,12 @@ function RecentRequestsPanel({
     if (!revisionText.trim()) return;
     try {
       const reqObj = requests.find((r) => r.id === reqId);
-      await updateDoc(doc(db, "requests", reqId), {
+      const sourceCollection = reqObj?.sourceCollection || "requests";
+      await updateDoc(doc(db, sourceCollection, reqId), {
         status: "revision",
+        ...(sourceCollection === "directServiceRequests"
+          ? { requestStatus: "revision" }
+          : {}),
         revisionNotes: revisionText.trim(),
         updatedAt: serverTimestamp(),
       });
@@ -762,7 +868,7 @@ function RecentRequestsPanel({
             const badge = getStatusBadge(item.status);
             return (
               <article
-                key={item.id}
+                key={`${item.sourceCollection}-${item.id}`}
                 className="overflow-hidden rounded-[15px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff,rgba(248,250,255,0.96))] shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
               >
                 <div className="border-b border-slate-200/70 px-3 py-2.5">

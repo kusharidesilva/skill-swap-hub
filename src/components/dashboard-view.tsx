@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import ProfileShell from "@/components/profile-shell";
@@ -13,91 +13,234 @@ type DashboardViewProps = {
   role: Role;
 };
 
+type DashboardRequest = {
+  buyerId?: string;
+  status?: string;
+  requestStatus?: string;
+  review?: {
+    rating?: number;
+  };
+  providerReview?: unknown;
+};
+
+const ACTIVE_PROVIDER_STATUSES = new Set([
+  "working",
+  "revision",
+  "done",
+  "review_pending",
+]);
+
+function normalizeDirectRequestStatus(status?: string) {
+  switch ((status || "").toLowerCase()) {
+    case "active":
+    case "pending":
+    case "open":
+      return "pending";
+    case "working":
+    case "accepted":
+    case "in_progress":
+      return "working";
+    case "revision":
+      return "revision";
+    case "done":
+      return "done";
+    case "review_pending":
+      return "review_pending";
+    case "completed":
+      return "completed";
+    case "rejected":
+    case "declined":
+      return "rejected";
+    default:
+      return "pending";
+  }
+}
+
+function isActiveProviderRequest(request: DashboardRequest, status: string) {
+  return (
+    ACTIVE_PROVIDER_STATUSES.has(status) ||
+    (status === "completed" && Boolean(request.review) && !request.providerReview)
+  );
+}
+
 export default function DashboardView({ role }: DashboardViewProps) {
   const { userProfile, loading } = useAuth();
+  const currentUserId = userProfile?.uid;
 
   // These totals are calculated from the current user's request history.
   const [buyerActiveRequests, setBuyerActiveRequests] = useState(0);
   const [buyerCompletedRequests, setBuyerCompletedRequests] = useState(0);
   const [providerIncomingRequests, setProviderIncomingRequests] = useState(0);
   const [providerActiveJobs, setProviderActiveJobs] = useState(0);
+  const [providerCompletedJobs, setProviderCompletedJobs] = useState(0);
   const [providerAvgRating, setProviderAvgRating] = useState(0.0);
   const [providerReviewCount, setProviderReviewCount] = useState(0);
 
   useEffect(() => {
-    if (!userProfile) return;
-    const uid = userProfile.uid;
+    if (!currentUserId) return;
+    const uid = currentUserId;
 
-    async function fetchStats() {
-      try {
-        // Buyer stats come from requests this user created.
-        const buyerQuery = query(
-          collection(db, "requests"),
-          where("buyerId", "==", uid),
-        );
-        const buyerSnapshot = await getDocs(buyerQuery);
-        let activeB = 0;
-        let completedB = 0;
-        buyerSnapshot.forEach((doc) => {
-          const status = doc.data().status;
-          if (status === "completed" && doc.data().providerReview) {
-            completedB++;
-          } else if (status !== "rejected") {
-            activeB++;
-          }
-        });
-        setBuyerActiveRequests(activeB);
-        setBuyerCompletedRequests(completedB);
+    const buyerQuery = query(
+      collection(db, "requests"),
+      where("buyerId", "==", uid),
+    );
+    const directBuyerRequestsQuery = query(
+      collection(db, "directServiceRequests"),
+      where("buyerUserId", "==", uid),
+    );
+    const providerQuery = query(
+      collection(db, "requests"),
+      where("providerId", "==", uid),
+    );
+    const generalRequestsQuery = query(
+      collection(db, "requests"),
+      where("providerId", "==", "general"),
+    );
+    const directRequestsQuery = query(
+      collection(db, "directServiceRequests"),
+      where("providerId", "==", uid),
+    );
 
-        // Provider stats come from requests assigned to this user.
-        const providerQuery = query(
-          collection(db, "requests"),
-          where("providerId", "==", uid),
-        );
-        const providerSnapshot = await getDocs(providerQuery);
-        let incomingP = 0;
-        let activeP = 0;
-        let totalStars = 0;
-        let reviewsCount = 0;
+    let buyerRequests: DashboardRequest[] = [];
+    let directBuyerRequests: DashboardRequest[] = [];
+    let providerRequests: DashboardRequest[] = [];
+    let generalRequests: DashboardRequest[] = [];
+    let directRequests: DashboardRequest[] = [];
 
-        providerSnapshot.forEach((doc) => {
-          const data = doc.data();
-          const status = data.status;
+    const updateBuyerStats = () => {
+      let active = 0;
+      let completed = 0;
 
-          if (status === "pending") {
-            incomingP++;
-          } else if (
-            status === "working" ||
-            status === "revision" ||
-            status === "done" ||
-            status === "review_pending"
-          ) {
-            activeP++;
-          } else if (status === "completed") {
-            if (data.review && typeof data.review.rating === "number") {
-              totalStars += data.review.rating;
-              reviewsCount++;
-            }
-          }
-        });
-
-        setProviderIncomingRequests(incomingP);
-        setProviderActiveJobs(activeP);
-        setProviderReviewCount(reviewsCount);
-        if (reviewsCount > 0) {
-          setProviderAvgRating(
-            parseFloat((totalStars / reviewsCount).toFixed(1)),
-          );
-        } else {
-          setProviderAvgRating(0.0);
+      const countRequest = (request: DashboardRequest, status: string) => {
+        if (status === "completed" && request.providerReview) {
+          completed++;
+        } else if (status !== "rejected") {
+          active++;
         }
-      } catch (err) {
-        console.error("Error fetching dashboard statistics:", err);
-      }
-    }
+      };
 
-    fetchStats();
-  }, [userProfile]);
+      buyerRequests.forEach((request) => {
+        countRequest(request, (request.status || "pending").trim().toLowerCase());
+      });
+
+      directBuyerRequests.forEach((request) => {
+        countRequest(request, normalizeDirectRequestStatus(request.requestStatus || request.status));
+      });
+
+      setBuyerActiveRequests(active);
+      setBuyerCompletedRequests(completed);
+    };
+
+    const updateProviderStats = () => {
+      let incoming = 0;
+      let active = 0;
+      let completed = 0;
+      let totalStars = 0;
+      let reviewCount = 0;
+
+      const countRequest = (request: DashboardRequest, status: string) => {
+        if (status === "pending") {
+          incoming++;
+        } else if (isActiveProviderRequest(request, status)) {
+          active++;
+        } else if (status === "completed") {
+          completed++;
+        }
+
+        if (
+          status === "completed" &&
+          typeof request.review?.rating === "number"
+        ) {
+          totalStars += request.review.rating;
+          reviewCount++;
+        }
+      };
+
+      providerRequests.forEach((request) => {
+        countRequest(request, (request.status || "pending").trim().toLowerCase());
+      });
+
+      generalRequests.forEach((request) => {
+        const status = (request.status || "pending").trim().toLowerCase();
+        if (request.buyerId !== uid && status === "pending") {
+          incoming++;
+        }
+      });
+
+      directRequests.forEach((request) => {
+        countRequest(request, normalizeDirectRequestStatus(request.requestStatus || request.status));
+      });
+
+      setProviderIncomingRequests(incoming);
+      setProviderActiveJobs(active);
+      setProviderCompletedJobs(completed);
+      setProviderReviewCount(reviewCount);
+      setProviderAvgRating(reviewCount > 0 ? totalStars / reviewCount : 0);
+    };
+
+    const unsubscribeBuyer = onSnapshot(
+      buyerQuery,
+      (snapshot) => {
+        buyerRequests = snapshot.docs.map((docSnapshot) => docSnapshot.data() as DashboardRequest);
+        updateBuyerStats();
+      },
+      (error) => {
+        console.error("Error subscribing to buyer dashboard statistics:", error);
+      },
+    );
+
+    const unsubscribeDirectBuyer = onSnapshot(
+      directBuyerRequestsQuery,
+      (snapshot) => {
+        directBuyerRequests = snapshot.docs.map((docSnapshot) => docSnapshot.data() as DashboardRequest);
+        updateBuyerStats();
+      },
+      (error) => {
+        console.error("Error subscribing to direct buyer dashboard requests:", error);
+      },
+    );
+
+    const unsubscribeProvider = onSnapshot(
+      providerQuery,
+      (snapshot) => {
+        providerRequests = snapshot.docs.map((docSnapshot) => docSnapshot.data() as DashboardRequest);
+        updateProviderStats();
+      },
+      (error) => {
+        console.error("Error subscribing to provider dashboard statistics:", error);
+      },
+    );
+
+    const unsubscribeGeneral = onSnapshot(
+      generalRequestsQuery,
+      (snapshot) => {
+        generalRequests = snapshot.docs.map((docSnapshot) => docSnapshot.data() as DashboardRequest);
+        updateProviderStats();
+      },
+      (error) => {
+        console.error("Error subscribing to general dashboard requests:", error);
+      },
+    );
+
+    const unsubscribeDirect = onSnapshot(
+      directRequestsQuery,
+      (snapshot) => {
+        directRequests = snapshot.docs.map((docSnapshot) => docSnapshot.data() as DashboardRequest);
+        updateProviderStats();
+      },
+      (error) => {
+        console.error("Error subscribing to direct dashboard requests:", error);
+      },
+    );
+
+    return () => {
+      unsubscribeBuyer();
+      unsubscribeDirectBuyer();
+      unsubscribeProvider();
+      unsubscribeGeneral();
+      unsubscribeDirect();
+    };
+  }, [currentUserId]);
 
   if (loading) {
     return (
@@ -229,7 +372,7 @@ export default function DashboardView({ role }: DashboardViewProps) {
                     Provided Swaps
                   </p>
                   <p className="mt-2 text-3xl font-bold text-emerald-600">
-                    {providerIncomingRequests + providerActiveJobs}
+                    {providerCompletedJobs}
                   </p>
                 </div>
                 <div className="dashboard-stat-card rounded-xl border border-slate-200 bg-slate-50 p-5">

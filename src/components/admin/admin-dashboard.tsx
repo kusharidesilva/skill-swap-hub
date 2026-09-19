@@ -192,10 +192,14 @@ export default function AdminDashboard() {
         collection(db, "users"),
         (snapshot) => {
           setUsers(
-            snapshot.docs.map((docSnap) => ({
-              id: docSnap.id,
-              ...(docSnap.data() as UserRecord),
-            })),
+            snapshot.docs
+              .map((docSnap) => ({
+                id: docSnap.id,
+                ...(docSnap.data() as UserRecord),
+              }))
+              .filter(
+                (user) => normalizeStatus(user.accountStatus || "active") !== "deleted",
+              ),
           );
           setLoadError("");
           markLoaded("users");
@@ -1618,12 +1622,6 @@ function FlagIcon() {
 function ShieldIcon() {
   return (
     <Icon path="M12 3 5.5 5.9v5.7c0 4.4 2.8 7.2 6.5 8.9 3.7-1.7 6.5-4.5 6.5-8.9V5.9L12 3Z m-2.6 8.9 1.8 1.8 3.6-3.8" />
-  );
-}
-
-function OfferIcon() {
-  return (
-    <Icon path="M5.5 7.5h9.8a2 2 0 0 1 1.4.6l1.8 1.8a2 2 0 0 1 0 2.8l-5.7 5.7a2 2 0 0 1-2.8 0l-4.5-4.5a2 2 0 0 1 0-2.8l2.8-2.8a2 2 0 0 1 1.2-.6Z M14.5 7.5v4h4" />
   );
 }
 

@@ -47,6 +47,7 @@ type RequestDocLike = {
 type RequestCardData = {
   id: string;
   sourceCollection: "requests" | "directServiceRequests";
+  sortMillis: number;
   title: string;
   subject: string;
   providerName: string;
@@ -227,6 +228,8 @@ export default function AllRequestServicePage({
       return {
         id,
         sourceCollection,
+        sortMillis:
+          data.createdAt?.toMillis?.() ?? data.updatedAt?.toMillis?.() ?? 0,
         title:
           data.title ||
           data.serviceTitle ||
@@ -255,7 +258,10 @@ export default function AllRequestServicePage({
       const docs = [
         ...standardRequests.values(),
         ...directRequests.values(),
-      ].sort((a, b) => b.id.localeCompare(a.id));
+      ].sort(
+        (a, b) =>
+          b.sortMillis - a.sortMillis || b.id.localeCompare(a.id),
+      );
       setRequestState({ uid: userProfile.uid, requests: docs });
     };
 

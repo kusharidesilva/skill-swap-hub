@@ -115,6 +115,7 @@ export interface UserProfile {
   suspensionReportId?: string;
   adminSuspensionReason?: string;
   suspendedAt?: Date | null;
+  deletedAt?: Date | null;
 }
 
 export interface ProviderGig {
@@ -648,6 +649,11 @@ export async function loginAdmin(
     throw new Error("This admin account is suspended.");
   }
 
+  if (nextProfile.accountStatus === "deleted") {
+    await firebaseSignOut(auth);
+    throw new Error("This admin account has been deactivated.");
+  }
+
   return { user, profile: nextProfile };
 }
 
@@ -665,6 +671,11 @@ export async function getPostLoginRedirect(
 
   if (profile.accountStatus === "suspended") {
     throw new SuspendedAccountError(profile);
+  }
+
+  if (profile.accountStatus === "deleted") {
+    await firebaseSignOut(auth);
+    throw new Error("This account has been deactivated. Contact support if you need help restoring access.");
   }
 
   if (profile.role === "admin") {
@@ -817,6 +828,39 @@ export async function activateVerifiedEmailUser(uid: string): Promise<void> {
 }
 
 export async function signOut(): Promise<void> {
+  await firebaseSignOut(auth);
+}
+
+export async function deactivateAccount(uid: string): Promise<void> {
+  const currentUser = auth.currentUser;
+
+  if (!currentUser || currentUser.uid !== uid) {
+    throw new Error("Your session has expired. Please sign in again.");
+  }
+
+  const gigsSnapshot = await getDocs(
+    query(collection(db, "gigs"), where("providerId", "==", uid)),
+  );
+  const batch = writeBatch(db);
+
+  gigsSnapshot.forEach((gigSnapshot) => {
+    batch.update(gigSnapshot.ref, {
+      status: "inactive",
+      gigStatus: "inactive",
+      updatedAt: serverTimestamp(),
+    });
+  });
+
+  batch.update(doc(db, "users", uid), {
+    accountStatus: "deleted",
+    canBuyServices: false,
+    canSellServices: false,
+    "settings.profileVisibility": false,
+    deletedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  await batch.commit();
   await firebaseSignOut(auth);
 }
 

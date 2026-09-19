@@ -30,7 +30,7 @@ const addAndManageGroups: AddAndManageGroup[] = [
     description: "Manage the services shown across gigs and requests.",
     href: "/admin/add-and-manage/service-categories",
   },
-  {
+  { 
     key: "universities",
     title: "Universities",
     description: "Control the university list used during registration.",
@@ -42,18 +42,18 @@ const addAndManageGroups: AddAndManageGroup[] = [
     description: "Set the report categories available to users and admins.",
     href: "/admin/add-and-manage/issue-types",
   },
-  {
-    key: "availabilityDays",
-    title: "Weekly Availability",
-    description: "Manage the days shown in weekly availability selectors.",
-    href: "/admin/add-and-manage/weekly-availability",
-  },
-  {
-    key: "availabilityTimeSlots",
-    title: "Availability Time Slots",
-    description: "Keep provider availability slots consistent across the app.",
-    href: "/admin/add-and-manage/availability-time-slots",
-  },
+  // {
+  //   key: "availabilityDays",
+  //   title: "Weekly Availability",
+  //   description: "Manage the days shown in weekly availability selectors.",
+  //   href: "/admin/add-and-manage/weekly-availability",
+  // },
+  // {
+  //   key: "availabilityTimeSlots",
+  //   title: "Availability Time Slots",
+  //   description: "Keep provider availability slots consistent across the app.",
+  //   href: "/admin/add-and-manage/availability-time-slots",
+  // },
 ];
 
 const emptyAddAndManageState: Record<AddAndManageGroupKey, AddAndManageItem[]> = {

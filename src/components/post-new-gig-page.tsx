@@ -10,7 +10,7 @@ import SelectField from "@/components/ui/select-field";
 import { useAuth } from "@/context/AuthContext";
 import type { ProviderGig } from "@/lib/auth";
 import { db, storage } from "@/lib/firebase";
-import { GIG_COVER_PRESETS, getGigCoverForCategory, isPresetGigCover } from "@/lib/gig-covers";
+import { GIG_COVER_PRESETS, getGigCoverForCategory } from "@/lib/gig-covers";
 import { ensureGigTitlePrefix } from "@/lib/gig-titles";
 import { useLookupOptions } from "@/lib/lookups";
 import { AVAILABILITY_DAYS, AVAILABILITY_TIME_SLOTS } from "@/lib/platform";
@@ -32,9 +32,10 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   const serviceCategories = useLookupOptions("serviceCategories");
   const availabilityDayOptions = useLookupOptions("availabilityDays");
   const timeSlotOptions = useLookupOptions("availabilityTimeSlots");
-  const weeklyAvailabilityDays = availabilityDayOptions.length
-    ? availabilityDayOptions
-    : [...AVAILABILITY_DAYS];
+  const weeklyAvailabilityDays = useMemo(
+    () => (availabilityDayOptions.length ? availabilityDayOptions : [...AVAILABILITY_DAYS]),
+    [availabilityDayOptions],
+  );
 
   const skillIndex = isEditMode && gigId ? parseInt(gigId.replace("gig-", ""), 10) : -1;
 
@@ -44,13 +45,9 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0]);
-  const [selectedImage, setSelectedImage] = useState<string>(
-    getGigCoverForCategory("Photography", "Photography", 0),
-  );
+  const [selectedImageOverride, setSelectedImageOverride] = useState<string | null>(null);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [availability, setAvailability] = useState<string[]>([]);
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -61,12 +58,13 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
 
   const backHref = role === "both" ? "/my-gigs/both?tab=manage" : "/my-gigs/provider?tab=manage";
   const selectedCategory = category.trim();
+  const selectedImage =
+    selectedImageOverride ?? getGigCoverForCategory(selectedCategory || "Photography", title || selectedCategory, 0);
   const availabilityPeriods = useMemo(
     () =>
       Array.from(
         new Set([
           ...(timeSlotOptions.length ? timeSlotOptions : [...AVAILABILITY_TIME_SLOTS]),
-          ...selectedPeriods,
           ...availability
             .map((slot) => {
               const normalizedSlot = slot.trim();
@@ -76,8 +74,43 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
             .filter(Boolean),
         ]),
       ),
-    [availability, selectedPeriods, timeSlotOptions, weeklyAvailabilityDays],
+    [availability, timeSlotOptions, weeklyAvailabilityDays],
   );
+
+  const selectedDays = useMemo(() => {
+    const days = new Set<string>();
+
+    availability.forEach((slot) => {
+      const normalizedSlot = slot.trim();
+      if (weeklyAvailabilityDays.includes(normalizedSlot)) {
+        days.add(normalizedSlot);
+        return;
+      }
+      const matchingDay = weeklyAvailabilityDays.find((day) =>
+        normalizedSlot.startsWith(`${day} `),
+      );
+      if (matchingDay) days.add(matchingDay);
+    });
+
+    return Array.from(days);
+  }, [availability, weeklyAvailabilityDays]);
+
+  const selectedPeriods = useMemo(() => {
+    const periods = new Set<string>();
+
+    availability.forEach((slot) => {
+      const normalizedSlot = slot.trim();
+      const matchingDay = weeklyAvailabilityDays.find((day) =>
+        normalizedSlot.startsWith(`${day} `),
+      );
+      if (!matchingDay) return;
+
+      const period = normalizedSlot.slice(matchingDay.length).trim();
+      if (availabilityPeriods.includes(period)) periods.add(period);
+    });
+
+    return Array.from(periods);
+  }, [availability, availabilityPeriods, weeklyAvailabilityDays]);
 
   useEffect(() => {
     if (!isEditMode || !userProfile || skillIndex < 0) return;
@@ -102,9 +135,9 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
 
       const gigImages = userProfile.providerProfile?.gigImages || [];
       if (existingGig?.image) {
-        setSelectedImage(existingGig.image);
+        setSelectedImageOverride(existingGig.image);
       } else if (gigImages[skillIndex]) {
-        setSelectedImage(gigImages[skillIndex]);
+        setSelectedImageOverride(gigImages[skillIndex]);
       }
     }, 0);
 
@@ -123,45 +156,6 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
     return () => clearTimeout(timer);
   }, [userProfile]);
 
-  useEffect(() => {
-    if (selectedImageFile) return;
-    if (!isPresetGigCover(selectedImage)) return;
-
-    setSelectedImage(
-      getGigCoverForCategory(selectedCategory || "Photography", title || selectedCategory, 0),
-    );
-  }, [selectedCategory, selectedImage, selectedImageFile, title]);
-
-  useEffect(() => {
-    if (!availability.length) return;
-
-    const nextDays = new Set<string>();
-    const nextPeriods = new Set<string>();
-
-    availability.forEach((slot) => {
-      const normalizedSlot = slot.trim();
-      const matchingDay = weeklyAvailabilityDays.find((day) => normalizedSlot.startsWith(`${day} `));
-      if (!matchingDay) return;
-
-      const period = normalizedSlot.slice(matchingDay.length).trim();
-      nextDays.add(matchingDay);
-
-      if (availabilityPeriods.includes(period)) {
-        nextPeriods.add(period);
-      }
-    });
-
-    const nextDaysList = Array.from(nextDays);
-    const nextPeriodsList = Array.from(nextPeriods);
-
-    setSelectedDays((current) =>
-      areSameSelections(current, nextDaysList) ? current : nextDaysList,
-    );
-    setSelectedPeriods((current) =>
-      areSameSelections(current, nextPeriodsList) ? current : nextPeriodsList,
-    );
-  }, [availability, availabilityPeriods, weeklyAvailabilityDays]);
-
   const addTag = () => {
     const trimmed = tagInput.trim();
     if (trimmed && !tags.includes(trimmed) && tags.length < 5) {
@@ -173,6 +167,11 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
   const removeTag = (tag: string) => setTags(tags.filter((item) => item !== tag));
 
   const syncAvailability = (days: string[], periods: string[]) => {
+    if (periods.length === 0) {
+      setAvailability(days);
+      return;
+    }
+
     const combinations = days.flatMap((day) => periods.map((period) => `${day} ${period}`));
     setAvailability(combinations);
   };
@@ -182,17 +181,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
       ? selectedDays.filter((value) => value !== day)
       : [...selectedDays, day];
 
-    setSelectedDays(nextDays);
     syncAvailability(nextDays, selectedPeriods);
-  };
-
-  const togglePeriod = (period: string) => {
-    const nextPeriods = selectedPeriods.includes(period)
-      ? selectedPeriods.filter((value) => value !== period)
-      : [...selectedPeriods, period];
-
-    setSelectedPeriods(nextPeriods);
-    syncAvailability(selectedDays, nextPeriods);
   };
 
   const isTitleInvalid = didAttemptSubmit && !title.trim();
@@ -623,6 +612,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                   </div>
                 </div>
 
+                {/*
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
                     Time Periods *
@@ -660,6 +650,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                     })}
                   </div>
                 </div>
+                */}
               </div>
             </div>
 
@@ -710,11 +701,12 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                   key={preset.src}
                   type="button"
                   onClick={() => {
-                    setSelectedImage(preset.src);
+                    setSelectedImageOverride(preset.src);
                     setSelectedImageFile(null);
                   }}
                   className={`relative cursor-pointer overflow-hidden rounded-xl border-4 transition ${
-                    selectedImage === preset.src || decodeURIComponent(selectedImage).endsWith(preset.src.replace("/img/", ""))
+                    selectedImage === preset.src ||
+                    decodeURIComponent(selectedImage).endsWith(preset.src.replace("/img/", ""))
                       ? "scale-105 border-[#1453c4]"
                       : "border-transparent opacity-75 hover:opacity-100"
                   }`}
@@ -754,7 +746,7 @@ export default function PostNewGigPage({ role, mode = "create", gigId }: PostNew
                     }
 
                     setSelectedImageFile(file);
-                    setSelectedImage(URL.createObjectURL(file));
+                    setSelectedImageOverride(URL.createObjectURL(file));
                   }}
                   className="hidden"
                 />
@@ -899,13 +891,6 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
-}
-
-function areSameSelections(current: string[], next: string[]) {
-  return (
-    current.length === next.length &&
-    current.every((value, index) => value === next[index])
-  );
 }
 
 function DeleteIcon({ className }: { className?: string }) {
